@@ -1,0 +1,44 @@
+# L2 theory. Directive list: AGENTS.md, section "Layer checks".
+
+name: describe dorian
+args: describe scale "D dorian"
+exit: 0
+stdout-contains: scale=D-dorian
+stdout-contains: pcs=D,E,F,G,A,B,C
+
+---
+name: describe Dm7
+args: describe chord Dm7 --key "D dorian"
+exit: 0
+stdout-contains: chord=Dm7
+stdout-contains: roman=i7
+stdout-contains: pcs=D,F,A,C
+
+---
+name: voice-led progression
+args: theory progression "i bVII bVI bVII" --key "D aeolian" --voice-lead --out build/l2
+exit: 0
+delete-before: build/l2
+stdout-contains: chords=4
+stdout-contains: parallels=0
+stdout-regex: maxMotion=[0-4]( |$)
+stdout-regex: hash=[0-9a-f]{64}
+capture: hash hash=([0-9a-f]{64})
+file-exists: build/l2/events.jsonl
+
+---
+name: progression is idempotent
+args: theory progression "i bVII bVI bVII" --key "D aeolian" --voice-lead --out build/l2
+exit: 0
+stdout-contains: changed=false
+stdout-contains: parallels=0
+stdout-contains-capture: hash
+
+---
+name: describe the progression
+args: describe-music build/l2/events.jsonl
+exit: 0
+stdout-contains: bar=1
+stdout-contains: chord=Dm
+stdout-regex: key=D-aeolian
+stdout-regex: conf=(0\.[7-9][0-9]*|1(\.0+)?)

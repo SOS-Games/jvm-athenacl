@@ -30,6 +30,7 @@ import java.util.regex.Pattern;
  * Blank lines and {@code #} comments are ignored. A directive is {@code key: value},
  * or a bare flag such as {@code stderr-empty}. Unknown keys fail the run.
  * {@code -Player=L0a} (passed through as the third argument) selects one file.
+ * {@code args} honors double quotes, so a scale name can contain a space.
  * The full key list lives in AGENTS.md under "Layer checks".
  */
 public final class LayerCheck {
@@ -330,7 +331,35 @@ public final class LayerCheck {
         if (args.isBlank()) {
             return List.of();
         }
-        return List.of(args.trim().split("\\s+"));
+        List<String> tokens = new ArrayList<>();
+        StringBuilder current = new StringBuilder();
+        boolean quote = false;
+        boolean started = false;
+        for (int i = 0; i < args.length(); i++) {
+            char c = args.charAt(i);
+            if (c == '"') {
+                quote = !quote;
+                started = true;
+                continue;
+            }
+            if (!quote && Character.isWhitespace(c)) {
+                if (started) {
+                    tokens.add(current.toString());
+                    current.setLength(0);
+                    started = false;
+                }
+                continue;
+            }
+            current.append(c);
+            started = true;
+        }
+        if (quote) {
+            throw new IllegalArgumentException("unclosed quote in args");
+        }
+        if (started) {
+            tokens.add(current.toString());
+        }
+        return tokens;
     }
 
     private static void require(Block block, String key) {

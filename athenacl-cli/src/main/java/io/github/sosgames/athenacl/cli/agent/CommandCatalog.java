@@ -49,8 +49,16 @@ public final class CommandCatalog {
                     true,
                     "athenacl.result.render/1"),
             new CommandInfo(
+                    "play",
+                    "Play a note list, event log, or WAV on the speakers. --dry-run prints the length and does not open the device.",
+                    List.of(
+                            gradle("play samples/notes/c-major-scale.yaml"),
+                            gradle("play samples/notes/c-major-scale.yaml --dry-run")),
+                    false,
+                    "athenacl.result.play/1"),
+            new CommandInfo(
                     "describe-music",
-                    "One bar= line per bar from an event log. --roll adds a piano roll (C4 |● is a downbeat quarter).",
+                    "One bar= line per bar from an event log. --roll adds a piano roll (C4 |● is a downbeat quarter). Chord and key estimates are appended when the notes support them.",
                     List.of(gradle("describe-music build/l0/events.jsonl --roll")),
                     false,
                     "athenacl.result.describe-music/1"),
@@ -72,8 +80,11 @@ public final class CommandCatalog {
                     "athenacl.result.soundbank/1"),
             new CommandInfo(
                     "describe",
-                    "describe instruments counts presets. GeneralUser GS is instruments=287 drumkits=13.",
-                    List.of(gradle("describe instruments --soundbank generaluser")),
+                    "describe scale lists a mode. describe chord names a roman numeral. describe instruments counts presets.",
+                    List.of(
+                            gradle("describe scale D-dorian"),
+                            gradle("describe chord Dm7 --key D-dorian"),
+                            gradle("describe instruments --soundbank generaluser")),
                     false,
                     "athenacl.result.instruments/1"),
             new CommandInfo(
@@ -81,7 +92,14 @@ public final class CommandCatalog {
                     "EBU R128 loudness of a WAV or a render directory: integrated LUFS, true peak, short-term.",
                     List.of(gradle("analyze build/l0")),
                     false,
-                    "athenacl.result.analyze/1"));
+                    "athenacl.result.analyze/1"),
+            new CommandInfo(
+                    "theory",
+                    "theory progression voice-leads roman numerals into events.jsonl. The hash is that event log.",
+                    List.of(gradle(
+                            "theory progression i bVII bVI bVII --key D-aeolian --voice-lead --out build/l2")),
+                    true,
+                    "athenacl.result.progression/1"));
 
     private CommandCatalog() {
     }

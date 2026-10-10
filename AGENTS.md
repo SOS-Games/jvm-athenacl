@@ -4,7 +4,7 @@ Instructions for AI coding agents working in **jvm-athenacl**.
 
 ## Project
 
-GPL-3.0-or-later Java 21 rewrite of athenaCL as an adaptive game-music engine for libGDX desktop. Package `io.github.sosgames.athenacl`. Layer plan: [docs/research/05-project-plan.md](docs/research/05-project-plan.md). L0a is the CLI skeleton. Do not start L0b until the user says L0a is working and it has been committed.
+GPL-3.0-or-later Java 21 rewrite of athenaCL as an adaptive game-music engine for libGDX desktop. Package `io.github.sosgames.athenacl`. Layer plan: [docs/research/05-project-plan.md](docs/research/05-project-plan.md). L2 (scales, chords, voice leading) is in the tree. Do not start L3 until the user asks.
 
 - Java 21 (`options.release = 21`). Versions live in `gradle.properties`.
 - Groovy Gradle, same shape as SOS-Games/jvm-mw. Root `gradlew layerCheck`. CLI: `gradlew :athenacl-cli:agentCli --args="help"`.
@@ -37,12 +37,15 @@ gradlew.bat :athenacl-cli:agentCli --args="schema athenacl.result.version/1"
 gradlew.bat :athenacl-cli:agentCli --args="schema athenacl.result.version/1 --out build/schema --dry-run"
 gradlew.bat :athenacl-cli:agentCli --args="schema athenacl.result.version/1 --out build/schema"
 gradlew.bat :athenacl-cli:agentCli --args="render samples/notes/c-major-scale.yaml --out build/l0 --formats mid,wav,events,txt"
+gradlew.bat :athenacl-cli:agentCli --args="play samples/notes/c-major-scale.yaml --dry-run"
 gradlew.bat :athenacl-cli:agentCli --args="describe-music build/l0/events.jsonl --roll"
 gradlew.bat :athenacl-cli:agentCli --args="debug determinism samples/notes/c-major-scale.yaml --runs 2"
 gradlew.bat :athenacl-cli:agentCli --args="debug inspect build/l0/events.jsonl --where pitch=E4"
 gradlew.bat :athenacl-cli:agentCli --args="soundbank install generaluser --dry-run"
 gradlew.bat :athenacl-cli:agentCli --args="describe instruments --soundbank generaluser"
 gradlew.bat :athenacl-cli:agentCli --args="analyze build/l0"
+gradlew.bat :athenacl-cli:agentCli --args="describe scale D-dorian"
+gradlew.bat :athenacl-cli:agentCli --args="theory progression i bVII bVI bVII --key D-aeolian --voice-lead --out build/l2"
 ```
 
 | Command | Use when |
@@ -51,11 +54,13 @@ gradlew.bat :athenacl-cli:agentCli --args="analyze build/l0"
 | version | You need the tool version, the Java feature level, or whether Gervill is on this JDK. |
 | schema | You need a published result schema on stdout, or you want an atomic write and `--dry-run` without rendering music. |
 | render | You have a note-list YAML file and want `score.mid`, `score.wav`, `events.jsonl`, and `score.txt` under `--out`. |
-| describe-music | You want one `bar=` line per bar from an event log, or a piano roll (`--roll`). |
+| play | You want to hear a note list, an event log, or a WAV on the speakers. `--dry-run` does not open the device. |
+| describe-music | You want one `bar=` line per bar from an event log, a piano roll (`--roll`), or the chord and key estimate. |
 | debug | You want `debug determinism` (same event-log hash twice), `debug inspect` (filter notes with `--where`), or `debug check --loudness`. |
 | soundbank | You want to install, list, or show the GeneralUser GS soundbank. |
-| describe | You want `describe instruments` to count presets in an installed soundbank. |
+| describe | You want `describe scale`, `describe chord`, or `describe instruments` (287 presets and 13 drum kits in GeneralUser GS). |
 | analyze | You want EBU R128 integrated loudness and true peak for a WAV or a render directory. |
+| theory | You want `theory progression` to voice-lead roman numerals into `events.jsonl`. |
 
 Shared flags, in front of the command or after it: `--json`, `--dry-run`, `--strict`, `-v`, `-vv`, `--log-level <error|warn|info|debug|trace>`, `-h`.
 
@@ -68,6 +73,7 @@ Published schema ids:
 - `athenacl.result.schema/1`
 - `athenacl.result.error/1`
 - `athenacl.result.render/1`
+- `athenacl.result.play/1`
 - `athenacl.result.describe-music/1`
 - `athenacl.result.determinism/1`
 - `athenacl.result.inspect/1`
@@ -75,6 +81,9 @@ Published schema ids:
 - `athenacl.result.instruments/1`
 - `athenacl.result.analyze/1`
 - `athenacl.result.check/1`
+- `athenacl.result.scale/1`
+- `athenacl.result.chord/1`
+- `athenacl.result.progression/1`
 
 When you add a command, add it to `CommandCatalog`, add a row to the table above, and add a block to the layer's `checks/L*.check`. `LayerCheckTest` fails if the table is missing a catalog command.
 
@@ -124,7 +133,7 @@ Blocks are split by a line that is only `---`. Blank lines and `#` comments are 
 | Directive | Meaning |
 | --- | --- |
 | name | Label printed as PASS or FAIL. |
-| args | Arguments after `athenacl`. Required once. |
+| args | Arguments after `athenacl`. Required once. Double quotes keep a value that contains a space, such as `"D dorian"`. |
 | exit | Expected process status. Required once. |
 | stdout-contains | Stdout must contain this literal. |
 | stdout-not-contains | Stdout must not contain this literal. |
@@ -166,11 +175,13 @@ Large classes get a short block immediately above `public class`. Not per line, 
 
 The summary line is `files= notes= bars= changed= hash=` plus `dryRun=`. `changed=true` when any requested file's bytes differ. A second render of the same notes is `changed=false` and the same hash. `--seed` defaults to 0. `--dry-run` plans the writes and does not create `--out`.
 
-`describe-music <events.jsonl> --roll` prints `bar= notes= range=` and a roll where one column is a 16th note: `●` starts a note, `─` holds it, `·` is empty. A quarter note on beat 1 starts `C4 |●`. Channel 9 is a drum grid under that roll.
+`describe-music <events.jsonl> --roll` prints `bar= notes= range=` and a roll where one column is a 16th note: `●` starts a note, `─` holds it, `·` is empty. A quarter note on beat 1 starts `C4 |●`. Channel 9 is a drum grid under that roll. When the notes form a chord, the summary also ends with `chord=`, `key=`, and `conf=` (cosine similarity of the whole piece against a mode profile).
 
 `debug determinism <notes.yaml> --runs 2` hashes the event log that many times and does not write audio. `debug inspect <events.jsonl> --where pitch=E4` prints only the matching `note id=` lines.
 
 The summary line also ends with `soundbank=`. A missing `--soundbank` file still exits 0 and adds `warning=SOUNDBANK_FALLBACK`. The WAV then uses the JDK default bank, so a second render of the same notes stays byte-for-byte the same.
+
+`play <notes.yaml|events.jsonl|wav|dir>` sends that audio to the speakers and waits until it finishes. A directory uses `score.wav`. A note list or event log is rendered in memory first, with the same soundbank rules as `render`. `--dry-run` prints `action=play seconds= dryRun=true` and does not open the device. No speakers is exit 7. This is not the libGDX window.
 
 ## Soundbanks and loudness
 
@@ -182,6 +193,16 @@ The summary line also ends with `soundbank=`. A missing `--soundbank` file still
 
 The download URL is a pinned commit until this project hosts its own copy. Do not point the installer at schristiancollins.com.
 
-## Not in L1
+## Theory
 
-Themes, the interactive REPL, and libGDX. Do not add them in a drive-by change.
+`describe scale "D dorian"` prints `scale=D-dorian pcs=D,E,F,G,A,B,C`. `D-dorian` is the same key. `major` means ionian and `minor` means aeolian.
+
+`describe chord Dm7 --key "D dorian"` prints `chord=Dm7 roman=i7 pcs=D,F,A,C`. Roman numerals are counted from the major scale, so in D aeolian `bVII` is C major and `bVI` is B-flat major. Upper case is major and lower case is minor.
+
+`theory progression "i bVII bVI bVII" --key "D aeolian" --voice-lead --out build/l2` writes `events.jsonl`, one whole-note chord per bar in 4/4 at 120 bpm. The summary is `chords= maxMotion= parallels= hash=`. `--voice-lead` keeps each leap within a few semitones and avoids parallel fifths and octaves. A second run of the same progression is `changed=false` with the same hash. `--dry-run` prints the plan and does not create `--out`.
+
+`describe-music` on that log prints `chord=Dm` and `key=D-aeolian` on bar 1, with `conf=` at least 0.70.
+
+## Not in L2
+
+Rhythm and groove, themes, the interactive REPL, and libGDX. Do not add them in a drive-by change.

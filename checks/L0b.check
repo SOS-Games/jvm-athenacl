@@ -48,3 +48,19 @@ exit: 4
 stdout-contains: error code=NOT_FOUND
 stdout-contains: path=argv[1]
 stdout-contains: fix=
+
+---
+name: play dry-run
+args: play samples/notes/c-major-scale.yaml --dry-run
+exit: 0
+stdout-contains: action=play
+stdout-contains: seconds=4.400
+stdout-contains: dryRun=true
+
+---
+name: play missing
+args: play missing.yaml
+exit: 4
+stdout-contains: error code=NOT_FOUND
+stdout-contains: path=argv[1]
+

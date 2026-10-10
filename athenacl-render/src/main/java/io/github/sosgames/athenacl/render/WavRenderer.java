@@ -69,6 +69,16 @@ public final class WavRenderer {
         return out.toByteArray();
     }
 
+    /** Length of the WAV this renderer would write, including the short tail after the last note. */
+    public static double durationSeconds(Score score) {
+        TempoMap tempo = new TempoMap(score.bpm());
+        long lastTick = 0;
+        for (NoteEvent note : score.notes()) {
+            lastTick = Math.max(lastTick, note.startTick() + note.durationTicks());
+        }
+        return (tempo.toMicros(lastTick) + TAIL_MICROS) / 1_000_000.0;
+    }
+
     private static GervillStreams openStream(Path soundbank) throws IOException, MidiUnavailableException {
         try {
             return GervillStreams.open(FORMAT, soundbank);

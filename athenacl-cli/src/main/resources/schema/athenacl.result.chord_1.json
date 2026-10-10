@@ -1,0 +1,15 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "athenacl.result.chord/1",
+  "type": "object",
+  "required": ["schema", "ok", "command", "data", "warnings", "errors", "meta"],
+  "properties": {
+    "schema": { "const": "athenacl.result.chord/1" },
+    "ok": { "type": "boolean" },
+    "command": { "const": "describe chord" },
+    "data": { "type": "object" },
+    "warnings": { "type": "array" },
+    "errors": { "type": "array" },
+    "meta": { "type": "object", "required": ["version", "seed", "durationMs"] }
+  }
+}

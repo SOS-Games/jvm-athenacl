@@ -3,6 +3,8 @@ package io.github.sosgames.athenacl.cli.agent;
 
 import io.github.sosgames.athenacl.cli.model.ExitCode;
 import io.github.sosgames.athenacl.cli.model.KeyValue;
+import io.github.sosgames.athenacl.theory.Chord;
+import io.github.sosgames.athenacl.theory.Key;
 import io.github.sosgames.athenacl.render.soundbank.InstrumentIndex;
 import io.github.sosgames.athenacl.render.soundbank.SoundbankCatalog;
 import io.github.sosgames.athenacl.render.soundbank.SoundbankPaths;
@@ -18,11 +20,16 @@ import java.util.Map;
 import java.util.concurrent.Callable;
 
 /**
- * {@code describe instruments} counts presets in a soundbank. GeneralUser GS is
+ * {@code describe scale} lists a mode, {@code describe chord} names a roman numeral,
+ * and {@code describe instruments} counts presets in a soundbank. GeneralUser GS is
  * {@code instruments=287 drumkits=13}. The bank has to be installed first.
  */
-@CommandLine.Command(name = "describe", description = "Describe a soundbank or, later, scales and chords.",
-        subcommands = {DescribeCommand.Instruments.class})
+@CommandLine.Command(name = "describe", description = "Describe a scale, a chord, or a soundbank.",
+        subcommands = {
+                DescribeCommand.ScaleName.class,
+                DescribeCommand.ChordName.class,
+                DescribeCommand.Instruments.class
+        })
 public class DescribeCommand implements Callable<Integer> {
     @CommandLine.ParentCommand AgentCli parent;
 
@@ -30,8 +37,70 @@ public class DescribeCommand implements Callable<Integer> {
     public Integer call() {
         parent.commandName = "describe";
         return parent.fail(ExitCode.USAGE, "USAGE", "argv[1]",
-                "usage: describe instruments --soundbank <id>",
-                "Install generaluser, then pass --soundbank generaluser.");
+                "usage: describe scale <key> | describe chord <symbol> --key <key> | describe instruments --soundbank <id>",
+                "Try describe scale D-dorian.");
+    }
+
+    @CommandLine.Command(name = "scale", description = "List the pitch classes of a scale.")
+    public static class ScaleName implements Callable<Integer> {
+        @CommandLine.ParentCommand DescribeCommand describe;
+        @CommandLine.Parameters(index = "0..1", arity = "1..2", paramLabel = "<tonic mode>")
+        List<String> name;
+
+        @Override
+        public Integer call() {
+            AgentCli parent = describe.cli();
+            parent.commandName = "describe scale";
+            try {
+                Key key = Key.parse(String.join(" ", name));
+                Map<String, String> fields = new LinkedHashMap<>();
+                fields.put("scale", key.name());
+                fields.put("pcs", key.pcs());
+                Map<String, Object> data = new LinkedHashMap<>();
+                data.put("scale", key.name());
+                data.put("pcs", key.pcs());
+                return parent.finish(ExitCode.OK, KeyValue.line(fields), "athenacl.result.scale/1",
+                        data, List.of(), List.of());
+            } catch (IllegalArgumentException e) {
+                return parent.fail(ExitCode.INVALID_INPUT, "INVALID_INPUT", "argv[1]", e.getMessage(),
+                        "Use a tonic and a mode, such as \"D dorian\" or D-dorian.");
+            }
+        }
+    }
+
+    @CommandLine.Command(name = "chord", description = "Spell a chord and its roman numeral in a key.")
+    public static class ChordName implements Callable<Integer> {
+        @CommandLine.ParentCommand DescribeCommand describe;
+        @CommandLine.Parameters(index = "0", paramLabel = "<symbol>")
+        String symbol;
+        @CommandLine.Option(names = "--key", required = true, paramLabel = "<tonic mode>")
+        String keyName;
+
+        @Override
+        public Integer call() {
+            AgentCli parent = describe.cli();
+            parent.commandName = "describe chord";
+            try {
+                Key key = Key.parse(keyName);
+                Chord chord = Chord.parse(symbol);
+                String roman = chord.roman(key).format();
+                String pcs = chord.pcs(key);
+                Map<String, String> fields = new LinkedHashMap<>();
+                fields.put("chord", symbol.trim());
+                fields.put("roman", roman);
+                fields.put("pcs", pcs);
+                Map<String, Object> data = new LinkedHashMap<>();
+                data.put("chord", symbol.trim());
+                data.put("roman", roman);
+                data.put("pcs", pcs);
+                data.put("key", key.name());
+                return parent.finish(ExitCode.OK, KeyValue.line(fields), "athenacl.result.chord/1",
+                        data, List.of(), List.of());
+            } catch (IllegalArgumentException e) {
+                return parent.fail(ExitCode.INVALID_INPUT, "INVALID_INPUT", "argv[1]", e.getMessage(),
+                        "Use a symbol such as Dm7 and a key such as \"D dorian\".");
+            }
+        }
     }
 
     AgentCli cli() {

@@ -22,13 +22,17 @@ public final class SchemaRegistry {
             "athenacl.result.schema/1",
             "athenacl.result.error/1",
             "athenacl.result.render/1",
+            "athenacl.result.play/1",
             "athenacl.result.describe-music/1",
             "athenacl.result.determinism/1",
             "athenacl.result.inspect/1",
             "athenacl.result.soundbank/1",
             "athenacl.result.instruments/1",
             "athenacl.result.analyze/1",
-            "athenacl.result.check/1");
+            "athenacl.result.check/1",
+            "athenacl.result.scale/1",
+            "athenacl.result.chord/1",
+            "athenacl.result.progression/1");
 
     private SchemaRegistry() {
     }

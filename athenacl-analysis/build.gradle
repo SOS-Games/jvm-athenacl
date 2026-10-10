@@ -1,5 +1,6 @@
 dependencies {
   api project(':athenacl-events')
+  implementation project(':athenacl-theory')
   testImplementation "org.junit.jupiter:junit-jupiter:$junitVersion"
   testRuntimeOnly "org.junit.platform:junit-platform-launcher:$junitPlatformVersion"
 }

@@ -4,6 +4,7 @@ package io.github.sosgames.athenacl.analysis;
 import io.github.sosgames.athenacl.events.NoteEvent;
 import io.github.sosgames.athenacl.events.Score;
 import io.github.sosgames.athenacl.events.TimeBase;
+import io.github.sosgames.athenacl.theory.HarmonyEstimate;
 
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -14,7 +15,8 @@ import java.util.TreeMap;
 /**
  * Per-bar text for an event log. One column of a roll is a 16th note: {@code ●} starts the note,
  * {@code ─} holds it, {@code ·} is empty. A quarter note at the downbeat is {@code C4 |●───}.
- * Channel 9 is a drum grid under the pitched roll.
+ * Channel 9 is a drum grid under the pitched roll. When the notes support it, the summary
+ * adds {@code chord=}, {@code key=}, and {@code conf=} from {@link HarmonyEstimate}.
  */
 public final class DescribeMusic {
     private static final Map<Integer, String> DRUMS = Map.of(
@@ -30,13 +32,14 @@ public final class DescribeMusic {
     }
 
     public static String text(Score score, boolean roll, int fromBar, int toBar) {
+        HarmonyEstimate.Reading harmony = HarmonyEstimate.read(score);
         StringBuilder out = new StringBuilder();
         for (int bar = fromBar; bar <= toBar; bar++) {
             List<NoteEvent> inBar = notesIn(score, bar);
             if (!out.isEmpty()) {
                 out.append('\n');
             }
-            out.append(summary(score, bar, inBar));
+            out.append(summary(score, bar, inBar, harmony));
             if (roll) {
                 out.append('\n').append(roll(score, bar, inBar, false));
                 String drums = roll(score, bar, inBar, true);
@@ -49,6 +52,10 @@ public final class DescribeMusic {
     }
 
     public static String summary(Score score, int bar, List<NoteEvent> inBar) {
+        return summary(score, bar, inBar, HarmonyEstimate.read(score));
+    }
+
+    private static String summary(Score score, int bar, List<NoteEvent> inBar, HarmonyEstimate.Reading harmony) {
         List<NoteEvent> pitched = pitched(inBar);
         String range = range(pitched);
         int minVel = 0;
@@ -69,6 +76,14 @@ public final class DescribeMusic {
                 .append(" density=").append(density);
         if (!pitched.isEmpty()) {
             line.append(" vel=").append(minVel).append("..").append(maxVel);
+        }
+        if (harmony.key() != null) {
+            String chord = harmony.chord(bar);
+            if (chord != null) {
+                line.append(" chord=").append(chord);
+            }
+            line.append(" key=").append(harmony.key());
+            line.append(" conf=").append(harmony.confidence());
         }
         return line.toString();
     }
@@ -174,12 +189,21 @@ public final class DescribeMusic {
     }
 
     public static Map<String, Object> data(Score score, boolean roll, int fromBar, int toBar) {
+        HarmonyEstimate.Reading harmony = HarmonyEstimate.read(score);
         List<Map<String, Object>> bars = new ArrayList<>();
         for (int bar = fromBar; bar <= toBar; bar++) {
             List<NoteEvent> inBar = notesIn(score, bar);
             Map<String, Object> row = new LinkedHashMap<>();
             row.put("bar", bar);
-            row.put("text", summary(score, bar, inBar));
+            row.put("text", summary(score, bar, inBar, harmony));
+            if (harmony.key() != null) {
+                String chord = harmony.chord(bar);
+                if (chord != null) {
+                    row.put("chord", chord);
+                }
+                row.put("key", harmony.key());
+                row.put("confidence", harmony.confidence());
+            }
             if (roll) {
                 row.put("roll", roll(score, bar, inBar, false));
             }

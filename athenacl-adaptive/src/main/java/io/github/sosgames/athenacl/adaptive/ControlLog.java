@@ -21,16 +21,23 @@ public final class ControlLog {
     private ControlLog() {
     }
 
-    public record Log(String theme, long seed, int bars, List<Theme.Control> controls) {
+    public record Log(String theme, long seed, int bars, List<Theme.Control> controls, Double reference) {
     }
 
     public static byte[] encode(String theme, long seed, int bars, List<Theme.Control> controls) {
+        return encode(theme, seed, bars, controls, null);
+    }
+
+    public static byte[] encode(String theme, long seed, int bars, List<Theme.Control> controls, Double reference) {
         StringBuilder text = new StringBuilder();
         text.append("{\"type\":\"header\",\"schema\":\"athenacl.control/1\",\"theme\":\"")
                 .append(escape(theme))
                 .append("\",\"seed\":").append(seed)
-                .append(",\"bars\":").append(bars)
-                .append("}\n");
+                .append(",\"bars\":").append(bars);
+        if (reference != null && Double.isFinite(reference)) {
+            text.append(",\"reference\":").append(reference);
+        }
+        text.append("}\n");
         for (Theme.Control control : controls) {
             text.append("{\"type\":\"state\",\"bar\":").append(control.bar())
                     .append(",\"beat\":").append(control.beat())
@@ -46,6 +53,7 @@ public final class ControlLog {
         String theme = null;
         long seed = 0;
         int bars = 0;
+        Double reference = null;
         List<Theme.Control> controls = new ArrayList<>();
         for (String line : text.split("\n", -1)) {
             if (line.isBlank()) {
@@ -57,6 +65,9 @@ public final class ControlLog {
                 theme = node.path("theme").asText("");
                 seed = node.path("seed").asLong();
                 bars = node.path("bars").asInt();
+                if (node.has("reference")) {
+                    reference = node.path("reference").asDouble();
+                }
             } else if (type.equals("state")) {
                 controls.add(new Theme.Control(
                         node.path("bar").asInt(1),
@@ -68,7 +79,7 @@ public final class ControlLog {
         if (theme == null || theme.isBlank()) {
             throw new IOException("control log has no header");
         }
-        return new Log(theme, seed, bars, List.copyOf(controls));
+        return new Log(theme, seed, bars, List.copyOf(controls), reference);
     }
 
     public static List<Theme.Control> readTimeline(Path path) throws IOException {

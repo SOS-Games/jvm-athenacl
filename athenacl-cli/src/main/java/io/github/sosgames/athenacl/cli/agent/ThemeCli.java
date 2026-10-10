@@ -14,6 +14,7 @@ import io.github.sosgames.athenacl.cli.model.KeyValue;
 import io.github.sosgames.athenacl.cli.model.TextPaths;
 import io.github.sosgames.athenacl.events.EventLog;
 import io.github.sosgames.athenacl.events.Score;
+import io.github.sosgames.athenacl.render.loudness.StateLoudness;
 import io.github.sosgames.athenacl.render.soundbank.SoundbankPaths;
 import io.github.sosgames.athenacl.render.soundbank.SoundbankResolver;
 
@@ -80,10 +81,19 @@ final class ThemeCli {
                     "Check that the soundbank file is readable.");
         }
         Score score = full.score();
+        List<String> stateByBar = new ArrayList<>();
+        for (Director.BarInfo bar : full.bars()) {
+            stateByBar.add(bar.state());
+        }
         Map<String, byte[]> bodies = new LinkedHashMap<>();
         try {
             for (String format : requested) {
-                bodies.put(format, RenderCommand.body(format, score, selection.file()));
+                byte[] body = RenderCommand.body(format, score, selection.file());
+                if ("wav".equals(format) && loaded.theme.loudness() != null) {
+                    body = StateLoudness.fit(body, score.bpm(), score.barTicks(), stateByBar,
+                            loaded.theme.loudness().reference(), loaded.theme.loudness().offsets());
+                }
+                bodies.put(format, body);
             }
         } catch (MidiUnavailableException e) {
             return parent.fail(ExitCode.ENVIRONMENT, "GERVILL_ABSENT", "gervill",
@@ -93,7 +103,9 @@ final class ThemeCli {
             return parent.fail(ExitCode.RUNTIME, "IO_ERROR", "--formats", e.getMessage(),
                     "Rendering the WAV or MIDI file failed. Try again, or drop wav from --formats.");
         }
-        bodies.put("control", ControlLog.encode(TextPaths.portable(themePath), seed, loaded.theme.bars(), loaded.controls));
+        Double reference = loaded.theme.loudness() == null ? null : loaded.theme.loudness().reference();
+        bodies.put("control", ControlLog.encode(TextPaths.portable(themePath), seed, loaded.theme.bars(),
+                loaded.controls, reference));
         boolean changed = false;
         try {
             for (Map.Entry<String, byte[]> entry : bodies.entrySet()) {

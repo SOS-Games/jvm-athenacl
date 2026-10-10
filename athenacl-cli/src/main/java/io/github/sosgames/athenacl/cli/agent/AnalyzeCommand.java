@@ -1,28 +1,39 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 package io.github.sosgames.athenacl.cli.agent;
 
+import io.github.sosgames.athenacl.adaptive.ControlLog;
+import io.github.sosgames.athenacl.adaptive.LoudnessContour;
 import io.github.sosgames.athenacl.cli.model.ExitCode;
+import io.github.sosgames.athenacl.cli.model.KeyValue;
 import io.github.sosgames.athenacl.events.Score;
 import io.github.sosgames.athenacl.events.ScoreException;
+import io.github.sosgames.athenacl.render.loudness.StateLoudness;
 import io.github.sosgames.athenacl.rhythm.Swing;
 import picocli.CommandLine;
 
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.concurrent.Callable;
 
 /**
  * Measures a rendered WAV. A directory uses {@code score.wav}. The line is
  * {@code loudness.integrated=} LUFS, {@code truePeak=} dBTP, and {@code shortTerm=}.
- * When the directory also has {@code events.jsonl} with swung eighths, the line adds
- * {@code swing.measured=}.
+ * {@code --by state} instead prints each state's offset from the contour reference,
+ * plus {@code loudness.spread=}. When the directory also has {@code events.jsonl}
+ * with swung eighths, the plain line adds {@code swing.measured=}.
  */
 @CommandLine.Command(name = "analyze", description = "Measure loudness of a rendered WAV.")
 public class AnalyzeCommand implements Callable<Integer> {
     @CommandLine.ParentCommand AgentCli parent;
     @CommandLine.Parameters(index = "0", arity = "0..1", paramLabel = "<wav-or-dir>")
     Path input;
+    @CommandLine.Option(names = "--by", paramLabel = "state")
+    String by;
 
     @Override
     public Integer call() {
@@ -36,7 +47,68 @@ public class AnalyzeCommand implements Callable<Integer> {
             return parent.fail(ExitCode.NOT_FOUND, "NOT_FOUND", "argv[1]", "wav not found",
                     "Render with --formats wav, then pass that directory or score.wav.");
         }
+        if ("state".equals(by)) {
+            return byState(wav);
+        }
+        if (by != null) {
+            return parent.fail(ExitCode.USAGE, "USAGE", "--by", "unknown grouping " + by,
+                    "Use --by state.");
+        }
         return LoudnessReports.finish(parent, wav, "athenacl.result.analyze/1", swingSuffix(input));
+    }
+
+    private int byState(Path wav) {
+        Path dir = Files.isDirectory(input) ? input : input.getParent();
+        if (dir == null) {
+            return parent.fail(ExitCode.INVALID_INPUT, "INVALID_INPUT", "--by",
+                    "state loudness needs a render directory",
+                    "Pass the directory that contains control.jsonl and events.jsonl.");
+        }
+        Path control = dir.resolve("control.jsonl");
+        Path events = dir.resolve("events.jsonl");
+        if (!Files.isRegularFile(control) || !Files.isRegularFile(events)) {
+            return parent.fail(ExitCode.NOT_FOUND, "NOT_FOUND", "--by",
+                    "control.jsonl or events.jsonl is missing",
+                    "Render a theme with --out, then analyze that directory.");
+        }
+        try {
+            ControlLog.Log log = ControlLog.read(control);
+            Score score = NoteFiles.events(events);
+            List<String> states = new ArrayList<>();
+            for (int bar = 1; bar <= log.bars(); bar++) {
+                String state = null;
+                for (var controlPoint : log.controls()) {
+                    if (controlPoint.bar() <= bar) {
+                        state = controlPoint.state();
+                    }
+                }
+                states.add(state == null ? "" : state);
+            }
+            double reference = log.reference() == null ? -23.0 : log.reference();
+            Map<String, Double> offsets = StateLoudness.offsets(
+                    Files.readAllBytes(wav), score.bpm(), score.barTicks(), states, reference);
+            Map<String, String> fields = new LinkedHashMap<>();
+            double min = Double.POSITIVE_INFINITY;
+            double max = Double.NEGATIVE_INFINITY;
+            for (Map.Entry<String, Double> entry : offsets.entrySet()) {
+                if (!Double.isFinite(entry.getValue())) {
+                    continue;
+                }
+                fields.put("loudness." + entry.getKey(), LoudnessContour.tenths(entry.getValue()));
+                min = Math.min(min, entry.getValue());
+                max = Math.max(max, entry.getValue());
+            }
+            double spread = fields.isEmpty() ? 0 : max - min;
+            fields.put("loudness.spread", LoudnessContour.tenths(spread).replace("+", ""));
+            Map<String, Object> data = new LinkedHashMap<>();
+            data.put("reference", reference);
+            data.put("spread", spread);
+            return parent.finish(ExitCode.OK, KeyValue.line(fields), "athenacl.result.analyze/1",
+                    data, List.of(), List.of());
+        } catch (ScoreException | IOException e) {
+            return parent.fail(ExitCode.RUNTIME, "IO_ERROR", "argv[1]", e.getMessage(),
+                    "Check that the WAV and the control log are readable.");
+        }
     }
 
     private static String swingSuffix(Path input) {

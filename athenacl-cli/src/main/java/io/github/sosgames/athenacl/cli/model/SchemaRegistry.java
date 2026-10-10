@@ -39,7 +39,8 @@ public final class SchemaRegistry {
             "athenacl.result.explain/1",
             "athenacl.result.trace/1",
             "athenacl.result.bar/1",
-            "athenacl.result.replay/1");
+            "athenacl.result.replay/1",
+            "athenacl.result.preset/1");
 
     private SchemaRegistry() {
     }

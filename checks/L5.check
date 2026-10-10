@@ -1,0 +1,50 @@
+# L5 presets and loudness. Directive list: AGENTS.md, section "Layer checks".
+
+name: fantasy theme is valid
+args: theme validate themes/fantasy-dungeon.yaml
+exit: 0
+stdout-contains: states=6
+stdout-contains: warnings=0
+
+---
+name: explain the preset contour
+args: theme explain themes/fantasy-dungeon.yaml
+exit: 0
+stdout-contains: preset=fantasy
+stdout-contains: loudness.combat=+4.0
+
+---
+name: show the fantasy preset
+args: preset show fantasy
+exit: 0
+stdout-contains: preset=fantasy
+stdout-contains: taiko
+
+---
+name: render the dungeon tour
+args: render themes/fantasy-dungeon.yaml --timeline samples/timelines/dungeon-tour.json --seed 1 --out build/l5 --formats mid,wav,events,txt
+exit: 0
+delete-before: build/l5
+stdout-contains: bars=14
+stdout-contains: states=sneaking,peaceful,danger,combat,trading,partying
+file-exists: build/l5/score.wav
+file-exists: build/l5/events.jsonl
+
+---
+name: loudness follows the contour
+args: analyze build/l5 --by state
+exit: 0
+stdout-regex: loudness\.sneaking=(-2\.[0-5]|-1\.[0-9]|-0\.[5-9])
+stdout-regex: loudness\.peaceful=(-2\.0|-1\.[0-9]|-0\.[0-9]|\+0\.0)
+stdout-regex: loudness\.trading=(-2\.0|-1\.[0-9]|-0\.[0-9]|\+0\.0)
+stdout-regex: loudness\.partying=(\+0\.[5-9]|\+1\.[0-9]|\+2\.[0-5])
+stdout-regex: loudness\.danger=(\+1\.[0-9]|\+2\.[0-9]|\+3\.0)
+stdout-regex: loudness\.combat=(\+3\.[0-9]|\+4\.[0-9]|\+5\.0)
+stdout-regex: loudness\.spread=([0-5]\.[0-9]|6\.0)
+
+---
+name: opening bars are modal with a drone
+args: describe-music build/l5/events.jsonl --bars 1-4
+exit: 0
+stdout-regex: key=\S*(dorian|aeolian|phrygian)
+stdout-contains: drone

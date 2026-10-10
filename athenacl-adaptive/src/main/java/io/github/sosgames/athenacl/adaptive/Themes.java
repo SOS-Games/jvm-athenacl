@@ -24,7 +24,8 @@ import java.util.Set;
  */
 public final class Themes {
     private static final ObjectMapper YAML = new ObjectMapper(new YAMLFactory());
-    private static final Set<String> LAYERS = Set.of("pad", "bass", "lead", "drums");
+    private static final Set<String> LAYERS = Set.of(
+            "pad", "bass", "lead", "drums", "drone", "harp", "taiko", "brass");
 
     private Themes() {
     }
@@ -32,7 +33,7 @@ public final class Themes {
     public static boolean looksLike(Path path) {
         try {
             JsonNode root = YAML.readTree(Files.readString(path, StandardCharsets.UTF_8));
-            return root != null && root.path("states").isObject();
+            return root != null && (root.path("states").isObject() || root.path("preset").isTextual());
         } catch (IOException e) {
             return false;
         }
@@ -57,11 +58,21 @@ public final class Themes {
                     "THEME_SYNTAX", "", "theme is empty",
                     "Add a states map. See samples/themes/poc.yaml.")));
         }
-        List<ThemeIssue> issues = new ArrayList<>();
+        List<ThemeIssue> errors = new ArrayList<>();
+        List<ThemeIssue> warnings = new ArrayList<>();
         String id = text(root, "id", name);
-        int bars = root.path("bars").asInt(16);
+        String presetId = root.path("preset").asText("").trim();
+        Presets.Preset preset = null;
+        if (!presetId.isBlank()) {
+            preset = Presets.get(presetId);
+            if (preset == null) {
+                errors.add(issue("THEME_UNKNOWN_PRESET", "/preset", "unknown preset " + presetId,
+                        "Use a preset such as fantasy."));
+            }
+        }
+        int bars = root.path("bars").asInt(preset == null ? 16 : 14);
         if (bars < 1) {
-            issues.add(issue("THEME_BARS", "/bars", "bars must be 1 or more", "Set bars to 16 or more."));
+            errors.add(issue("THEME_BARS", "/bars", "bars must be 1 or more", "Set bars to 16 or more."));
             bars = 1;
         }
         int bpm = root.path("bpm").asInt(120);
@@ -74,24 +85,35 @@ public final class Themes {
                 numerator = Integer.parseInt(meterParts[0].trim());
                 denominator = Integer.parseInt(meterParts[1].trim());
             } catch (NumberFormatException e) {
-                issues.add(issue("THEME_METER", "/meter", "meter " + meter, "Use a meter like 4/4."));
+                errors.add(issue("THEME_METER", "/meter", "meter " + meter, "Use a meter like 4/4."));
             }
         } else {
-            issues.add(issue("THEME_METER", "/meter", "meter " + meter, "Use a meter like 4/4."));
+            errors.add(issue("THEME_METER", "/meter", "meter " + meter, "Use a meter like 4/4."));
         }
         Map<String, Theme.StateDef> states = new LinkedHashMap<>();
+        if (preset != null) {
+            states.putAll(preset.states());
+        }
         JsonNode stateNode = root.get("states");
-        if (stateNode == null || !stateNode.isObject() || stateNode.isEmpty()) {
-            issues.add(issue("THEME_STATES", "/states", "theme has no states",
-                    "Add at least one state, such as peaceful."));
-        } else {
+        if (stateNode != null && stateNode.isObject()) {
             var fields = stateNode.fields();
             while (fields.hasNext()) {
                 var entry = fields.next();
-                states.put(entry.getKey(), stateDef(entry.getKey(), entry.getValue(), bpm, issues));
+                states.put(entry.getKey(), stateDef(entry.getKey(), entry.getValue(), bpm, errors));
             }
         }
+        if (states.isEmpty()) {
+            errors.add(issue("THEME_STATES", "/states", "theme has no states",
+                    "Add at least one state, such as peaceful, or set preset: fantasy."));
+        }
         Map<String, Theme.StingerDef> stingers = new LinkedHashMap<>();
+        if (preset != null) {
+            for (Theme.StateDef state : preset.states().values()) {
+                if (state.stinger() != null) {
+                    stingers.putIfAbsent(state.stinger(), new Theme.StingerDef(state.stinger(), "C5", "1/8"));
+                }
+            }
+        }
         JsonNode stingerNode = root.get("stingers");
         if (stingerNode != null && stingerNode.isObject()) {
             var fields = stingerNode.fields();
@@ -105,7 +127,7 @@ public final class Themes {
         }
         for (Theme.StateDef state : states.values()) {
             if (state.stinger() != null && !stingers.containsKey(state.stinger())) {
-                issues.add(issue("THEME_UNKNOWN_STINGER", "/states/" + state.id() + "/stinger",
+                errors.add(issue("THEME_UNKNOWN_STINGER", "/states/" + state.id() + "/stinger",
                         "unknown stinger " + state.stinger(),
                         "Declare " + state.stinger() + " under stingers."));
             }
@@ -116,7 +138,7 @@ public final class Themes {
             try {
                 quantize = Quantize.parse(defaults.asText());
             } catch (IllegalArgumentException e) {
-                issues.add(issue("THEME_QUANTIZE", "/transitions/defaults/quantize", e.getMessage(),
+                errors.add(issue("THEME_QUANTIZE", "/transitions/defaults/quantize", e.getMessage(),
                         "Use bar, beat, or immediate."));
             }
         }
@@ -124,20 +146,32 @@ public final class Themes {
         JsonNode ruleNode = root.path("transitions").path("rules");
         if (ruleNode.isArray()) {
             for (int i = 0; i < ruleNode.size(); i++) {
-                rules.add(rule(ruleNode.get(i), i, states, issues));
+                rules.add(rule(ruleNode.get(i), i, states, errors));
             }
         }
         List<Theme.Control> timeline = new ArrayList<>();
         JsonNode timelineNode = root.get("timeline");
         if (timelineNode != null && timelineNode.isArray()) {
             for (int i = 0; i < timelineNode.size(); i++) {
-                timeline.add(control(timelineNode.get(i), "/timeline/" + i, states, issues));
+                timeline.add(control(timelineNode.get(i), "/timeline/" + i, states, errors));
             }
         }
-        if (!issues.isEmpty()) {
-            throw new ThemeException(issues);
+        LoudnessContour loudness = preset == null ? null : preset.loudness();
+        if (loudness != null) {
+            double spread = loudness.spread();
+            if (spread > 9) {
+                errors.add(issue("THEME_LOUDNESS", "/loudness", "loudness spread " + LoudnessContour.tenths(spread),
+                        "Keep the contour inside 9 LU."));
+            } else if (spread > loudness.maxSpread()) {
+                warnings.add(issue("THEME_LOUDNESS", "/loudness", "loudness spread " + LoudnessContour.tenths(spread),
+                        "The contour is wider than maxSpread. Narrow it, or raise maxSpread."));
+            }
         }
-        return new Theme(id, bars, bpm, numerator, denominator, states, stingers, quantize, rules, timeline);
+        if (!errors.isEmpty()) {
+            throw new ThemeException(errors);
+        }
+        return new Theme(id, bars, bpm, numerator, denominator, states, stingers, quantize, rules, timeline,
+                presetId.isBlank() ? null : presetId, loudness, warnings);
     }
 
     /** Four decimal places, so a YAML float and the control log agree. */

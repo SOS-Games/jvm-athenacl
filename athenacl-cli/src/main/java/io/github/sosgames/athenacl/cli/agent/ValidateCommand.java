@@ -45,11 +45,11 @@ public class ValidateCommand implements Callable<Integer> {
             Map<String, String> fields = new LinkedHashMap<>();
             fields.put("states", Integer.toString(loaded.states().size()));
             fields.put("errors", "0");
-            fields.put("warnings", "0");
+            fields.put("warnings", Integer.toString(loaded.warnings().size()));
             Map<String, Object> data = new LinkedHashMap<>();
             data.put("states", loaded.states().size());
             data.put("errors", 0);
-            data.put("warnings", 0);
+            data.put("warnings", loaded.warnings().size());
             return parent.finish(ExitCode.OK, KeyValue.line(fields), "athenacl.result.validate/1",
                     data, List.of(), List.of());
         } catch (ThemeException e) {

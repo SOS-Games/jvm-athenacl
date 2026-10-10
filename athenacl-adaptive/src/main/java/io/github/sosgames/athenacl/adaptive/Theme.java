@@ -22,13 +22,22 @@ public record Theme(
         Map<String, StingerDef> stingers,
         Quantize defaultQuantize,
         List<Rule> rules,
-        List<Control> timeline) {
+        List<Control> timeline,
+        String preset,
+        LoudnessContour loudness,
+        List<ThemeIssue> warnings) {
 
     public Theme {
         states = Collections.unmodifiableMap(new LinkedHashMap<>(states));
         stingers = Collections.unmodifiableMap(new LinkedHashMap<>(stingers));
         rules = List.copyOf(rules);
         timeline = List.copyOf(timeline);
+        warnings = List.copyOf(warnings);
+    }
+
+    public Theme withBars(int bars) {
+        return new Theme(id, bars, bpm, numerator, denominator, states, stingers, defaultQuantize, rules,
+                timeline, preset, loudness, warnings);
     }
 
     public long barTicks() {
@@ -53,9 +62,21 @@ public record Theme(
         return defaultQuantize;
     }
 
-    public record StateDef(String id, Key key, int tempo, List<String> layers, String stinger) {
+    public record StateDef(String id, Key key, int tempo, List<String> layers, String stinger,
+                           Map<String, Integer> programs) {
+        public StateDef(String id, Key key, int tempo, List<String> layers, String stinger) {
+            this(id, key, tempo, layers, stinger, Map.of());
+        }
+
         public StateDef {
             layers = List.copyOf(layers);
+            programs = programs == null || programs.isEmpty()
+                    ? Map.of()
+                    : Collections.unmodifiableMap(new LinkedHashMap<>(programs));
+        }
+
+        public int program(String layer, int fallback) {
+            return programs.getOrDefault(layer, fallback);
         }
     }
 

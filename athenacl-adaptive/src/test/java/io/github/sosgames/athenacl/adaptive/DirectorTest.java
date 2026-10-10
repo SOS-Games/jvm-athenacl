@@ -65,8 +65,7 @@ class DirectorTest {
         java.nio.file.Files.createDirectories(written.getParent());
         java.nio.file.Files.write(written, log);
         ControlLog.Log read = ControlLog.read(written);
-        Theme replayTheme = new Theme(theme.id(), read.bars(), theme.bpm(), theme.numerator(), theme.denominator(),
-                theme.states(), theme.stingers(), theme.defaultQuantize(), theme.rules(), List.of());
+        Theme replayTheme = theme.withBars(read.bars());
         Director.Performance replay = Director.perform(replayTheme, read.controls(), read.seed());
         assertEquals(EventLog.hash(full.score()), EventLog.hash(replay.score()));
     }

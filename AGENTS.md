@@ -4,7 +4,7 @@ Instructions for AI coding agents working in **jvm-athenacl**.
 
 ## Project
 
-GPL-3.0-or-later Java 21 rewrite of athenaCL as an adaptive game-music engine for libGDX desktop. Package `io.github.sosgames.athenacl`. Layer plan: [docs/research/05-project-plan.md](docs/research/05-project-plan.md). L4 (offline adaptive director) is in the tree. Do not start L5 until the user asks.
+GPL-3.0-or-later Java 21 rewrite of athenaCL as an adaptive game-music engine for libGDX desktop. Package `io.github.sosgames.athenacl`. Layer plan: [docs/research/05-project-plan.md](docs/research/05-project-plan.md). L5 (presets and loudness) is in the tree. Do not start L6 until the user asks.
 
 - Java 21 (`options.release = 21`). Versions live in `gradle.properties`.
 - Groovy Gradle, same shape as SOS-Games/jvm-mw. Root `gradlew layerCheck`. CLI: `gradlew :athenacl-cli:agentCli --args="help"`.
@@ -50,6 +50,10 @@ gradlew.bat :athenacl-cli:agentCli --args="rhythm pattern x..x..x. --meter 6/8 -
 gradlew.bat :athenacl-cli:agentCli --args="rhythm poly 3:2 --bars 2 --out build/l3p"
 gradlew.bat :athenacl-cli:agentCli --args="theme validate samples/themes/poc.yaml"
 gradlew.bat :athenacl-cli:agentCli --args="render samples/themes/poc.yaml --timeline samples/timelines/poc.json --seed 42 --out build/l4"
+gradlew.bat :athenacl-cli:agentCli --args="preset show fantasy"
+gradlew.bat :athenacl-cli:agentCli --args="theme explain themes/fantasy-dungeon.yaml"
+gradlew.bat :athenacl-cli:agentCli --args="render themes/fantasy-dungeon.yaml --timeline samples/timelines/dungeon-tour.json --seed 1 --out build/l5 --formats mid,wav,events,txt"
+gradlew.bat :athenacl-cli:agentCli --args="analyze build/l5 --by state"
 ```
 
 | Command | Use when |
@@ -63,10 +67,11 @@ gradlew.bat :athenacl-cli:agentCli --args="render samples/themes/poc.yaml --time
 | debug | You want `debug determinism` (same event-log hash twice), `debug inspect` (filter notes with `--where`), `debug check --loudness`, `debug check --stuck-notes`, `debug bar`, `debug trace --transitions`, or `debug replay`. |
 | soundbank | You want to install, list, or show the GeneralUser GS soundbank. |
 | describe | You want `describe scale`, `describe chord`, or `describe instruments` (287 presets and 13 drum kits in GeneralUser GS). |
-| analyze | You want EBU R128 integrated loudness and true peak for a WAV or a render directory. A swung render also prints `swing.measured=`. |
+| analyze | You want EBU R128 integrated loudness and true peak for a WAV or a render directory. A swung render also prints `swing.measured=`. `analyze <dir> --by state` prints each state's offset from the contour. |
 | theory | You want `theory progression` to voice-lead roman numerals into `events.jsonl`. |
 | rhythm | You want `rhythm pattern` to print a drum grid, or `rhythm poly` to write 3-against-2 into `events.jsonl`. |
 | theme | You want `theme validate` to check a theme file, or `theme explain` to print its states. |
+| preset | You want `preset show fantasy` for the dungeon preset's instruments and GM limits. |
 
 Shared flags, in front of the command or after it: `--json`, `--dry-run`, `--strict`, `-v`, `-vv`, `--log-level <error|warn|info|debug|trace>`, `-h`.
 
@@ -97,6 +102,7 @@ Published schema ids:
 - `athenacl.result.trace/1`
 - `athenacl.result.bar/1`
 - `athenacl.result.replay/1`
+- `athenacl.result.preset/1`
 
 When you add a command, add it to `CommandCatalog`, add a row to the table above, and add a block to the layer's `checks/L*.check`. `LayerCheckTest` fails if the table is missing a catalog command.
 
@@ -234,6 +240,14 @@ The download URL is a pinned commit until this project hosts its own copy. Do no
 
 `render samples/themes/poc.yaml --seed 42 --bars 9-10 --at "9 state combat 0.6"` prints the same events as bars 9–10 of that full render. `debug bar samples/themes/poc.yaml --seed 42 --bar 9` prints `bar=9 state=combat` and one `note id= layer= seed= why=` line per note. `debug replay build/l4/control.jsonl` prints the same `hash=` as the render.
 
-## Not in L4
+## Presets and loudness
 
-Presets, the fantasy-dungeon theme, loudness calibration, beat retraction, motifs, and libGDX. Do not add them in a drive-by change.
+`preset show fantasy` prints `preset=fantasy` and the GM instruments (harp, choir, horn, flute, fiddle, taiko). `theme explain themes/fantasy-dungeon.yaml` prints `preset=fantasy` and the design contour, including `loudness.combat=+4.0`. `theme validate` on that file prints `states=6` and `warnings=0`.
+
+`render themes/fantasy-dungeon.yaml --timeline samples/timelines/dungeon-tour.json --seed 1 --out build/l5` plays fourteen bars at one tempo. The summary lists `states=sneaking,peaceful,danger,combat,trading,partying`. The WAV is trimmed so `analyze build/l5 --by state` prints each state's measured offset within 1 LU of the contour, and `loudness.spread=` stays at or under 6.0. The event-log hash does not include that trim.
+
+`describe-music build/l5/events.jsonl --bars 1-4` estimates the key from those bars only. The line ends with `layers=`, and the sneaking bars include `drone`. The mode is dorian, aeolian, or phrygian.
+
+## Not in L5
+
+Beat retraction, motifs, the scifi preset, and libGDX. Do not add them in a drive-by change.

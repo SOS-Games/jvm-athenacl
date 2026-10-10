@@ -141,8 +141,7 @@ public final class TraceCommands {
                     "Check that the theme file is readable."));
             return null;
         }
-        Theme limited = new Theme(theme.id(), recorded.bars(), theme.bpm(), theme.numerator(), theme.denominator(),
-                theme.states(), theme.stingers(), theme.defaultQuantize(), theme.rules(), List.of());
+        Theme limited = theme.withBars(recorded.bars());
         return new Played(Director.perform(limited, recorded.controls(), recorded.seed()));
     }
 

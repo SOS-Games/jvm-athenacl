@@ -11,6 +11,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
+import java.util.TreeSet;
 
 /**
  * Per-bar text for an event log. One column of a roll is a 16th note: {@code ●} starts the note,
@@ -32,7 +33,7 @@ public final class DescribeMusic {
     }
 
     public static String text(Score score, boolean roll, int fromBar, int toBar) {
-        HarmonyEstimate.Reading harmony = HarmonyEstimate.read(score);
+        HarmonyEstimate.Reading harmony = HarmonyEstimate.read(score, fromBar, toBar);
         StringBuilder out = new StringBuilder();
         for (int bar = fromBar; bar <= toBar; bar++) {
             List<NoteEvent> inBar = notesIn(score, bar);
@@ -85,7 +86,21 @@ public final class DescribeMusic {
             line.append(" key=").append(harmony.key());
             line.append(" conf=").append(harmony.confidence());
         }
+        String layers = layers(inBar);
+        if (!layers.isEmpty()) {
+            line.append(" layers=").append(layers);
+        }
         return line.toString();
+    }
+
+    private static String layers(List<NoteEvent> inBar) {
+        TreeSet<String> names = new TreeSet<>();
+        for (NoteEvent note : inBar) {
+            if (note.layer() != null && !note.layer().isBlank()) {
+                names.add(note.layer());
+            }
+        }
+        return String.join(",", names);
     }
 
     private static String roll(Score score, int bar, List<NoteEvent> inBar, boolean drums) {

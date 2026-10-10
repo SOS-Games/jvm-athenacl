@@ -9,13 +9,12 @@ import javax.sound.sampled.SourceDataLine;
 import javax.sound.sampled.UnsupportedAudioFileException;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
-import java.io.InputStream;
-import java.nio.file.Files;
 import java.nio.file.Path;
 
 /**
  * Plays a WAV on the default speakers. {@code play --dry-run} reads the length and does not
- * open the device. This is ordinary Java sound, not the libGDX window.
+ * open the device. A file is opened as a file: Java's WAV reader rewinds the stream, and a
+ * plain file stream cannot. This is ordinary Java sound, not the libGDX window.
  */
 public final class SpeakerPlayer {
     private SpeakerPlayer() {
@@ -26,25 +25,25 @@ public final class SpeakerPlayer {
 
     public static Played play(Path wav, boolean dryRun)
             throws IOException, UnsupportedAudioFileException, LineUnavailableException {
-        try (InputStream in = Files.newInputStream(wav)) {
-            return play(in, dryRun);
+        try (AudioInputStream audio = AudioSystem.getAudioInputStream(wav.toFile())) {
+            return play(audio, dryRun);
         }
     }
 
     public static Played play(byte[] wav, boolean dryRun)
             throws IOException, UnsupportedAudioFileException, LineUnavailableException {
-        return play(new ByteArrayInputStream(wav), dryRun);
+        try (AudioInputStream audio = AudioSystem.getAudioInputStream(new ByteArrayInputStream(wav))) {
+            return play(audio, dryRun);
+        }
     }
 
-    private static Played play(InputStream in, boolean dryRun)
-            throws IOException, UnsupportedAudioFileException, LineUnavailableException {
-        try (AudioInputStream audio = AudioSystem.getAudioInputStream(in)) {
-            double seconds = seconds(audio);
-            if (!dryRun) {
-                write(audio);
-            }
-            return new Played(seconds, dryRun);
+    private static Played play(AudioInputStream audio, boolean dryRun)
+            throws IOException, LineUnavailableException {
+        double seconds = seconds(audio);
+        if (!dryRun) {
+            write(audio);
         }
+        return new Played(seconds, dryRun);
     }
 
     private static double seconds(AudioInputStream audio) {

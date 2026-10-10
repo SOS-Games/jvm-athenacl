@@ -116,7 +116,13 @@ public final class CommandCatalog {
                             gradle("theme validate samples/themes/poc.yaml"),
                             gradle("theme explain samples/themes/poc.yaml")),
                     false,
-                    "athenacl.result.validate/1"));
+                    "athenacl.result.validate/1"),
+            new CommandInfo(
+                    "preset",
+                    "preset show prints a built-in genre preset: instruments and the GM limits.",
+                    List.of(gradle("preset show fantasy")),
+                    false,
+                    "athenacl.result.preset/1"));
 
     private CommandCatalog() {
     }

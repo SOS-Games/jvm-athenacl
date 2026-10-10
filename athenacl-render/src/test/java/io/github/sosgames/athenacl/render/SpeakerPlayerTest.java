@@ -10,6 +10,8 @@ import javax.sound.sampled.AudioInputStream;
 import javax.sound.sampled.AudioSystem;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -31,6 +33,21 @@ class SpeakerPlayerTest {
         AudioSystem.write(new AudioInputStream(new ByteArrayInputStream(pcm), WavRenderer.FORMAT, frames),
                 AudioFileFormat.Type.WAVE, out);
         SpeakerPlayer.Played played = SpeakerPlayer.play(out.toByteArray(), true);
+        assertTrue(played.dryRun());
+        assertEquals(1.0, played.seconds(), 1e-6);
+    }
+
+    @Test
+    void dryRunReadsAWavFile() throws Exception {
+        int frames = 44100;
+        byte[] pcm = new byte[WavRenderer.FORMAT.getFrameSize() * frames];
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        AudioSystem.write(new AudioInputStream(new ByteArrayInputStream(pcm), WavRenderer.FORMAT, frames),
+                AudioFileFormat.Type.WAVE, out);
+        Path wav = Path.of("build/speaker-dry.wav");
+        Files.createDirectories(wav.getParent());
+        Files.write(wav, out.toByteArray());
+        SpeakerPlayer.Played played = SpeakerPlayer.play(wav, true);
         assertTrue(played.dryRun());
         assertEquals(1.0, played.seconds(), 1e-6);
     }

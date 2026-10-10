@@ -10,9 +10,9 @@ import java.util.Locale;
 import java.util.Map;
 
 /**
- * Chord and key guesses for {@code describe-music}. The key is one guess for the whole
- * piece: cosine similarity against a mode profile. The lowest note of bar 1 counts as
- * four extra notes, because a short loop usually states its tonic there.
+ * Chord and key guesses for {@code describe-music}. The key is one guess for the bars
+ * you asked about: cosine similarity against a mode profile. The lowest note of the
+ * first of those bars counts as four extra notes, because a short loop usually states its tonic there.
  * A bar's chord is printed only when every chord tone is actually sounding.
  */
 public final class HarmonyEstimate {
@@ -30,16 +30,20 @@ public final class HarmonyEstimate {
     }
 
     public static Reading read(Score score) {
+        return read(score, 1, score.bars());
+    }
+
+    public static Reading read(Score score, int fromBar, int toBar) {
         long[] hist = new long[12];
         NoteEvent openingBass = null;
         boolean any = false;
         for (NoteEvent note : score.notes()) {
-            if (note.channel() == 9) {
+            if (note.channel() == 9 || note.bar() < fromBar || note.bar() > toBar) {
                 continue;
             }
             any = true;
             hist[Math.floorMod(note.pitch(), 12)] += note.durationTicks();
-            if (note.bar() == 1 && (openingBass == null || note.pitch() < openingBass.pitch())) {
+            if (note.bar() == fromBar && (openingBass == null || note.pitch() < openingBass.pitch())) {
                 openingBass = note;
             }
         }
@@ -64,7 +68,7 @@ public final class HarmonyEstimate {
             return Reading.none();
         }
         Map<Integer, String> chords = new LinkedHashMap<>();
-        for (int bar = 1; bar <= score.bars(); bar++) {
+        for (int bar = fromBar; bar <= toBar; bar++) {
             String symbol = chord(notesIn(score, bar), best);
             if (symbol != null) {
                 chords.put(bar, symbol);

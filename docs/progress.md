@@ -30,6 +30,12 @@ A note list such as `samples/notes/c-major-scale.yaml` renders to `score.mid`, `
 
 ## L4 — Adaptive director, offline
 
-`gradlew layerCheck -Player=L4` passes (6 checks). The full `gradlew layerCheck` passes (44 checks).
+`gradlew layerCheck -Player=L4` passes (6 checks).
 
 `theme validate` rejects a transition that names a missing state. `render` of `samples/themes/poc.yaml` with the poc timeline plays 16 bars through peaceful, sneaking, and combat, with both state changes on a bar line. Bars 9–10 of that render match a window that asks for combat at intensity 0.6. `debug replay` of `control.jsonl` prints the same hash.
+
+## L5 — Presets and loudness
+
+`gradlew layerCheck -Player=L5` passes (6 checks). The full `gradlew layerCheck` passes (50 checks).
+
+`themes/fantasy-dungeon.yaml` uses the fantasy preset: six states, a drone under the sneaking bars, and a loudness contour from sneaking at −1.5 LU to combat at +4.0. `analyze --by state` measures each state within 1 LU of that contour, with the spread at or under 6. The event-log hash is unchanged by the WAV trim.

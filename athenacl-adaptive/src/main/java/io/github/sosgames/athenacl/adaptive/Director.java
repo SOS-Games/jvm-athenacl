@@ -101,6 +101,12 @@ public final class Director {
             bars.add(info);
             ids.start(bar);
             long start = (bar - 1L) * barTicks;
+            if (changed) {
+                for (String layer : state.layers()) {
+                    events.add(new ControlEvent.ProgramChange(start, StockLayers.channel(layer),
+                            StockLayers.program(state, layer)));
+                }
+            }
             if (changed && state.stinger() != null) {
                 Theme.StingerDef stinger = theme.stingers().get(state.stinger());
                 if (stinger != null) {

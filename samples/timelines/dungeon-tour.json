@@ -1,0 +1,8 @@
+[
+  {"bar": 1, "state": "sneaking", "intensity": 0.35},
+  {"bar": 5, "state": "peaceful", "intensity": 0.4},
+  {"bar": 7, "state": "danger", "intensity": 0.55},
+  {"bar": 9, "state": "combat", "intensity": 0.8},
+  {"bar": 11, "state": "trading", "intensity": 0.4},
+  {"bar": 13, "state": "partying", "intensity": 0.75}
+]

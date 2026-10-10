@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 package io.github.sosgames.athenacl.cli.agent;
 
+import io.github.sosgames.athenacl.adaptive.LoudnessContour;
 import io.github.sosgames.athenacl.adaptive.Theme;
 import io.github.sosgames.athenacl.adaptive.ThemeException;
 import io.github.sosgames.athenacl.adaptive.ThemeIssue;
@@ -19,7 +20,8 @@ import java.util.concurrent.Callable;
 
 /**
  * Prints the states a theme will play: key, tempo, layers, and the default quantize.
- * Presets are not merged yet. This is the theme file itself.
+ * A preset is already merged, so {@code preset=fantasy} and {@code loudness.combat=+4.0}
+ * describe the theme the director will actually use.
  */
 @CommandLine.Command(name = "explain", description = "Print the states and layers in a theme.")
 public class ExplainThemeCommand implements Callable<Integer> {
@@ -53,6 +55,9 @@ public class ExplainThemeCommand implements Callable<Integer> {
         StringBuilder text = new StringBuilder();
         Map<String, String> head = new LinkedHashMap<>();
         head.put("id", loaded.id());
+        if (loaded.preset() != null) {
+            head.put("preset", loaded.preset());
+        }
         head.put("bars", Integer.toString(loaded.bars()));
         head.put("states", String.join(",", loaded.states().keySet()));
         head.put("quantize", loaded.defaultQuantize().id());
@@ -67,6 +72,13 @@ public class ExplainThemeCommand implements Callable<Integer> {
                 fields.put("stinger", state.stinger());
             }
             text.append('\n').append(KeyValue.line(fields));
+        }
+        if (loaded.loudness() != null) {
+            Map<String, String> contour = new LinkedHashMap<>();
+            for (String state : loaded.states().keySet()) {
+                contour.put("loudness." + state, LoudnessContour.tenths(loaded.loudness().offset(state)));
+            }
+            text.append('\n').append(KeyValue.line(contour));
         }
         Map<String, Object> data = new LinkedHashMap<>();
         data.put("id", loaded.id());

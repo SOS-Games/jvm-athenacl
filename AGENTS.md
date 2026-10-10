@@ -4,7 +4,7 @@ Instructions for AI coding agents working in **jvm-athenacl**.
 
 ## Project
 
-GPL-3.0-or-later Java 21 rewrite of athenaCL as an adaptive game-music engine for libGDX desktop. Package `io.github.sosgames.athenacl`. Layer plan: [docs/research/05-project-plan.md](docs/research/05-project-plan.md). L2 (scales, chords, voice leading) is in the tree. Do not start L3 until the user asks.
+GPL-3.0-or-later Java 21 rewrite of athenaCL as an adaptive game-music engine for libGDX desktop. Package `io.github.sosgames.athenacl`. Layer plan: [docs/research/05-project-plan.md](docs/research/05-project-plan.md). L3 (rhythm, meter, swing, ties) is in the tree. Do not start L4 until the user asks.
 
 - Java 21 (`options.release = 21`). Versions live in `gradle.properties`.
 - Groovy Gradle, same shape as SOS-Games/jvm-mw. Root `gradlew layerCheck`. CLI: `gradlew :athenacl-cli:agentCli --args="help"`.
@@ -46,6 +46,8 @@ gradlew.bat :athenacl-cli:agentCli --args="describe instruments --soundbank gene
 gradlew.bat :athenacl-cli:agentCli --args="analyze build/l0"
 gradlew.bat :athenacl-cli:agentCli --args="describe scale D-dorian"
 gradlew.bat :athenacl-cli:agentCli --args="theory progression i bVII bVI bVII --key D-aeolian --voice-lead --out build/l2"
+gradlew.bat :athenacl-cli:agentCli --args="rhythm pattern x..x..x. --meter 6/8 --bars 2 --drum-grid"
+gradlew.bat :athenacl-cli:agentCli --args="rhythm poly 3:2 --bars 2 --out build/l3p"
 ```
 
 | Command | Use when |
@@ -56,11 +58,12 @@ gradlew.bat :athenacl-cli:agentCli --args="theory progression i bVII bVI bVII --
 | render | You have a note-list YAML file and want `score.mid`, `score.wav`, `events.jsonl`, and `score.txt` under `--out`. |
 | play | You want to hear a note list, an event log, or a WAV on the speakers. `--dry-run` does not open the device. |
 | describe-music | You want one `bar=` line per bar from an event log, a piano roll (`--roll`), or the chord and key estimate. |
-| debug | You want `debug determinism` (same event-log hash twice), `debug inspect` (filter notes with `--where`), or `debug check --loudness`. |
+| debug | You want `debug determinism` (same event-log hash twice), `debug inspect` (filter notes with `--where`), `debug check --loudness`, or `debug check --stuck-notes`. |
 | soundbank | You want to install, list, or show the GeneralUser GS soundbank. |
 | describe | You want `describe scale`, `describe chord`, or `describe instruments` (287 presets and 13 drum kits in GeneralUser GS). |
-| analyze | You want EBU R128 integrated loudness and true peak for a WAV or a render directory. |
+| analyze | You want EBU R128 integrated loudness and true peak for a WAV or a render directory. A swung render also prints `swing.measured=`. |
 | theory | You want `theory progression` to voice-lead roman numerals into `events.jsonl`. |
+| rhythm | You want `rhythm pattern` to print a drum grid, or `rhythm poly` to write 3-against-2 into `events.jsonl`. |
 
 Shared flags, in front of the command or after it: `--json`, `--dry-run`, `--strict`, `-v`, `-vv`, `--log-level <error|warn|info|debug|trace>`, `-h`.
 
@@ -84,6 +87,8 @@ Published schema ids:
 - `athenacl.result.scale/1`
 - `athenacl.result.chord/1`
 - `athenacl.result.progression/1`
+- `athenacl.result.rhythm/1`
+- `athenacl.result.poly/1`
 
 When you add a command, add it to `CommandCatalog`, add a row to the table above, and add a block to the layer's `checks/L*.check`. `LayerCheckTest` fails if the table is missing a catalog command.
 
@@ -203,6 +208,16 @@ The download URL is a pinned commit until this project hosts its own copy. Do no
 
 `describe-music` on that log prints `chord=Dm` and `key=D-aeolian` on bar 1, with `conf=` at least 0.70.
 
-## Not in L2
+## Rhythm
 
-Rhythm and groove, themes, the interactive REPL, and libGDX. Do not add them in a drive-by change.
+`rhythm pattern x..x..x. --meter 6/8 --bars 2 --drum-grid` repeats the pattern once per bar. `x` is a hit and `.` is a rest. The summary is `bars= onsets= meter= grouping=`. The grid row is `kick |` with the same piano-roll marks as `describe-music`. 6/8 groups as `3+3`.
+
+`render samples/notes/tie-across-bar.yaml --out build/l3` is one note held for six quarter-beats. The summary appends `maxDurBeats=6` after `soundbank=`. The note's end can sit in a later bar. `describe-music` draws that hold as `─` in the next bar. `debug check <dir> --stuck-notes` prints `stuck=0` when every note has an end and nothing overlaps. Overlap exits 6.
+
+`rhythm poly 3:2 --bars 2 --out build/l3p` writes `events.jsonl` only. Three pulses against two, both on the downbeat, so the summary has `layers=2 alignedAtBar=1,2`. `--dry-run` does not create `--out`.
+
+`render samples/notes/swing.yaml --groove "swing=0.62" --out build/l3s` moves eighths that sat halfway through a quarter. `0.50` is straight. The summary and `analyze` of that directory print `swing.measured=` to two decimals. A directory with no off-beat pair leaves that field off.
+
+## Not in L3
+
+Themes, the interactive REPL, libGDX, and the adaptive director. Do not add them in a drive-by change.

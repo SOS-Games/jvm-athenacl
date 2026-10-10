@@ -1,0 +1,45 @@
+# L3 rhythm and time. Directive list: AGENTS.md, section "Layer checks".
+
+name: drum pattern
+args: rhythm pattern "x..x..x." --meter 6/8 --bars 2 --drum-grid
+exit: 0
+stdout-contains: bars=2 onsets=6
+stdout-contains: kick |●
+
+---
+name: tie across the bar
+args: render samples/notes/tie-across-bar.yaml --out build/l3
+exit: 0
+delete-before: build/l3
+stdout-contains: notes=1
+stdout-contains: maxDurBeats=6
+file-exists: build/l3/events.jsonl
+
+---
+name: no stuck notes
+args: debug check build/l3 --stuck-notes
+exit: 0
+stdout-contains: stuck=0
+
+---
+name: three against two
+args: rhythm poly 3:2 --bars 2 --out build/l3p
+exit: 0
+delete-before: build/l3p
+stdout-contains: layers=2
+stdout-contains: alignedAtBar=1,2
+file-exists: build/l3p/events.jsonl
+
+---
+name: swing the offbeats
+args: render samples/notes/swing.yaml --groove "swing=0.62" --seed 7 --out build/l3s
+exit: 0
+delete-before: build/l3s
+stdout-contains: swing.measured=0.62
+
+---
+name: analyze measures the swing
+args: analyze build/l3s
+exit: 0
+stdout-contains: swing.measured=0.62
+stdout-contains: loudness.integrated=

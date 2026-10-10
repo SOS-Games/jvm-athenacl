@@ -1,0 +1,14 @@
+# Eighth notes on and off the beat, so --groove swing=0.62 has something to move.
+bpm: 120
+meter: "4/4"
+layer: melody
+velocity: 96
+notes:
+  - { pitch: C4, bar: 1, beat: 1, dur: "1/8" }
+  - { pitch: C4, bar: 1, beat: 1.5, dur: "1/8" }
+  - { pitch: C4, bar: 1, beat: 2, dur: "1/8" }
+  - { pitch: C4, bar: 1, beat: 2.5, dur: "1/8" }
+  - { pitch: C4, bar: 1, beat: 3, dur: "1/8" }
+  - { pitch: C4, bar: 1, beat: 3.5, dur: "1/8" }
+  - { pitch: C4, bar: 1, beat: 4, dur: "1/8" }
+  - { pitch: C4, bar: 1, beat: 4.5, dur: "1/8" }

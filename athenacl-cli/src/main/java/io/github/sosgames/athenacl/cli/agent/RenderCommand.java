@@ -15,6 +15,9 @@ import io.github.sosgames.athenacl.render.TextDump;
 import io.github.sosgames.athenacl.render.WavRenderer;
 import io.github.sosgames.athenacl.render.soundbank.SoundbankPaths;
 import io.github.sosgames.athenacl.render.soundbank.SoundbankResolver;
+import io.github.sosgames.athenacl.rhythm.Durations;
+import io.github.sosgames.athenacl.rhythm.Groove;
+import io.github.sosgames.athenacl.rhythm.Swing;
 import picocli.CommandLine;
 
 import javax.sound.midi.MidiUnavailableException;
@@ -50,6 +53,8 @@ public class RenderCommand implements Callable<Integer> {
     String soundbank;
     @CommandLine.Option(names = "--cache", paramLabel = "<dir>")
     Path cache;
+    @CommandLine.Option(names = "--groove", paramLabel = "<swing=0.62>")
+    String groove;
 
     @Override
     public Integer call() {
@@ -62,6 +67,15 @@ public class RenderCommand implements Callable<Integer> {
             return parent.fail(ExitCode.NOT_FOUND, "NOT_FOUND", "argv[1]",
                     "note list not found",
                     "Pass a YAML note list such as samples/notes/c-major-scale.yaml.");
+        }
+        Groove parsedGroove = null;
+        if (groove != null) {
+            try {
+                parsedGroove = Groove.parse(groove);
+            } catch (IllegalArgumentException e) {
+                return parent.fail(ExitCode.INVALID_INPUT, "INVALID_INPUT", "--groove", e.getMessage(),
+                        "Use swing=0.62. 0.50 is straight and 1 is the next downbeat.");
+            }
         }
         if (outDir == null && soundbank == null) {
             return parent.fail(ExitCode.USAGE, "USAGE", "--out", "usage: render <notes.yaml> --out <dir>",
@@ -93,6 +107,9 @@ public class RenderCommand implements Callable<Integer> {
         } catch (IOException e) {
             return parent.fail(ExitCode.RUNTIME, "IO_ERROR", "argv[1]", e.getMessage(),
                     "Check that the note list is readable.");
+        }
+        if (parsedGroove != null) {
+            score = Swing.apply(score, parsedGroove);
         }
         Map<String, byte[]> bodies = new LinkedHashMap<>();
         try {
@@ -130,6 +147,10 @@ public class RenderCommand implements Callable<Integer> {
         if (selection.fallback()) {
             fields.put("warning", "SOUNDBANK_FALLBACK");
         }
+        fields.put("maxDurBeats", Durations.maxBeats(score));
+        if (parsedGroove != null) {
+            Swing.measure(score).ifPresent(measured -> fields.put("swing.measured", Swing.format(measured)));
+        }
         Map<String, Object> data = new LinkedHashMap<>();
         data.put("files", requested.size());
         data.put("notes", score.notes().size());
@@ -139,6 +160,10 @@ public class RenderCommand implements Callable<Integer> {
         data.put("dryRun", parent.dryRun);
         data.put("seed", Long.toString(seed));
         data.put("soundbank", selection.name());
+        data.put("maxDurBeats", Durations.maxBeats(score));
+        if (parsedGroove != null) {
+            Swing.measure(score).ifPresent(measured -> data.put("swingMeasured", measured));
+        }
         return parent.finish(ExitCode.OK, KeyValue.line(fields), "athenacl.result.render/1",
                 data, warnings(selection), List.of());
     }

@@ -23,14 +23,14 @@ import java.util.concurrent.Callable;
  * {@code --strict}, {@code -h}) are read by {@link Globals}. picocli then dispatches the command
  * name and that command's own flags. Stdout is the result. Logs and the one-line error summary
  * go to stderr, except usage errors, which also print this help page on stdout.
- * Commands: help, version, schema, render, play, describe-music, debug, soundbank, describe, analyze, and theory.
+ * Commands: help, version, schema, render, play, describe-music, debug, soundbank, describe, analyze, theory, and rhythm.
  */
 @CommandLine.Command(name = "athenacl", mixinStandardHelpOptions = false,
         subcommands = {
                 HelpCommand.class, VersionCommand.class, SchemaCommand.class,
                 RenderCommand.class, PlayCommand.class, DescribeMusicCommand.class, DebugCommand.class,
                 SoundbankCommand.class, DescribeCommand.class, AnalyzeCommand.class,
-                TheoryCommand.class
+                TheoryCommand.class, RhythmCommand.class
         },
         description = "Headless athenaCL CLI.")
 public class AgentCli implements Callable<Integer> {

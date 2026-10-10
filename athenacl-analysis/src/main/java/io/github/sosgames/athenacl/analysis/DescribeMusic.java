@@ -145,9 +145,12 @@ public final class DescribeMusic {
     }
 
     private static List<NoteEvent> notesIn(Score score, int bar) {
+        long barStart = (bar - 1L) * score.barTicks();
+        long barEnd = barStart + score.barTicks();
         List<NoteEvent> found = new ArrayList<>();
         for (NoteEvent note : score.notes()) {
-            if (note.bar() == bar) {
+            long noteEnd = note.startTick() + note.durationTicks();
+            if (note.startTick() < barEnd && noteEnd > barStart) {
                 found.add(note);
             }
         }

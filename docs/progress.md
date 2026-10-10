@@ -20,6 +20,10 @@ A note list such as `samples/notes/c-major-scale.yaml` renders to `score.mid`, `
 
 ## L2 — Theory
 
-`gradlew layerCheck -Player=L2` passes (5 checks). The full `gradlew layerCheck` passes (32 checks).
+`gradlew layerCheck -Player=L2` passes (5 checks).
 
 `describe scale "D dorian"` lists `D,E,F,G,A,B,C`. `describe chord Dm7 --key "D dorian"` prints roman `i7`. `theory progression "i bVII bVI bVII" --key "D aeolian" --voice-lead` writes a four-bar event log whose largest leap is at most 4 semitones and whose parallel fifths and octaves are 0. `describe-music` on that log reads bar 1 as `Dm` in `D-aeolian`.
+
+## L3 — Rhythm and time
+
+`gradlew layerCheck -Player=L3` passes (6 checks). The full `gradlew layerCheck` passes (38 checks). A six-beat tie renders as one note with `maxDurBeats=6`, and `debug check --stuck-notes` reports `stuck=0`. `rhythm poly 3:2` writes two layers that meet on each downbeat. `render --groove "swing=0.62"` and `analyze` both print `swing.measured=0.62`.

@@ -2,20 +2,21 @@
 package io.github.sosgames.athenacl.cli.agent;
 
 import io.github.sosgames.athenacl.cli.model.ExitCode;
-import io.github.sosgames.athenacl.render.loudness.LoudnessMeter;
+import io.github.sosgames.athenacl.events.Score;
+import io.github.sosgames.athenacl.events.ScoreException;
+import io.github.sosgames.athenacl.rhythm.Swing;
 import picocli.CommandLine;
 
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
 import java.util.concurrent.Callable;
 
 /**
  * Measures a rendered WAV. A directory uses {@code score.wav}. The line is
  * {@code loudness.integrated=} LUFS, {@code truePeak=} dBTP, and {@code shortTerm=}.
+ * When the directory also has {@code events.jsonl} with swung eighths, the line adds
+ * {@code swing.measured=}.
  */
 @CommandLine.Command(name = "analyze", description = "Measure loudness of a rendered WAV.")
 public class AnalyzeCommand implements Callable<Integer> {
@@ -35,7 +36,27 @@ public class AnalyzeCommand implements Callable<Integer> {
             return parent.fail(ExitCode.NOT_FOUND, "NOT_FOUND", "argv[1]", "wav not found",
                     "Render with --formats wav, then pass that directory or score.wav.");
         }
-        return LoudnessReports.finish(parent, wav, "athenacl.result.analyze/1");
+        return LoudnessReports.finish(parent, wav, "athenacl.result.analyze/1", swingSuffix(input));
+    }
+
+    private static String swingSuffix(Path input) {
+        Path dir = Files.isDirectory(input) ? input : input.getParent();
+        if (dir == null) {
+            return null;
+        }
+        Path events = dir.resolve("events.jsonl");
+        if (!Files.isRegularFile(events)) {
+            return null;
+        }
+        try {
+            Score score = NoteFiles.events(events);
+            return Swing.measure(score).stream()
+                    .mapToObj(measured -> "swing.measured=" + Swing.format(measured))
+                    .findFirst()
+                    .orElse(null);
+        } catch (ScoreException | IOException e) {
+            return null;
+        }
     }
 
     static Path wav(Path input) {

@@ -16,6 +16,7 @@ application.applicationDefaultJvmArgs = [
 dependencies {
   implementation project(':athenacl-events')
   implementation project(':athenacl-theory')
+  implementation project(':athenacl-rhythm')
   implementation project(':athenacl-render')
   implementation project(':athenacl-analysis')
   implementation project(':athenacl-debug')

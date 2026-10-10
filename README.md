@@ -2,7 +2,7 @@
 
 A Java rewrite of [athenaCL](https://github.com/ales-tsurko/athenaCL) as an adaptive game-music engine for libGDX desktop. Package `io.github.sosgames.athenacl`. License [GPL-3.0-or-later](LICENSE).
 
-The tree is early. Layers through L2 are in: a headless CLI, note-list render to MIDI and WAV, a piano roll, the GeneralUser GS soundbank, an EBU R128 loudness meter, and scale, chord, and progression commands. Themes, generation, and the libGDX window come later. The layer plan is [docs/research/05-project-plan.md](docs/research/05-project-plan.md). What is done is [docs/progress.md](docs/progress.md).
+The tree is early. Layers through L3 are in: a headless CLI, note-list render to MIDI and WAV, a piano roll, the GeneralUser GS soundbank, an EBU R128 loudness meter, scale, chord, and progression commands, and rhythm (meter, ties, polyrhythm, swing). Themes, generation, and the libGDX window come later. The layer plan is [docs/research/05-project-plan.md](docs/research/05-project-plan.md). What is done is [docs/progress.md](docs/progress.md).
 
 ## Requirements
 

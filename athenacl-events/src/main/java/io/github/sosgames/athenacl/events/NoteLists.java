@@ -119,6 +119,10 @@ public final class NoteLists {
         int bars = 1;
         for (NoteEvent note : built) {
             bars = Math.max(bars, note.bar());
+            long lastTick = note.startTick() + note.durationTicks() - 1;
+            if (lastTick >= 0) {
+                bars = Math.max(bars, (int) (lastTick / barTicks) + 1);
+            }
         }
         List<ControlEvent> controls = List.of(
                 new ControlEvent.Tempo(0, bpm),

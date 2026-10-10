@@ -64,7 +64,7 @@ public final class CommandCatalog {
                     "athenacl.result.describe-music/1"),
             new CommandInfo(
                     "debug",
-                    "debug determinism hashes a note list twice. debug inspect filters notes with --where pitch=E4.",
+                    "debug determinism hashes a note list twice. debug inspect filters notes with --where pitch=E4. debug check --stuck-notes counts notes that never turn off.",
                     List.of(
                             gradle("debug determinism samples/notes/c-major-scale.yaml --runs 2"),
                             gradle("debug inspect build/l0/events.jsonl --where pitch=E4")),
@@ -99,7 +99,15 @@ public final class CommandCatalog {
                     List.of(gradle(
                             "theory progression i bVII bVI bVII --key D-aeolian --voice-lead --out build/l2")),
                     true,
-                    "athenacl.result.progression/1"));
+                    "athenacl.result.progression/1"),
+            new CommandInfo(
+                    "rhythm",
+                    "rhythm pattern prints a drum grid. rhythm poly writes 3-against-2 into events.jsonl.",
+                    List.of(
+                            gradle("rhythm pattern x..x..x. --meter 6/8 --bars 2 --drum-grid"),
+                            gradle("rhythm poly 3:2 --bars 2 --out build/l3p")),
+                    true,
+                    "athenacl.result.rhythm/1"));
 
     private CommandCatalog() {
     }

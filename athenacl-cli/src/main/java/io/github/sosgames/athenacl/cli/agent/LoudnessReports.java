@@ -16,6 +16,10 @@ final class LoudnessReports {
     }
 
     static int finish(AgentCli parent, Path wav, String schema) {
+        return finish(parent, wav, schema, null);
+    }
+
+    static int finish(AgentCli parent, Path wav, String schema, String extra) {
         try {
             LoudnessMeter.Reading reading = LoudnessMeter.measure(wav);
             Map<String, Object> data = new LinkedHashMap<>();
@@ -23,7 +27,8 @@ final class LoudnessReports {
             data.put("shortTerm", reading.shortTerm());
             data.put("truePeak", reading.truePeak());
             data.put("wav", wav.getFileName().toString());
-            return parent.finish(ExitCode.OK, reading.line(), schema, data, List.of(), List.of());
+            String line = extra == null || extra.isBlank() ? reading.line() : reading.line() + " " + extra;
+            return parent.finish(ExitCode.OK, line, schema, data, List.of(), List.of());
         } catch (IOException e) {
             return parent.fail(ExitCode.RUNTIME, "IO_ERROR", "argv[1]", e.getMessage(),
                     "Check that the WAV is readable PCM.");

@@ -1,0 +1,7 @@
+# One note held for six quarter-beats, from bar 1 beat 1 into bar 2.
+bpm: 120
+meter: "4/4"
+layer: melody
+velocity: 96
+notes:
+  - { pitch: C4, bar: 1, beat: 1, dur: "6/4" }

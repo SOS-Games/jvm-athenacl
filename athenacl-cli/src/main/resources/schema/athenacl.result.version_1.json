@@ -1,0 +1,31 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "athenacl.result.version/1",
+  "type": "object",
+  "required": ["schema", "ok", "command", "data", "warnings", "errors", "meta"],
+  "properties": {
+    "schema": { "const": "athenacl.result.version/1" },
+    "ok": { "type": "boolean" },
+    "command": { "const": "version" },
+    "data": {
+      "type": "object",
+      "required": ["version", "java", "gervill"],
+      "properties": {
+        "version": { "type": "string" },
+        "java": { "type": "string", "description": "Java feature version, such as 21." },
+        "gervill": { "enum": ["present", "absent"] }
+      }
+    },
+    "warnings": { "type": "array" },
+    "errors": { "type": "array" },
+    "meta": {
+      "type": "object",
+      "required": ["version", "seed", "durationMs"],
+      "properties": {
+        "version": { "type": "string" },
+        "seed": { "type": "string" },
+        "durationMs": { "type": "string", "description": "Wall-clock time. Not part of a musical hash." }
+      }
+    }
+  }
+}

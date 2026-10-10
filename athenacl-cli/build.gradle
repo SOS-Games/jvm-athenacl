@@ -1,0 +1,107 @@
+plugins {
+  id 'application'
+}
+
+eclipse.project.name = appName + '-cli'
+application.mainClass = 'io.github.sosgames.athenacl.cli.agent.AgentCli'
+application.applicationName = appName
+application.applicationDefaultJvmArgs = [
+  '-Dfile.encoding=UTF-8',
+  '-Dstdout.encoding=UTF-8',
+  '-Dstderr.encoding=UTF-8',
+  '-Djava.awt.headless=true',
+  '--add-exports=java.desktop/com.sun.media.sound=ALL-UNNAMED'
+]
+
+dependencies {
+  implementation project(':athenacl-events')
+  implementation project(':athenacl-render')
+  implementation project(':athenacl-analysis')
+  implementation project(':athenacl-debug')
+  implementation project(':athenacl-soundbank-generaluser')
+  implementation "info.picocli:picocli:$picocliVersion"
+  implementation "com.fasterxml.jackson.core:jackson-databind:$jacksonVersion"
+  testImplementation "org.junit.jupiter:junit-jupiter:$junitVersion"
+  testRuntimeOnly "org.junit.platform:junit-platform-launcher:$junitPlatformVersion"
+}
+
+def generatedDir = layout.buildDirectory.dir('generated/version')
+
+tasks.register('generateVersion') {
+  inputs.property('projectVersion', projectVersion)
+  outputs.dir(generatedDir)
+  doLast {
+    def dir = new File(generatedDir.get().asFile, 'io/github/sosgames/athenacl/cli/model')
+    dir.mkdirs()
+    new File(dir, 'BuildVersion.java').text = """package io.github.sosgames.athenacl.cli.model;
+
+public final class BuildVersion {
+    public static final String PROJECT = "${projectVersion}";
+
+    private BuildVersion() {
+    }
+}
+"""
+  }
+}
+
+sourceSets.main.java.srcDir(generatedDir)
+tasks.named('compileJava') { dependsOn('generateVersion') }
+
+def agentMain = 'io.github.sosgames.athenacl.cli.agent.AgentCli'
+def cliJvmArgs = [
+  '-Dfile.encoding=UTF-8',
+  '-Dstdout.encoding=UTF-8',
+  '-Dstderr.encoding=UTF-8',
+  '-Djava.awt.headless=true',
+  '--add-exports=java.desktop/com.sun.media.sound=ALL-UNNAMED'
+]
+
+tasks.register('agentCli', JavaExec) {
+  group = 'athenacl'
+  description = 'Headless athenacl CLI (see :athenacl-cli:agentCli --args="help")'
+  dependsOn tasks.named('classes')
+  classpath = sourceSets.main.runtimeClasspath
+  mainClass = agentMain
+  workingDir = rootProject.projectDir
+  jvmArgs = cliJvmArgs
+}
+
+tasks.register('layerCheck', JavaExec) {
+  group = 'athenacl'
+  description = 'Run checks/L*.check. Optional -Player=L0a.'
+  dependsOn tasks.named('classes')
+  classpath = sourceSets.main.runtimeClasspath
+  mainClass = 'io.github.sosgames.athenacl.cli.LayerCheck'
+  workingDir = rootProject.projectDir
+  jvmArgs = cliJvmArgs
+  args rootProject.projectDir.absolutePath, sourceSets.main.runtimeClasspath.asPath
+  if (project.hasProperty('layer')) {
+    args project.property('layer').toString()
+  }
+}
+
+test {
+  useJUnitPlatform()
+  workingDir = rootProject.projectDir
+  jvmArgs = cliJvmArgs
+  testLogging {
+    exceptionFormat = 'full'
+    showStandardStreams = true
+  }
+}
+
+jar {
+  archiveFileName.set("${appName}-${projectVersion}.jar")
+  duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+  dependsOn configurations.runtimeClasspath
+  from { configurations.runtimeClasspath.collect { it.isDirectory() ? it : zipTree(it) } }
+  exclude('META-INF/INDEX.LIST', 'META-INF/*.SF', 'META-INF/*.DSA', 'META-INF/*.RSA')
+  manifest {
+    attributes(
+      'Main-Class': agentMain,
+      'Add-Exports': 'java.desktop/com.sun.media.sound',
+      'Enable-Native-Access': 'ALL-UNNAMED'
+    )
+  }
+}

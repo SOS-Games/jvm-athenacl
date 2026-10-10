@@ -1,0 +1,54 @@
+# L1 soundbanks and loudness. Directive list: AGENTS.md, section "Layer checks".
+
+name: render wav for analyze
+args: render samples/notes/c-major-scale.yaml --out build/l0 --formats wav
+exit: 0
+file-exists: build/l0/score.wav
+
+---
+name: soundbank dry-run
+args: soundbank install generaluser --dry-run --cache build/l1/banks
+exit: 0
+delete-before: build/l1
+stdout-contains: action=download size=32319396 sha256=9575028c7a1f589f5770fccc8cff2734566af40cd26ed836944e9a5152688cfe
+file-absent: build/l1/banks
+
+---
+name: soundbank install
+args: soundbank install generaluser --cache build/l1/banks
+exit: 0
+stdout-contains: soundbank=generaluser status=installed sha256=9575028c7a1f589f5770fccc8cff2734566af40cd26ed836944e9a5152688cfe
+file-exists: build/l1/banks/GeneralUser-GS.sf2
+
+---
+name: soundbank install is idempotent
+args: soundbank install generaluser --cache build/l1/banks
+exit: 0
+stdout-contains: status=present changed=false
+
+---
+name: describe instruments
+args: describe instruments --soundbank generaluser --cache build/l1/banks
+exit: 0
+stdout-contains: instruments=287 drumkits=13
+
+---
+name: analyze loudness
+args: analyze build/l0
+exit: 0
+stdout-contains: loudness.integrated=
+stdout-contains: LUFS truePeak=
+stdout-contains: dBTP
+
+---
+name: debug check loudness
+args: debug check build/l0 --loudness
+exit: 0
+stdout-contains: loudness.integrated=
+stdout-contains: dBTP
+
+---
+name: missing soundbank falls back
+args: render samples/notes/c-major-scale.yaml --soundbank /nonexistent.sf2
+exit: 0
+stdout-contains: soundbank=emergency warning=SOUNDBANK_FALLBACK

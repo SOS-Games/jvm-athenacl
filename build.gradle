@@ -1,0 +1,38 @@
+buildscript {
+  repositories {
+    mavenCentral()
+    gradlePluginPortal()
+  }
+}
+
+allprojects {
+  apply plugin: 'eclipse'
+  apply plugin: 'idea'
+}
+
+configure(subprojects) {
+  apply plugin: 'java-library'
+  java.sourceCompatibility = 21
+  java.targetCompatibility = 21
+  tasks.withType(JavaCompile).configureEach {
+    options.incremental = true
+    options.encoding = 'UTF-8'
+    options.release = 21
+  }
+}
+
+subprojects {
+  version = "$projectVersion"
+  ext.appName = 'athenacl'
+  repositories {
+    mavenCentral()
+  }
+}
+
+tasks.register('layerCheck') {
+  group = 'athenacl'
+  description = 'Run checks/L*.check. Optional -Player=L0a.'
+  dependsOn ':athenacl-cli:layerCheck'
+}
+
+eclipse.project.name = 'jvm-athenacl-parent'

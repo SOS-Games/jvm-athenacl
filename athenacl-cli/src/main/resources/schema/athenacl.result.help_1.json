@@ -1,0 +1,38 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "athenacl.result.help/1",
+  "type": "object",
+  "required": ["schema", "ok", "command", "data", "warnings", "errors", "meta"],
+  "properties": {
+    "schema": { "const": "athenacl.result.help/1" },
+    "ok": { "type": "boolean" },
+    "command": { "const": "help" },
+    "data": {
+      "type": "object",
+      "required": ["commands"],
+      "properties": {
+        "commands": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "required": ["name", "summary", "examples", "writesFiles", "schema"],
+            "properties": {
+              "name": { "type": "string" },
+              "summary": { "type": "string" },
+              "examples": { "type": "array", "items": { "type": "string" } },
+              "writesFiles": { "type": "boolean" },
+              "schema": { "type": "string" }
+            }
+          }
+        }
+      }
+    },
+    "warnings": { "type": "array" },
+    "errors": { "type": "array" },
+    "meta": {
+      "type": "object",
+      "required": ["version", "seed", "durationMs"]
+    }
+  }
+}

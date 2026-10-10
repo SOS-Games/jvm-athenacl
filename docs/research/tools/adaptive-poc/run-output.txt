@@ -1,0 +1,27 @@
+t=  0.00s  request peaceful @ 0.3
+t=  9.00s  request peaceful @ 0.7
+t= 16.40s  request sneaking @ 0.4
+t= 29.10s  request combat @ 0.6
+t= 36.00s  request combat @ 1.0
+bar  0  t=  0.00s  peaceful bpm= 84 intensity=0.30   <- transition from -
+bar  1  t=  2.86s  peaceful bpm= 84 intensity=0.30
+bar  2  t=  5.71s  peaceful bpm= 84 intensity=0.30
+bar  3  t=  8.57s  peaceful bpm= 84 intensity=0.30
+bar  4  t= 11.43s  peaceful bpm= 84 intensity=0.50
+bar  5  t= 14.29s  peaceful bpm= 84 intensity=0.60
+bar  6  t= 17.14s  sneaking bpm=100 intensity=0.50   <- transition from peaceful
+bar  7  t= 19.54s  sneaking bpm=100 intensity=0.45
+bar  8  t= 21.94s  sneaking bpm=100 intensity=0.43
+bar  9  t= 24.34s  sneaking bpm=100 intensity=0.41
+bar 10  t= 26.74s  sneaking bpm=100 intensity=0.41
+bar 11  t= 29.14s  sneaking bpm=100 intensity=0.40
+bar 12  t= 31.54s  combat   bpm=144 intensity=0.50   <- transition from sneaking
+bar 13  t= 33.21s  combat   bpm=144 intensity=0.55
+bar 14  t= 34.88s  combat   bpm=144 intensity=0.58
+bar 15  t= 36.54s  combat   bpm=144 intensity=0.79
+bar 16  t= 38.21s  combat   bpm=144 intensity=0.89
+bar 17  t= 39.88s  combat   bpm=144 intensity=0.95
+bar 18  t= 41.54s  combat   bpm=144 intensity=0.97
+bar 19  t= 43.21s  combat   bpm=144 intensity=0.99
+bar 20  t= 44.88s  combat   bpm=144 intensity=0.99
+wrote /workspace/jtest/adaptive.wav (49.0 s)

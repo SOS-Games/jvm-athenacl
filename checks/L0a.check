@@ -1,0 +1,98 @@
+# L0a CLI skeleton. Directive list: AGENTS.md, section "Layer checks".
+
+name: help lists commands and examples
+args: help
+exit: 0
+stderr-empty
+stdout-contains: gradlew.bat :athenacl-cli:agentCli --args="help"
+stdout-contains: gradlew.bat :athenacl-cli:agentCli --args="help --json"
+stdout-contains: gradlew.bat :athenacl-cli:agentCli --args="version"
+stdout-contains: gradlew.bat :athenacl-cli:agentCli --args="version -vv"
+stdout-contains: gradlew.bat :athenacl-cli:agentCli --args="schema athenacl.result.version/1"
+
+---
+name: help json
+args: help --json
+exit: 0
+json-document
+json-array-nonempty: data.commands
+json-equals: schema athenacl.result.help/1
+json-equals: ok true
+
+---
+name: unknown command
+args: bogus
+exit: 2
+stderr-contains: unknown command: bogus
+stdout-contains: gradlew.bat :athenacl-cli:agentCli --args="help"
+
+---
+name: version
+args: version
+exit: 0
+stderr-empty
+stdout-contains: version=0.1.0
+stdout-contains: gervill=present
+stdout-regex: java=(2[1-9]|[3-9][0-9]+)
+
+---
+name: version logs stay on stderr
+args: version -vv
+exit: 0
+stdout-same-as: version
+stderr-regex: TRACE athenacl\.cli
+stdout-not-contains: TRACE
+stdout-not-contains: DEBUG
+
+---
+name: version json
+args: version --json
+exit: 0
+json-document
+json-equals: schema athenacl.result.version/1
+json-equals: data.version 0.1.0
+json-equals: data.gervill present
+json-regex: data.java (2[1-9]|[3-9][0-9]+)
+
+---
+name: schema document
+args: schema athenacl.result.version/1
+exit: 0
+json-document
+json-equals: $id athenacl.result.version/1
+
+---
+name: schema missing
+args: schema athenacl.missing/1
+exit: 4
+stdout-contains: error code=NOT_FOUND
+stdout-contains: path=argv[1]
+stdout-contains: fix=
+
+---
+name: schema dry-run writes nothing
+args: schema athenacl.result.version/1 --out build/layercheck/l0a-dry --dry-run
+exit: 0
+delete-before: build/layercheck/l0a-dry
+stdout-contains: dryRun=true
+stdout-contains: action=write
+stdout-contains: changed=true
+file-absent: build/layercheck/l0a-dry
+
+---
+name: schema atomic write
+args: schema athenacl.result.version/1 --out build/layercheck/l0a-write
+exit: 0
+delete-before: build/layercheck/l0a-write
+stdout-contains: changed=true
+stdout-contains: dryRun=false
+stdout-contains: action=write
+stdout-contains: path=build/layercheck/l0a-write/athenacl.result.version_1.json
+file-exists: build/layercheck/l0a-write/athenacl.result.version_1.json
+
+---
+name: schema write is idempotent
+args: schema athenacl.result.version/1 --out build/layercheck/l0a-write
+exit: 0
+stdout-contains: changed=false
+file-exists: build/layercheck/l0a-write/athenacl.result.version_1.json

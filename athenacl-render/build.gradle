@@ -1,0 +1,17 @@
+dependencies {
+  api project(':athenacl-events')
+  testImplementation "org.junit.jupiter:junit-jupiter:$junitVersion"
+  testRuntimeOnly "org.junit.platform:junit-platform-launcher:$junitPlatformVersion"
+}
+
+tasks.withType(JavaCompile).configureEach {
+  // --release rejects --add-exports. This module is the only one that imports Gervill.
+  options.release = null
+  options.compilerArgs.addAll(['--add-exports', 'java.desktop/com.sun.media.sound=ALL-UNNAMED'])
+}
+
+test {
+  useJUnitPlatform()
+  jvmArgs '-Dfile.encoding=UTF-8', '-Djava.awt.headless=true',
+      '--add-exports=java.desktop/com.sun.media.sound=ALL-UNNAMED'
+}

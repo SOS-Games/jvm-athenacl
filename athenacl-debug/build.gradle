@@ -1,0 +1,9 @@
+dependencies {
+  api project(':athenacl-events')
+  testImplementation "org.junit.jupiter:junit-jupiter:$junitVersion"
+  testRuntimeOnly "org.junit.platform:junit-platform-launcher:$junitPlatformVersion"
+}
+
+test {
+  useJUnitPlatform()
+}

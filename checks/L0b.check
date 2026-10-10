@@ -1,0 +1,50 @@
+# L0b events, render, describe. Directive list: AGENTS.md, section "Layer checks".
+
+name: render c major scale
+args: render samples/notes/c-major-scale.yaml --out build/l0 --formats mid,wav,events,txt
+exit: 0
+delete-before: build/l0
+stdout-contains: files=4 notes=8 bars=2 changed=true
+stdout-regex: hash=[0-9a-f]{64}
+capture: hash hash=([0-9a-f]{64})
+file-exists: build/l0/events.jsonl
+file-exists: build/l0/score.mid
+file-exists: build/l0/score.wav
+file-exists: build/l0/score.txt
+
+---
+name: render is idempotent
+args: render samples/notes/c-major-scale.yaml --out build/l0 --formats mid,wav,events,txt
+exit: 0
+stdout-contains: changed=false
+stdout-contains-capture: hash
+
+---
+name: describe music roll
+args: describe-music build/l0/events.jsonl --roll
+exit: 0
+stdout-contains: bar=1 notes=4 range=C4..F4
+stdout-contains: C4 |●
+
+---
+name: determinism
+args: debug determinism samples/notes/c-major-scale.yaml --runs 2
+exit: 0
+stdout-contains: runs=2
+stdout-contains: identical=true
+stdout-contains-capture: hash
+
+---
+name: inspect E4
+args: debug inspect build/l0/events.jsonl --where pitch=E4
+exit: 0
+stdout-contains: pitch=E4
+stdout-count: 1 note id=
+
+---
+name: render missing
+args: render missing.yaml
+exit: 4
+stdout-contains: error code=NOT_FOUND
+stdout-contains: path=argv[1]
+stdout-contains: fix=

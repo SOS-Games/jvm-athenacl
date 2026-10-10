@@ -1,0 +1,13 @@
+bpm: 120
+meter: "4/4"
+layer: melody
+velocity: 96
+notes:
+  - { pitch: C4, bar: 1, beat: 1, dur: "1/4" }
+  - { pitch: D4, bar: 1, beat: 2, dur: "1/4" }
+  - { pitch: E4, bar: 1, beat: 3, dur: "1/4" }
+  - { pitch: F4, bar: 1, beat: 4, dur: "1/4" }
+  - { pitch: G4, bar: 2, beat: 1, dur: "1/4" }
+  - { pitch: A4, bar: 2, beat: 2, dur: "1/4" }
+  - { pitch: B4, bar: 2, beat: 3, dur: "1/4" }
+  - { pitch: C5, bar: 2, beat: 4, dur: "1/4" }

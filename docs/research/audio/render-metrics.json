@@ -1,0 +1,254 @@
+{
+ "generaluser-gs": {
+  "lufs": -21.9,
+  "lra": 6.0,
+  "true_peak": -6.5,
+  "overall_rms_dbfs": -25.3,
+  "clipped_samples": 0,
+  "tail_to_minus60_s": 1.7,
+  "sections": [
+   {
+    "section": "piano (prog 0)",
+    "rms_dbfs": -25.6,
+    "peak_dbfs": -7.1,
+    "crest_db": 18.5,
+    "centroid_hz": 2052,
+    "rolloff85_hz": 1046,
+    "side_minus_mid_db": -14.2
+   },
+   {
+    "section": "strings (prog 48)",
+    "rms_dbfs": -24.6,
+    "peak_dbfs": -8.2,
+    "crest_db": 16.4,
+    "centroid_hz": 1700,
+    "rolloff85_hz": 660,
+    "side_minus_mid_db": -9.1
+   },
+   {
+    "section": "brass (prog 61)",
+    "rms_dbfs": -27.4,
+    "peak_dbfs": -10.6,
+    "crest_db": 16.8,
+    "centroid_hz": 3538,
+    "rolloff85_hz": 2343,
+    "side_minus_mid_db": -9.2
+   },
+   {
+    "section": "flute (prog 73)",
+    "rms_dbfs": -22.2,
+    "peak_dbfs": -13.8,
+    "crest_db": 8.4,
+    "centroid_hz": 1613,
+    "rolloff85_hz": 1048,
+    "side_minus_mid_db": -16.8
+   },
+   {
+    "section": "nylon guitar (prog 24)",
+    "rms_dbfs": -25.2,
+    "peak_dbfs": -10.2,
+    "crest_db": 15.0,
+    "centroid_hz": 1546,
+    "rolloff85_hz": 440,
+    "side_minus_mid_db": -15.7
+   },
+   {
+    "section": "bass 33 + drums",
+    "rms_dbfs": -24.4,
+    "peak_dbfs": -6.5,
+    "crest_db": 17.8,
+    "centroid_hz": 2524,
+    "rolloff85_hz": 222,
+    "side_minus_mid_db": -13.4
+   },
+   {
+    "section": "drums solo + fill",
+    "rms_dbfs": -27.2,
+    "peak_dbfs": -6.8,
+    "crest_db": 20.4,
+    "centroid_hz": 2913,
+    "rolloff85_hz": 325,
+    "side_minus_mid_db": -12.5
+   },
+   {
+    "section": "crash + tail",
+    "rms_dbfs": -34.2,
+    "peak_dbfs": -9.8,
+    "crest_db": 24.4,
+    "centroid_hz": 6024,
+    "rolloff85_hz": 5929,
+    "side_minus_mid_db": -11.1
+   }
+  ],
+  "wav_bytes": 5468444,
+  "mp3_bytes": 745518
+ },
+ "fluidr3-gm": {
+  "lufs": -19.3,
+  "lra": 7.0,
+  "true_peak": -5.9,
+  "overall_rms_dbfs": -24.1,
+  "clipped_samples": 0,
+  "tail_to_minus60_s": 2.6,
+  "sections": [
+   {
+    "section": "piano (prog 0)",
+    "rms_dbfs": -30.9,
+    "peak_dbfs": -6.6,
+    "crest_db": 24.3,
+    "centroid_hz": 2345,
+    "rolloff85_hz": 660,
+    "side_minus_mid_db": -0.0
+   },
+   {
+    "section": "strings (prog 48)",
+    "rms_dbfs": -23.0,
+    "peak_dbfs": -6.7,
+    "crest_db": 16.3,
+    "centroid_hz": 1698,
+    "rolloff85_hz": 1541,
+    "side_minus_mid_db": 0.2
+   },
+   {
+    "section": "brass (prog 61)",
+    "rms_dbfs": -24.6,
+    "peak_dbfs": -9.9,
+    "crest_db": 14.7,
+    "centroid_hz": 3513,
+    "rolloff85_hz": 2626,
+    "side_minus_mid_db": -8.6
+   },
+   {
+    "section": "flute (prog 73)",
+    "rms_dbfs": -22.7,
+    "peak_dbfs": -12.4,
+    "crest_db": 10.3,
+    "centroid_hz": 1929,
+    "rolloff85_hz": 1055,
+    "side_minus_mid_db": -2.7
+   },
+   {
+    "section": "nylon guitar (prog 24)",
+    "rms_dbfs": -22.7,
+    "peak_dbfs": -9.2,
+    "crest_db": 13.5,
+    "centroid_hz": 1832,
+    "rolloff85_hz": 659,
+    "side_minus_mid_db": -14.9
+   },
+   {
+    "section": "bass 33 + drums",
+    "rms_dbfs": -21.1,
+    "peak_dbfs": -5.9,
+    "crest_db": 15.2,
+    "centroid_hz": 3599,
+    "rolloff85_hz": 294,
+    "side_minus_mid_db": -13.1
+   },
+   {
+    "section": "drums solo + fill",
+    "rms_dbfs": -27.0,
+    "peak_dbfs": -6.1,
+    "crest_db": 21.0,
+    "centroid_hz": 4624,
+    "rolloff85_hz": 502,
+    "side_minus_mid_db": -9.5
+   },
+   {
+    "section": "crash + tail",
+    "rms_dbfs": -30.3,
+    "peak_dbfs": -7.3,
+    "crest_db": 23.0,
+    "centroid_hz": 6162,
+    "rolloff85_hz": 7432,
+    "side_minus_mid_db": -8.3
+   }
+  ],
+  "wav_bytes": 5468444,
+  "mp3_bytes": 745514
+ },
+ "java-emergency": {
+  "lufs": -20.1,
+  "lra": 7.0,
+  "true_peak": -2.0,
+  "overall_rms_dbfs": -23.3,
+  "clipped_samples": 0,
+  "tail_to_minus60_s": 1.2,
+  "sections": [
+   {
+    "section": "piano (prog 0)",
+    "rms_dbfs": -27.5,
+    "peak_dbfs": -9.0,
+    "crest_db": 18.5,
+    "centroid_hz": 680,
+    "rolloff85_hz": 659,
+    "side_minus_mid_db": -19.6
+   },
+   {
+    "section": "strings (prog 48)",
+    "rms_dbfs": -24.2,
+    "peak_dbfs": -11.5,
+    "crest_db": 12.7,
+    "centroid_hz": 1458,
+    "rolloff85_hz": 1048,
+    "side_minus_mid_db": -15.5
+   },
+   {
+    "section": "brass (prog 61)",
+    "rms_dbfs": -27.2,
+    "peak_dbfs": -13.5,
+    "crest_db": 13.7,
+    "centroid_hz": 2637,
+    "rolloff85_hz": 2622,
+    "side_minus_mid_db": -17.2
+   },
+   {
+    "section": "flute (prog 73)",
+    "rms_dbfs": -25.0,
+    "peak_dbfs": -14.8,
+    "crest_db": 10.3,
+    "centroid_hz": 1994,
+    "rolloff85_hz": 2353,
+    "side_minus_mid_db": -21.1
+   },
+   {
+    "section": "nylon guitar (prog 24)",
+    "rms_dbfs": -25.3,
+    "peak_dbfs": -7.1,
+    "crest_db": 18.2,
+    "centroid_hz": 2062,
+    "rolloff85_hz": 1974,
+    "side_minus_mid_db": -15.9
+   },
+   {
+    "section": "bass 33 + drums",
+    "rms_dbfs": -18.3,
+    "peak_dbfs": -2.9,
+    "crest_db": 15.4,
+    "centroid_hz": 3100,
+    "rolloff85_hz": 350,
+    "side_minus_mid_db": -14.9
+   },
+   {
+    "section": "drums solo + fill",
+    "rms_dbfs": -21.1,
+    "peak_dbfs": -2.2,
+    "crest_db": 19.0,
+    "centroid_hz": 4257,
+    "rolloff85_hz": 135,
+    "side_minus_mid_db": -16.2
+   },
+   {
+    "section": "crash + tail",
+    "rms_dbfs": -30.7,
+    "peak_dbfs": -6.6,
+    "crest_db": 24.0,
+    "centroid_hz": 5069,
+    "rolloff85_hz": 8153,
+    "side_minus_mid_db": -10.1
+   }
+  ],
+  "wav_bytes": 5468444,
+  "mp3_bytes": 745518
+ }
+}

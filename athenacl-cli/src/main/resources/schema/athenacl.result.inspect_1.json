@@ -1,0 +1,25 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "athenacl.result.inspect/1",
+  "type": "object",
+  "required": ["schema", "ok", "command", "data", "warnings", "errors", "meta"],
+  "properties": {
+    "schema": { "const": "athenacl.result.inspect/1" },
+    "ok": { "type": "boolean" },
+    "command": { "const": "debug inspect" },
+    "data": {
+      "type": "object",
+      "required": ["matches", "lines"],
+      "properties": {
+        "matches": { "type": "integer" },
+        "lines": { "type": "array" }
+      }
+    },
+    "warnings": { "type": "array" },
+    "errors": { "type": "array" },
+    "meta": {
+      "type": "object",
+      "required": ["version", "seed", "durationMs"]
+    }
+  }
+}

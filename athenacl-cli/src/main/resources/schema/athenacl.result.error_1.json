@@ -1,0 +1,32 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "athenacl.result.error/1",
+  "type": "object",
+  "required": ["schema", "ok", "command", "errors", "warnings", "meta"],
+  "properties": {
+    "schema": { "const": "athenacl.result.error/1" },
+    "ok": { "const": false },
+    "command": { "type": "string" },
+    "warnings": { "type": "array" },
+    "errors": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["code", "severity", "path", "message", "fix"],
+        "properties": {
+          "code": { "type": "string" },
+          "severity": { "enum": ["WARNING", "ERROR"] },
+          "path": { "type": "string" },
+          "message": { "type": "string" },
+          "fix": { "type": "string" },
+          "docRef": { "type": "string" }
+        }
+      }
+    },
+    "meta": {
+      "type": "object",
+      "required": ["version", "seed", "durationMs"]
+    }
+  }
+}

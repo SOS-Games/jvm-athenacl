@@ -11,7 +11,8 @@ import java.util.concurrent.Callable;
  * {@code inspect} prints the notes that match {@code --where}.
  */
 @CommandLine.Command(name = "debug", description = "Determinism and event-log inspect.",
-        subcommands = {DeterminismCommand.class, InspectCommand.class, CheckCommand.class})
+        subcommands = {DeterminismCommand.class, InspectCommand.class, CheckCommand.class,
+                BarCommand.class, ExplainNoteCommand.class, TraceCommands.Trace.class, TraceCommands.Replay.class})
 public class DebugCommand implements Callable<Integer> {
     @CommandLine.ParentCommand AgentCli parent;
 

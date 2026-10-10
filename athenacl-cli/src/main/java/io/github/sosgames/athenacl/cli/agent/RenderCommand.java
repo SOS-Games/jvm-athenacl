@@ -18,6 +18,7 @@ import io.github.sosgames.athenacl.render.soundbank.SoundbankResolver;
 import io.github.sosgames.athenacl.rhythm.Durations;
 import io.github.sosgames.athenacl.rhythm.Groove;
 import io.github.sosgames.athenacl.rhythm.Swing;
+import io.github.sosgames.athenacl.adaptive.Themes;
 import picocli.CommandLine;
 
 import javax.sound.midi.MidiUnavailableException;
@@ -55,6 +56,12 @@ public class RenderCommand implements Callable<Integer> {
     Path cache;
     @CommandLine.Option(names = "--groove", paramLabel = "<swing=0.62>")
     String groove;
+    @CommandLine.Option(names = "--timeline", paramLabel = "<file.json>")
+    Path timeline;
+    @CommandLine.Option(names = "--bars", paramLabel = "<from-to>")
+    String barWindow;
+    @CommandLine.Option(names = "--at", paramLabel = "<bar state name intensity>")
+    List<String> at = new ArrayList<>();
 
     @Override
     public Integer call() {
@@ -67,6 +74,9 @@ public class RenderCommand implements Callable<Integer> {
             return parent.fail(ExitCode.NOT_FOUND, "NOT_FOUND", "argv[1]",
                     "note list not found",
                     "Pass a YAML note list such as samples/notes/c-major-scale.yaml.");
+        }
+        if (Themes.looksLike(notes)) {
+            return ThemeCli.render(parent, notes, timeline, barWindow, at, seed, outDir, formats, soundbank, cache);
         }
         Groove parsedGroove = null;
         if (groove != null) {
@@ -181,7 +191,7 @@ public class RenderCommand implements Callable<Integer> {
                 data, warnings(selection), List.of());
     }
 
-    private static List<Issue> warnings(SoundbankResolver.Selection selection) {
+    static List<Issue> warnings(SoundbankResolver.Selection selection) {
         if (!selection.fallback()) {
             return List.of();
         }
@@ -194,7 +204,7 @@ public class RenderCommand implements Callable<Integer> {
                 "AGENTS.md#cli"));
     }
 
-    private static byte[] body(String format, Score score, Path soundbank)
+    static byte[] body(String format, Score score, Path soundbank)
             throws IOException, MidiUnavailableException {
         return switch (format) {
             case "mid" -> SmfWriter.write(score);

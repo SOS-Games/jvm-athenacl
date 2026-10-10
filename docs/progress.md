@@ -26,4 +26,10 @@ A note list such as `samples/notes/c-major-scale.yaml` renders to `score.mid`, `
 
 ## L3 — Rhythm and time
 
-`gradlew layerCheck -Player=L3` passes (6 checks). The full `gradlew layerCheck` passes (38 checks). A six-beat tie renders as one note with `maxDurBeats=6`, and `debug check --stuck-notes` reports `stuck=0`. `rhythm poly 3:2` writes two layers that meet on each downbeat. `render --groove "swing=0.62"` and `analyze` both print `swing.measured=0.62`.
+`gradlew layerCheck -Player=L3` passes (6 checks). A six-beat tie renders as one note with `maxDurBeats=6`, and `debug check --stuck-notes` reports `stuck=0`. `rhythm poly 3:2` writes two layers that meet on each downbeat. `render --groove "swing=0.62"` and `analyze` both print `swing.measured=0.62`.
+
+## L4 — Adaptive director, offline
+
+`gradlew layerCheck -Player=L4` passes (6 checks). The full `gradlew layerCheck` passes (44 checks).
+
+`theme validate` rejects a transition that names a missing state. `render` of `samples/themes/poc.yaml` with the poc timeline plays 16 bars through peaceful, sneaking, and combat, with both state changes on a bar line. Bars 9–10 of that render match a window that asks for combat at intensity 0.6. `debug replay` of `control.jsonl` prints the same hash.

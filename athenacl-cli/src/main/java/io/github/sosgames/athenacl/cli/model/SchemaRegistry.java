@@ -34,7 +34,12 @@ public final class SchemaRegistry {
             "athenacl.result.chord/1",
             "athenacl.result.progression/1",
             "athenacl.result.rhythm/1",
-            "athenacl.result.poly/1");
+            "athenacl.result.poly/1",
+            "athenacl.result.validate/1",
+            "athenacl.result.explain/1",
+            "athenacl.result.trace/1",
+            "athenacl.result.bar/1",
+            "athenacl.result.replay/1");
 
     private SchemaRegistry() {
     }

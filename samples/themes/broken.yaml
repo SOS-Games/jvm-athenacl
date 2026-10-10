@@ -1,0 +1,8 @@
+# A transition that names a state the theme does not have.
+id: broken
+states:
+  peaceful:
+    key: "C major"
+transitions:
+  rules:
+    - {to: nowhere, quantize: bar}

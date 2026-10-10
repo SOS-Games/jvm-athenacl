@@ -1,0 +1,31 @@
+# Offline director demo. Three states, two bar-line changes, sixteen bars.
+id: poc
+bars: 16
+bpm: 120
+meter: "4/4"
+states:
+  peaceful:
+    key: "C major"
+    tempo: 120
+    layers: [pad, bass]
+  sneaking:
+    key: "D dorian"
+    tempo: 100
+    layers: [pad]
+  combat:
+    key: "D aeolian"
+    tempo: 132
+    layers: [lead, bass, drums]
+    stinger: strike
+stingers:
+  strike:
+    pitch: C5
+    dur: "1/8"
+transitions:
+  defaults: {quantize: bar}
+  rules:
+    - {to: combat, quantize: bar}
+timeline:
+  - {bar: 1, state: peaceful, intensity: 0.3}
+  - {bar: 5, state: sneaking, intensity: 0.4}
+  - {bar: 9, state: combat, intensity: 0.6}

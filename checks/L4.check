@@ -1,0 +1,45 @@
+# L4 adaptive director, offline. Directive list: AGENTS.md, section "Layer checks".
+
+name: unknown state
+args: theme validate samples/themes/broken.yaml
+exit: 3
+stdout-contains: error code=THEME_UNKNOWN_STATE
+stdout-contains: path=/transitions/rules/0/to
+stdout-contains: fix=
+
+---
+name: render the timeline
+args: render samples/themes/poc.yaml --timeline samples/timelines/poc.json --seed 42 --out build/l4
+exit: 0
+delete-before: build/l4
+stdout-contains: bars=16 states=peaceful,sneaking,combat transitions=2
+capture: hash hash=([0-9a-f]+)
+file-exists: build/l4/events.jsonl
+file-exists: build/l4/control.jsonl
+
+---
+name: transitions land on bar lines
+args: debug trace build/l4 --transitions
+exit: 0
+stdout-count: 2 appliedTick=
+stdout-contains: appliedTick=15360
+stdout-contains: appliedTick=30720
+
+---
+name: a later window matches the full render
+args: render samples/themes/poc.yaml --seed 42 --bars 9-10 --at "9 state combat 0.6"
+exit: 0
+stdout-same-as: render samples/themes/poc.yaml --timeline samples/timelines/poc.json --seed 42 --bars 9-10
+
+---
+name: one bar explains its notes
+args: debug bar samples/themes/poc.yaml --seed 42 --bar 9
+exit: 0
+stdout-contains: bar=9 state=combat
+stdout-regex: note id=\d+ layer=\S+ seed=42/combat/\S+/bar9/\S+ why=
+
+---
+name: replay matches the render hash
+args: debug replay build/l4/control.jsonl
+exit: 0
+stdout-contains-capture: hash

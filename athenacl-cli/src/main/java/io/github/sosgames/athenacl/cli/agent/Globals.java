@@ -14,7 +14,7 @@ import java.util.Set;
 final class Globals {
     private static final Set<String> VALUE_FLAGS = Set.of(
             "--out", "--formats", "--where", "--runs", "--bars", "--seed", "--soundbank", "--cache", "--key",
-            "--groove", "--meter");
+            "--groove", "--meter", "--timeline", "--at", "--bar");
     boolean json;
     boolean dryRun;
     boolean strict;

@@ -20,7 +20,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class SpeakerPlayerTest {
     @Test
     void scaleLengthIncludesTheTail() {
-        NoteEvent last = new NoteEvent(1, 6720, 960, 72, "C5", 96, 0, "melody", 2, "4", "1/4", "0");
+        NoteEvent last = new NoteEvent(1, 6720, 960, 72, "C5", 96, 0, "melody", 2, "4", "1/4", "0", null);
         Score score = new Score(List.of(), List.of(last), 120, 4, 4, 2);
         assertEquals(4.4, WavRenderer.durationSeconds(score), 1e-9);
     }

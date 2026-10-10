@@ -11,6 +11,9 @@ import java.util.Map;
 /**
  * A theme the director can play without a game running. States name the music.
  * The timeline is the demo script used when a render does not pass {@code --timeline}.
+ * An empty script stays on {@code hold}, or on the first state when hold is absent.
+ * {@code motif.every} is how many bars pass before the lead states the motif again.
+ * {@code 1} plays it every bar.
  */
 public record Theme(
         String id,
@@ -25,7 +28,9 @@ public record Theme(
         List<Control> timeline,
         String preset,
         LoudnessContour loudness,
-        List<ThemeIssue> warnings) {
+        List<ThemeIssue> warnings,
+        int motifEvery,
+        Hold hold) {
 
     public Theme {
         states = Collections.unmodifiableMap(new LinkedHashMap<>(states));
@@ -37,7 +42,7 @@ public record Theme(
 
     public Theme withBars(int bars) {
         return new Theme(id, bars, bpm, numerator, denominator, states, stingers, defaultQuantize, rules,
-                timeline, preset, loudness, warnings);
+                timeline, preset, loudness, warnings, motifEvery, hold);
     }
 
     public long barTicks() {
@@ -91,5 +96,9 @@ public record Theme(
 
     /** A request to be in {@code state} at this bar and beat, with an optional intensity. */
     public record Control(int bar, int beat, String state, double intensity) {
+    }
+
+    /** The state an empty script stays on, and how hard that music plays. */
+    public record Hold(String state, double intensity) {
     }
 }

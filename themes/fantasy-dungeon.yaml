@@ -3,3 +3,5 @@ preset: fantasy
 bars: 14
 bpm: 100
 meter: "4/4"
+motif:
+  every: 4

@@ -114,7 +114,7 @@ public final class NoteLists {
             long id = built.size() + 1L;
             String seedPath = seed + "/" + noteLayer + "/bar" + bar + "/note#" + id;
             built.add(new NoteEvent(id, start, length, midi, pitchName, noteVelocity, noteChannel,
-                    noteLayer, bar, beat, duration, seedPath));
+                    noteLayer, bar, beat, duration, seedPath, null));
         }
         int bars = 1;
         for (NoteEvent note : built) {

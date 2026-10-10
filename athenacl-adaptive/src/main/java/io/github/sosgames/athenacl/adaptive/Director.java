@@ -67,9 +67,10 @@ public final class Director {
         IntensityTrack intensity = new IntensityTrack();
         Ids ids = new Ids();
         String stateId = null;
-        double target = 0.3;
+        double target = theme.hold() == null ? 0.3 : theme.hold().intensity();
         int lastTempo = -1;
         int leadDegree = -1;
+        int held = 0;
         int cursor = 0;
         for (int bar = 1; bar <= theme.bars(); bar++) {
             boolean changed = false;
@@ -88,9 +89,17 @@ public final class Director {
                 target = next.control.intensity();
             }
             if (stateId == null) {
-                stateId = theme.firstState();
+                stateId = theme.hold() == null ? theme.firstState() : theme.hold().state();
                 changed = true;
             }
+            if (changed) {
+                held = 0;
+            } else {
+                held++;
+            }
+            int every = theme.motifEvery();
+            int phraseBar = held / every;
+            boolean playMotif = held % every == 0;
             Theme.StateDef state = theme.state(stateId);
             double smoothed = intensity.apply(target, changed);
             if (state.tempo() != lastTempo) {
@@ -114,7 +123,8 @@ public final class Director {
                 }
             }
             boolean drums = intensity.drums(smoothed);
-            leadDegree = StockLayers.bar(theme, state, info, start, seed, ids, notes, leadDegree, drums);
+            leadDegree = StockLayers.bar(theme, state, info, start, seed, ids, notes, leadDegree, drums,
+                    phraseBar, playMotif);
         }
         List<NoteEvent> eventsNotes = new ArrayList<>();
         for (Played played : notes) {

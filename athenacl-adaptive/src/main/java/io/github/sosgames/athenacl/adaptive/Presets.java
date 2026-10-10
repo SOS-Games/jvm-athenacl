@@ -31,7 +31,7 @@ public final class Presets {
 
     /**
      * Dungeon music: modal exploration, a low drone while sneaking, harp and flute in town,
-     * taiko and horn in a fight. Each state keeps several of those sounding together.
+     * taiko, horn, and trumpet in a fight. Each state keeps several of those sounding together.
      * Loudness follows the shared contour.
      */
     public static Preset fantasy() {
@@ -42,7 +42,7 @@ public final class Presets {
                 Map.of("drone", 49, "pad", 52, "bass", 43, "harp", 46)));
         states.put("combat", state("combat", "D aeolian", 100,
                 List.of("pad", "brass", "bass", "lead", "taiko", "drums"),
-                Map.of("pad", 48, "brass", 60, "bass", 43, "lead", 73, "taiko", 116)));
+                Map.of("pad", 48, "brass", 60, "bass", 43, "lead", 56, "taiko", 116)));
         states.put("danger", state("danger", "E phrygian", 100, List.of("drone", "pad", "bass", "brass", "taiko"),
                 Map.of("drone", 49, "pad", 52, "bass", 43, "brass", 60, "taiko", 116)));
         states.put("trading", state("trading", "D dorian", 100, List.of("harp", "pad", "bass", "lead"),

@@ -61,6 +61,11 @@ public class ExplainThemeCommand implements Callable<Integer> {
         head.put("bars", Integer.toString(loaded.bars()));
         head.put("states", String.join(",", loaded.states().keySet()));
         head.put("quantize", loaded.defaultQuantize().id());
+        head.put("motif.every", Integer.toString(loaded.motifEvery()));
+        if (loaded.hold() != null) {
+            head.put("hold", loaded.hold().state());
+            head.put("intensity", Themes.number(loaded.hold().intensity()));
+        }
         text.append(KeyValue.line(head));
         for (Theme.StateDef state : loaded.states().values()) {
             Map<String, String> fields = new LinkedHashMap<>();

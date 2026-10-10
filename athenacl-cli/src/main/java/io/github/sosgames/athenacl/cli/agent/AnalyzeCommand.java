@@ -8,6 +8,7 @@ import io.github.sosgames.athenacl.cli.model.KeyValue;
 import io.github.sosgames.athenacl.events.Score;
 import io.github.sosgames.athenacl.events.ScoreException;
 import io.github.sosgames.athenacl.render.loudness.StateLoudness;
+import io.github.sosgames.athenacl.motif.MotifReuse;
 import io.github.sosgames.athenacl.rhythm.Swing;
 import picocli.CommandLine;
 
@@ -25,7 +26,8 @@ import java.util.concurrent.Callable;
  * {@code loudness.integrated=} LUFS, {@code truePeak=} dBTP, and {@code shortTerm=}.
  * {@code --by state} instead prints each state's offset from the contour reference,
  * plus {@code loudness.spread=}. When the directory also has {@code events.jsonl}
- * with swung eighths, the plain line adds {@code swing.measured=}.
+ * with swung eighths, the plain line adds {@code swing.measured=}. A render whose lead
+ * carries a motif also adds {@code motif.reuse.per8bars=}.
  */
 @CommandLine.Command(name = "analyze", description = "Measure loudness of a rendered WAV.")
 public class AnalyzeCommand implements Callable<Integer> {
@@ -54,7 +56,7 @@ public class AnalyzeCommand implements Callable<Integer> {
             return parent.fail(ExitCode.USAGE, "USAGE", "--by", "unknown grouping " + by,
                     "Use --by state.");
         }
-        return LoudnessReports.finish(parent, wav, "athenacl.result.analyze/1", swingSuffix(input));
+        return LoudnessReports.finish(parent, wav, "athenacl.result.analyze/1", extras(input));
     }
 
     private int byState(Path wav) {
@@ -108,6 +110,39 @@ public class AnalyzeCommand implements Callable<Integer> {
         } catch (ScoreException | IOException e) {
             return parent.fail(ExitCode.RUNTIME, "IO_ERROR", "argv[1]", e.getMessage(),
                     "Check that the WAV and the control log are readable.");
+        }
+    }
+
+    private static String extras(Path input) {
+        String swing = swingSuffix(input);
+        String motif = motifSuffix(input);
+        if (swing == null) {
+            return motif;
+        }
+        if (motif == null) {
+            return swing;
+        }
+        return swing + " " + motif;
+    }
+
+    private static String motifSuffix(Path input) {
+        Path dir = Files.isDirectory(input) ? input : input.getParent();
+        if (dir == null) {
+            return null;
+        }
+        Path events = dir.resolve("events.jsonl");
+        if (!Files.isRegularFile(events)) {
+            return null;
+        }
+        try {
+            Score score = NoteFiles.events(events);
+            Double reuse = MotifReuse.per8bars(score);
+            if (reuse == null) {
+                return null;
+            }
+            return "motif.reuse.per8bars=" + String.format(java.util.Locale.ROOT, "%.1f", reuse);
+        } catch (ScoreException | IOException e) {
+            return null;
         }
     }
 

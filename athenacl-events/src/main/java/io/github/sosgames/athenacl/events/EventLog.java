@@ -106,7 +106,8 @@ public final class EventLog {
                         node.path("bar").asInt(),
                         text(node, "beat"),
                         text(node, "dur"),
-                        text(node, "seed")));
+                        text(node, "seed"),
+                        node.hasNonNull("motif") ? node.get("motif").asText() : null));
                 default -> throw new ScoreException("line " + lineNo, "unknown event type " + type,
                         "Expected note, tempo, meter, program, control, or bend.");
             }
@@ -146,7 +147,16 @@ public final class EventLog {
                 + ",\"channel\":" + note.channel()
                 + ",\"layer\":\"" + escape(note.layer()) + "\""
                 + ",\"dur\":\"" + escape(note.duration()) + "\""
-                + ",\"seed\":\"" + escape(note.seedPath()) + "\"}";
+                + ",\"seed\":\"" + escape(note.seedPath()) + "\""
+                + motifField(note)
+                + "}";
+    }
+
+    private static String motifField(NoteEvent note) {
+        if (note.motif() == null || note.motif().isBlank()) {
+            return "";
+        }
+        return ",\"motif\":\"" + escape(note.motif()) + "\"";
     }
 
     private static int rank(ControlEvent control) {

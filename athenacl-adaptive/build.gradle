@@ -1,6 +1,7 @@
 dependencies {
   api project(':athenacl-events')
   api project(':athenacl-theory')
+  implementation project(':athenacl-motif')
   implementation "com.fasterxml.jackson.core:jackson-databind:$jacksonVersion"
   implementation "com.fasterxml.jackson.dataformat:jackson-dataformat-yaml:$jacksonVersion"
   testImplementation "org.junit.jupiter:junit-jupiter:$junitVersion"

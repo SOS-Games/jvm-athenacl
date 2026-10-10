@@ -26,6 +26,6 @@ class StuckNotesTest {
     }
 
     private static NoteEvent note(long id, long start, long duration, int pitch) {
-        return new NoteEvent(id, start, duration, pitch, "C4", 96, 0, "melody", 1, "1", "1/4", "0");
+        return new NoteEvent(id, start, duration, pitch, "C4", 96, 0, "melody", 1, "1", "1/4", "0", null);
     }
 }

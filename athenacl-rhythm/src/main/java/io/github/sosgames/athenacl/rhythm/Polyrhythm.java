@@ -81,7 +81,8 @@ public final class Polyrhythm {
                     bar,
                     Swing.beatText(tick - start),
                     "1/16",
-                    "0/" + layer + "/bar" + bar + "/note#" + id));
+                    "0/" + layer + "/bar" + bar + "/note#" + id,
+                    null));
             id++;
         }
         return id;

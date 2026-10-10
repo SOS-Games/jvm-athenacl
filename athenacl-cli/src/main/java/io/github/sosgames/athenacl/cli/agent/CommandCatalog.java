@@ -122,7 +122,15 @@ public final class CommandCatalog {
                     "preset show prints a built-in genre preset: instruments and the GM limits.",
                     List.of(gradle("preset show fantasy")),
                     false,
-                    "athenacl.result.preset/1"));
+                    "athenacl.result.preset/1"),
+            new CommandInfo(
+                    "motif",
+                    "motif generate grows a short idea. motif transform turns it over. motif import reads a MIDI melody.",
+                    List.of(
+                            gradle("motif generate --key D-dorian --seed 3"),
+                            gradle("motif transform m1 --invert --invert")),
+                    true,
+                    "athenacl.result.motif/1"));
 
     private CommandCatalog() {
     }

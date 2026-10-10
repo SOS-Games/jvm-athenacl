@@ -50,7 +50,8 @@ public final class Swing {
                     bar,
                     beatText(tick % barTicks),
                     note.duration(),
-                    note.seedPath()));
+                    note.seedPath(),
+                    note.motif()));
         }
         return new Score(score.controls(), notes, score.bpm(), score.numerator(), score.denominator(), bars);
     }

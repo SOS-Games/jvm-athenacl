@@ -1,0 +1,58 @@
+# L7 motif engine. Directive list: AGENTS.md, section "Layer checks".
+
+name: generate a motif
+args: motif generate --key "D dorian" --seed 3
+exit: 0
+stdout-contains: motif=m1
+stdout-regex: notes=[2-8]( |$)
+stdout-contains: contour=
+
+---
+name: invert twice is the same motif
+args: motif transform m1 --invert --invert
+exit: 0
+stdout-contains: identical=true
+
+---
+name: render with the motif
+args: render themes/fantasy-dungeon.yaml --seed 1 --bars 1-16 --out build/l7
+exit: 0
+delete-before: build/l7
+file-exists: build/l7/events.jsonl
+
+---
+name: the motif comes back
+args: analyze build/l7
+exit: 0
+stdout-regex: motif\.reuse\.per8bars=(0\.[5-9]|1\.0)
+
+---
+name: a lead note names its motif
+args: debug explain themes/fantasy-dungeon.yaml --seed 1 --bar 1
+exit: 0
+stdout-contains: layer=lead
+stdout-contains: motif=m1:
+
+---
+name: the lead keeps playing between motifs
+args: debug explain themes/fantasy-dungeon.yaml --seed 1 --bar 2
+exit: 0
+stdout-contains: layer=lead
+stdout-not-contains: motif=
+
+---
+name: combat hold stays in the fight
+args: theme explain themes/fantasy-combat.yaml
+exit: 0
+stdout-contains: hold=combat
+stdout-contains: intensity=1
+stdout-contains: tempo=144
+stdout-contains: taiko
+
+---
+name: import a composed motif
+args: motif import samples/motifs/theme.mid --out build/l7/m.yaml
+exit: 0
+stdout-contains: motifs=1
+stdout-regex: notes=[1-9]
+file-exists: build/l7/m.yaml

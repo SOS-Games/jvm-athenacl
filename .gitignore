@@ -14,6 +14,7 @@ hs_err_pid*
 Thumbs.db
 *.wav
 *.mid
+!samples/motifs/*.mid
 *.sf2
 *.sf3
 *.dls

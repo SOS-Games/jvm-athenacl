@@ -36,6 +36,12 @@ A note list such as `samples/notes/c-major-scale.yaml` renders to `score.mid`, `
 
 ## L5 — Presets and loudness
 
-`gradlew layerCheck -Player=L5` passes (6 checks). The full `gradlew layerCheck` passes (50 checks).
+`gradlew layerCheck -Player=L5` passes (6 checks).
 
 `themes/fantasy-dungeon.yaml` uses the fantasy preset: six states, a drone under the sneaking bars, and a loudness contour from sneaking at −1.5 LU to combat at +4.0. `analyze --by state` measures each state within 1 LU of that contour, with the spread at or under 6. The event-log hash is unchanged by the WAV trim.
+
+## L7 — Motifs
+
+`gradlew layerCheck -Player=L7` passes (8 checks). The full `gradlew layerCheck` passes (58 checks).
+
+`motif generate` grows a 2–8 note idea from a seed. Inverting it twice restores the idea. The theme lead plays that idea every `motif.every` bars (`themes/fantasy-dungeon.yaml` uses 4) and keeps a scale line between statements; combat turns it upside down and shortens it. `analyze` prints `motif.reuse.per8bars=`. `motif import` reads `samples/motifs/theme.mid` into YAML.

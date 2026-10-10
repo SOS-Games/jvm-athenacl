@@ -11,6 +11,7 @@ name: explain the preset contour
 args: theme explain themes/fantasy-dungeon.yaml
 exit: 0
 stdout-contains: preset=fantasy
+stdout-contains: motif.every=4
 stdout-contains: loudness.combat=+4.0
 
 ---

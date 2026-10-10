@@ -99,7 +99,12 @@ public final class Themes {
             var fields = stateNode.fields();
             while (fields.hasNext()) {
                 var entry = fields.next();
-                states.put(entry.getKey(), stateDef(entry.getKey(), entry.getValue(), bpm, errors));
+                Theme.StateDef existing = states.get(entry.getKey());
+                if (existing == null) {
+                    states.put(entry.getKey(), stateDef(entry.getKey(), entry.getValue(), bpm, errors));
+                } else {
+                    states.put(entry.getKey(), overlay(existing, entry.getValue(), errors));
+                }
             }
         }
         if (states.isEmpty()) {
@@ -167,11 +172,63 @@ public final class Themes {
                         "The contour is wider than maxSpread. Narrow it, or raise maxSpread."));
             }
         }
+        int motifEvery = motifEvery(root, errors);
+        Theme.Hold hold = hold(root, states, errors);
         if (!errors.isEmpty()) {
             throw new ThemeException(errors);
         }
         return new Theme(id, bars, bpm, numerator, denominator, states, stingers, quantize, rules, timeline,
-                presetId.isBlank() ? null : presetId, loudness, warnings);
+                presetId.isBlank() ? null : presetId, loudness, warnings, motifEvery, hold);
+    }
+
+    /** {@code hold} is the state used when a render has no timeline. */
+    private static Theme.Hold hold(JsonNode root, Map<String, Theme.StateDef> states, List<ThemeIssue> errors) {
+        JsonNode node = root.get("hold");
+        if (node == null) {
+            return null;
+        }
+        if (!node.isObject()) {
+            errors.add(issue("THEME_HOLD", "/hold", "hold must be a map",
+                    "Use hold.state and hold.intensity, such as combat at 0.8."));
+            return null;
+        }
+        String state = node.path("state").asText("").trim();
+        if (state.isEmpty() || !states.containsKey(state)) {
+            errors.add(issue("THEME_UNKNOWN_STATE", "/hold/state", "unknown state " + state,
+                    "Use a state declared under states, such as " + example(states) + "."));
+            return null;
+        }
+        double level = node.has("intensity") ? intensity(node.get("intensity").asDouble()) : 0.8;
+        if (level < 0 || level > 1) {
+            errors.add(issue("THEME_INTENSITY", "/hold/intensity", "intensity " + number(level),
+                    "Use a value from 0 to 1."));
+            level = 0.8;
+        }
+        return new Theme.Hold(state, level);
+    }
+
+    /** {@code motif.every} bars between lead statements. Missing means every bar. */
+    private static int motifEvery(JsonNode root, List<ThemeIssue> errors) {
+        JsonNode motif = root.get("motif");
+        if (motif == null) {
+            return 1;
+        }
+        if (!motif.isObject()) {
+            errors.add(issue("THEME_MOTIF", "/motif", "motif must be a map",
+                    "Use motif.every, such as 4 for one statement then three bars of rest."));
+            return 1;
+        }
+        JsonNode every = motif.get("every");
+        if (every == null) {
+            return 1;
+        }
+        int value = every.asInt(0);
+        if (!every.isIntegralNumber() || value < 1) {
+            errors.add(issue("THEME_MOTIF", "/motif/every", "motif every must be 1 or more",
+                    "Use 1 to state the motif every bar, or a larger gap."));
+            return 1;
+        }
+        return value;
     }
 
     /** Four decimal places, so a YAML float and the control log agree. */
@@ -194,6 +251,36 @@ public final class Themes {
             key = Key.parse("C major");
         }
         int tempo = body.path("tempo").asInt(bpm);
+        List<String> layers = layers(id, body, issues);
+        String stinger = body.hasNonNull("stinger") ? body.get("stinger").asText() : null;
+        return new Theme.StateDef(id, key, tempo, layers, stinger);
+    }
+
+    /** A preset state keeps its instruments when the theme only overrides a field such as tempo. */
+    private static Theme.StateDef overlay(Theme.StateDef existing, JsonNode body, List<ThemeIssue> issues) {
+        Key key = existing.key();
+        if (body.hasNonNull("key")) {
+            try {
+                key = Key.parse(body.get("key").asText());
+            } catch (IllegalArgumentException e) {
+                issues.add(issue("THEME_KEY", "/states/" + existing.id() + "/key", e.getMessage(),
+                        "Use a key like C major or D-dorian."));
+            }
+        }
+        int tempo = body.has("tempo") ? body.get("tempo").asInt(existing.tempo()) : existing.tempo();
+        if (tempo < 1) {
+            issues.add(issue("THEME_TEMPO", "/states/" + existing.id() + "/tempo", "tempo " + tempo,
+                    "Use a tempo of 1 bpm or more."));
+            tempo = existing.tempo();
+        }
+        List<String> layers = body.has("layers") ? layers(existing.id(), body, issues) : existing.layers();
+        String stinger = body.has("stinger")
+                ? (body.hasNonNull("stinger") ? body.get("stinger").asText() : null)
+                : existing.stinger();
+        return new Theme.StateDef(existing.id(), key, tempo, layers, stinger, existing.programs());
+    }
+
+    private static List<String> layers(String id, JsonNode body, List<ThemeIssue> issues) {
         List<String> layers = new ArrayList<>();
         JsonNode layerNode = body.get("layers");
         if (layerNode != null && layerNode.isArray()) {
@@ -210,8 +297,7 @@ public final class Themes {
         if (layers.isEmpty()) {
             layers.add("pad");
         }
-        String stinger = body.hasNonNull("stinger") ? body.get("stinger").asText() : null;
-        return new Theme.StateDef(id, key, tempo, layers, stinger);
+        return layers;
     }
 
     private static Theme.Rule rule(JsonNode body, int index, Map<String, Theme.StateDef> states, List<ThemeIssue> issues) {

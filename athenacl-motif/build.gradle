@@ -1,0 +1,11 @@
+dependencies {
+  api project(':athenacl-theory')
+  api project(':athenacl-rhythm')
+  testImplementation "org.junit.jupiter:junit-jupiter:$junitVersion"
+  testRuntimeOnly "org.junit.platform:junit-platform-launcher:$junitPlatformVersion"
+}
+
+test {
+  useJUnitPlatform()
+  workingDir = rootProject.projectDir
+}

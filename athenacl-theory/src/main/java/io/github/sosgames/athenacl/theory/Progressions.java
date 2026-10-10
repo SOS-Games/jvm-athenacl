@@ -54,7 +54,8 @@ public final class Progressions {
                         bar,
                         "1",
                         "1/1",
-                        "0/harmony/bar" + bar + "/note#" + id));
+                        "0/harmony/bar" + bar + "/note#" + id,
+                        null));
                 id++;
             }
         }

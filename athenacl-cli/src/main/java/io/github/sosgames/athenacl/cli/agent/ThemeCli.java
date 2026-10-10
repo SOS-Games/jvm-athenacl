@@ -238,6 +238,9 @@ final class ThemeCli {
             fields.put("id", Long.toString(played.note().id()));
             fields.put("layer", played.note().layer());
             fields.put("seed", played.note().seedPath());
+            if (played.note().motif() != null && !played.note().motif().isBlank()) {
+                fields.put("motif", played.note().motif());
+            }
             fields.put("why", played.why());
             text.append(KeyValue.record("note", fields)).append('\n');
         }

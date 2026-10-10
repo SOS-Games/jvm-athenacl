@@ -4,11 +4,11 @@ Instructions for AI coding agents working in **jvm-athenacl**.
 
 ## Project
 
-GPL-3.0-or-later Java 21 rewrite of athenaCL as an adaptive game-music engine for libGDX desktop. Package `io.github.sosgames.athenacl`. Layer plan: [docs/research/05-project-plan.md](docs/research/05-project-plan.md). L5 (presets and loudness) is in the tree. Do not start L6 until the user asks.
+GPL-3.0-or-later Java 21 rewrite of athenaCL as an adaptive game-music engine for libGDX desktop. Package `io.github.sosgames.athenacl`. Layer plan: [docs/research/05-project-plan.md](docs/research/05-project-plan.md). L7 (motifs) is in the tree. L6 was skipped. Do not start L6 or L8 until the user asks.
 
 - Java 21 (`options.release = 21`). Versions live in `gradle.properties`.
 - Groovy Gradle, same shape as SOS-Games/jvm-mw. Root `gradlew layerCheck`. CLI: `gradlew :athenacl-cli:agentCli --args="help"`.
-- Do not commit `build/`, `local.properties`, soundbanks (`.sf2`), or rendered audio (`.wav`, `.mid`).
+- Do not commit `build/`, `local.properties`, soundbanks (`.sf2`), or rendered audio (`.wav`, `.mid`). `samples/motifs/*.mid` is a composed fixture, not a render.
 - Do not add a server, a socket, or an MCP mode. Agents use one-shot commands.
 - Do not port Csound, SuperCollider, or athenaCL's GUI. Those are later optional layers.
 - Generation must not read the wall clock, iterate an unordered map, or draw randomness except through the future `RandomSource`. `meta.durationMs` is wall-clock and is not part of a musical hash.
@@ -54,6 +54,9 @@ gradlew.bat :athenacl-cli:agentCli --args="preset show fantasy"
 gradlew.bat :athenacl-cli:agentCli --args="theme explain themes/fantasy-dungeon.yaml"
 gradlew.bat :athenacl-cli:agentCli --args="render themes/fantasy-dungeon.yaml --timeline samples/timelines/dungeon-tour.json --seed 1 --out build/l5 --formats mid,wav,events,txt"
 gradlew.bat :athenacl-cli:agentCli --args="analyze build/l5 --by state"
+gradlew.bat :athenacl-cli:agentCli --args="motif generate --key D-dorian --seed 3"
+gradlew.bat :athenacl-cli:agentCli --args="motif transform m1 --invert --invert"
+gradlew.bat :athenacl-cli:agentCli --args="motif import samples/motifs/theme.mid --out build/l7/m.yaml"
 ```
 
 | Command | Use when |
@@ -67,11 +70,12 @@ gradlew.bat :athenacl-cli:agentCli --args="analyze build/l5 --by state"
 | debug | You want `debug determinism` (same event-log hash twice), `debug inspect` (filter notes with `--where`), `debug check --loudness`, `debug check --stuck-notes`, `debug bar`, `debug trace --transitions`, or `debug replay`. |
 | soundbank | You want to install, list, or show the GeneralUser GS soundbank. |
 | describe | You want `describe scale`, `describe chord`, or `describe instruments` (287 presets and 13 drum kits in GeneralUser GS). |
-| analyze | You want EBU R128 integrated loudness and true peak for a WAV or a render directory. A swung render also prints `swing.measured=`. `analyze <dir> --by state` prints each state's offset from the contour. |
+| analyze | You want EBU R128 integrated loudness and true peak for a WAV or a render directory. A swung render also prints `swing.measured=`. `analyze <dir> --by state` prints each state's offset from the contour. A motif render also prints `motif.reuse.per8bars=`. |
 | theory | You want `theory progression` to voice-lead roman numerals into `events.jsonl`. |
 | rhythm | You want `rhythm pattern` to print a drum grid, or `rhythm poly` to write 3-against-2 into `events.jsonl`. |
 | theme | You want `theme validate` to check a theme file, or `theme explain` to print its states. |
 | preset | You want `preset show fantasy` for the dungeon preset's instruments and GM limits. |
+| motif | You want `motif generate` to grow a short idea, `motif transform` to turn it over, or `motif import` to read a MIDI melody. |
 
 Shared flags, in front of the command or after it: `--json`, `--dry-run`, `--strict`, `-v`, `-vv`, `--log-level <error|warn|info|debug|trace>`, `-h`.
 
@@ -103,6 +107,7 @@ Published schema ids:
 - `athenacl.result.bar/1`
 - `athenacl.result.replay/1`
 - `athenacl.result.preset/1`
+- `athenacl.result.motif/1`
 
 When you add a command, add it to `CommandCatalog`, add a row to the table above, and add a block to the layer's `checks/L*.check`. `LayerCheckTest` fails if the table is missing a catalog command.
 
@@ -248,6 +253,14 @@ The download URL is a pinned commit until this project hosts its own copy. Do no
 
 `describe-music build/l5/events.jsonl --bars 1-4` estimates the key from those bars only. The line ends with `layers=`, and the sneaking bars include `drone`. The mode is dorian, aeolian, or phrygian.
 
-## Not in L5
+## Motifs
 
-Beat retraction, motifs, the scifi preset, and libGDX. Do not add them in a drive-by change.
+`motif generate --key "D dorian" --seed 3` prints `motif=m1`, `notes=` between 2 and 8, and `contour=`. The same seed grows the same idea. `motif transform m1 --invert --invert` prints `identical=true`.
+
+The lead of a theme plays that idea every `motif.every` bars. `1` is every bar. `themes/fantasy-dungeon.yaml` sets it to 4, so a render with no timeline states the motif, then the lead keeps a plain scale line for three bars. `themes/fantasy-combat.yaml` holds the fight the whole time: tempo 144, intensity 1, and the motif on every bar. A sentence is the idea, the idea again, a fragment moved up a step, then the idea backwards. Coming back to a state starts the phrase over. Combat uses the same motif turned upside down and shortened. `debug explain` on a lead note prints `motif=m1:`. `analyze` of that render prints `motif.reuse.per8bars=`.
+
+`motif import samples/motifs/theme.mid --out build/l7/m.yaml` reads the composed melody and prints `motifs=1` and `notes=`.
+
+## Not in L7
+
+In-game playback, beat retraction, overlays, and the scifi preset. Do not add them in a drive-by change.

@@ -205,9 +205,14 @@ public record Theme(
      * A request at this bar and beat. {@code state} is empty when the line only
      * sets an overlay. {@code overlay} is empty when it only sets the state.
      */
-    public record Control(int bar, int beat, String state, double intensity, String overlay, double overlayLevel) {
+    public record Control(int bar, int beat, String state, double intensity, String overlay, double overlayLevel,
+                          String themePath) {
+        public Control(int bar, int beat, String state, double intensity, String overlay, double overlayLevel) {
+            this(bar, beat, state, intensity, overlay, overlayLevel, "");
+        }
+
         public Control(int bar, int beat, String state, double intensity) {
-            this(bar, beat, state, intensity, "", 0);
+            this(bar, beat, state, intensity, "", 0, "");
         }
 
         public boolean hasState() {
@@ -216,6 +221,11 @@ public record Theme(
 
         public boolean hasOverlay() {
             return overlay != null && !overlay.isBlank();
+        }
+
+        /** A path to another theme file. Empty when this line does not switch themes. */
+        public boolean hasTheme() {
+            return themePath != null && !themePath.isBlank();
         }
     }
 

@@ -120,7 +120,9 @@ public final class CommandCatalog {
             new CommandInfo(
                     "preset",
                     "preset show prints a built-in genre preset: instruments and the GM limits.",
-                    List.of(gradle("preset show fantasy")),
+                    List.of(
+                            gradle("preset show fantasy"),
+                            gradle("preset show scifi-space")),
                     false,
                     "athenacl.result.preset/1"),
             new CommandInfo(

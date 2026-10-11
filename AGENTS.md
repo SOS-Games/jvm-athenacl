@@ -4,7 +4,7 @@ Instructions for AI coding agents working in **jvm-athenacl**.
 
 ## Project
 
-GPL-3.0-or-later Java 21 rewrite of athenaCL as an adaptive game-music engine for libGDX desktop. Package `io.github.sosgames.athenacl`. Layer plan: [docs/research/05-project-plan.md](docs/research/05-project-plan.md). L0a–L8, L1b (instrument kits), and L7b (hook generator and melody critic) are in the tree. Do not start L6b or L9 until the user asks.
+GPL-3.0-or-later Java 21 rewrite of athenaCL as an adaptive game-music engine for libGDX desktop. Package `io.github.sosgames.athenacl`. Layer plan: [docs/research/05-project-plan.md](docs/research/05-project-plan.md). L0a–L9, L1b (instrument kits), and L7b (hook generator and melody critic) are in the tree. Do not start L6b or L9b until the user asks.
 
 - Java 21 (`options.release = 21`). Versions live in `gradle.properties`.
 - Groovy Gradle, same shape as SOS-Games/jvm-mw. Root `gradlew layerCheck`. CLI: `gradlew :athenacl-cli:agentCli --args="help"`.
@@ -51,6 +51,7 @@ gradlew.bat :athenacl-cli:agentCli --args="rhythm poly 3:2 --bars 2 --out build/
 gradlew.bat :athenacl-cli:agentCli --args="theme validate samples/themes/poc.yaml"
 gradlew.bat :athenacl-cli:agentCli --args="render samples/themes/poc.yaml --timeline samples/timelines/poc.json --seed 42 --out build/l4"
 gradlew.bat :athenacl-cli:agentCli --args="preset show fantasy"
+gradlew.bat :athenacl-cli:agentCli --args="preset show scifi-space"
 gradlew.bat :athenacl-cli:agentCli --args="theme explain themes/fantasy-dungeon.yaml"
 gradlew.bat :athenacl-cli:agentCli --args="render themes/fantasy-dungeon.yaml --timeline samples/timelines/dungeon-tour.json --seed 1 --out build/l5 --formats mid,wav,events,txt"
 gradlew.bat :athenacl-cli:agentCli --args="analyze build/l5 --by state"
@@ -75,7 +76,7 @@ gradlew.bat :athenacl-cli:agentCli --args="melody generate --key E-minor --candi
 | theory | You want `theory progression` to voice-lead roman numerals into `events.jsonl`. |
 | rhythm | You want `rhythm pattern` to print a drum grid, or `rhythm poly` to write 3-against-2 into `events.jsonl`. |
 | theme | You want `theme validate` to check a theme file, or `theme explain` to print its states. |
-| preset | You want `preset show fantasy` for the dungeon preset's instruments and GM limits. |
+| preset | You want `preset show fantasy` or `preset show scifi-space` for a preset's instruments and GM limits. |
 | motif | You want `motif generate` to grow a short idea, `motif transform` to turn it over, or `motif import` to read a MIDI melody. |
 | melody | You want `melody generate` to rank hook candidates, `melody score` to rate a MIDI line, `melody rate` to write an A/B row, or `melody fit` to turn ratings into weights. |
 | adapt | You want the scheduler snapshot: `state=`, `intensity=`, `bar=`, `sched.lookaheadMs=`, and `cpu.msPerBar=`. |
@@ -301,6 +302,12 @@ A named `from` beats a wildcard, so entering combat or danger still waits for th
 
 `clock.frameMs` snaps a request onto a fixed frame before the musical grid. It is 0 unless the theme sets it. A stinger with `degree` follows the state's key, and `cooldownBars` skips a repeat inside that many bars. A pitch-only stinger is unchanged. The window still preloads the next kit and swaps it at a bar line.
 
-## Not in L8
+## Sci-fi
 
-The sci-fi preset, the effects stage, and SFZ kits. Do not add them in a drive-by change.
+`preset show scifi-space` prints `preset=scifi-space` and the synth set (pad, square, saw, bass, celesta, 808). `themes/scifi-space.yaml` is that preset at 100 bpm in Lydian. There is no whole-tone scale, so the raised fourth stands in for it. Combat stays at 100; the drive is a sixteenth-note arp, not a tempo jump. Other states arpeggiate in eighths. `describe-music` prints `arp.grid=` and `programs=` for the bars you asked about.
+
+`render themes/fantasy-dungeon.yaml --at "8 theme themes/scifi-space.yaml" --bars 1-16` prints `themeSwitch.bar=9`. A theme change asked for on a bar line still waits until the next bar. The window still preloads the combat kit and swaps that at a bar. A Space button plays this theme instead, and the window shows how far through the current track you are.
+
+## Not in L9
+
+The effects stage and SFZ kits. Do not add them in a drive-by change.

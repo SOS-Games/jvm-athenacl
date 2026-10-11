@@ -57,7 +57,7 @@ final class ThemeCli {
                         "Use a window like 9-10.");
             }
         }
-        Director.Performance full = Director.perform(loaded.theme, loaded.controls, seed);
+        Director.Performance full = Director.perform(loaded.theme, loaded.controls, seed, loaded.alternates());
         Director.Performance shown = range == null ? full : Director.slice(full, range.from, range.to);
         if (outDir == null) {
             String text = new String(EventLog.encode(shown.score()), StandardCharsets.UTF_8);
@@ -138,6 +138,9 @@ final class ThemeCli {
         if (!full.overlayList().isEmpty()) {
             fields.put("overlays", full.overlayList());
         }
+        if (full.themeSwitchBar() > 0) {
+            fields.put("themeSwitch.bar", Integer.toString(full.themeSwitchBar()));
+        }
         fields.put("hash", hash);
         if (!loaded.theme.kits().isEmpty()) {
             fields.put("kit", String.join(",", loaded.theme.kits()));
@@ -157,7 +160,7 @@ final class ThemeCli {
         if (loaded == null) {
             return null;
         }
-        return Director.perform(loaded.theme, loaded.controls, seed);
+        return Director.perform(loaded.theme, loaded.controls, seed, loaded.alternates());
     }
 
     static int remember(int code) {
@@ -208,7 +211,31 @@ final class ThemeCli {
             parentCode = parent.fail(ExitCode.INVALID_INPUT, unknown.code(), unknown.path(), unknown.message(), unknown.fix());
             return null;
         }
-        return new Loaded(theme, controls);
+        Map<String, Theme> alternates = new LinkedHashMap<>();
+        for (Theme.Control control : controls) {
+            if (!control.hasTheme()) {
+                continue;
+            }
+            Path path = Path.of(control.themePath());
+            if (!java.nio.file.Files.isRegularFile(path)) {
+                parentCode = parent.fail(ExitCode.NOT_FOUND, "NOT_FOUND", "--at",
+                        "theme not found",
+                        "Pass a theme file, such as themes/scifi-space.yaml.");
+                return null;
+            }
+            try {
+                alternates.put(control.themePath(), Themes.load(path));
+            } catch (ThemeException e) {
+                ThemeIssue issue = e.issues().get(0);
+                parentCode = parent.fail(ExitCode.INVALID_INPUT, issue.code(), issue.path(), issue.message(), issue.fix());
+                return null;
+            } catch (IOException e) {
+                parentCode = parent.fail(ExitCode.RUNTIME, "IO_ERROR", "--at", e.getMessage(),
+                        "Check that the theme file is readable.");
+                return null;
+            }
+        }
+        return new Loaded(theme, controls, alternates);
     }
 
     static Theme.Control parseAt(String text) {
@@ -216,11 +243,14 @@ final class ThemeCli {
             throw new IllegalArgumentException("at is empty");
         }
         String[] parts = text.trim().split("\\s+");
-        if (parts.length < 3 || (!parts[1].equals("state") && !parts[1].equals("overlay"))) {
+        if (parts.length < 3 || (!parts[1].equals("state") && !parts[1].equals("overlay") && !parts[1].equals("theme"))) {
             throw new IllegalArgumentException("at " + text);
         }
         try {
             int bar = Integer.parseInt(parts[0]);
+            if (parts[1].equals("theme")) {
+                return new Theme.Control(bar, 1, "", 0, "", 0, parts[2]);
+            }
             if (parts[1].equals("overlay")) {
                 double level = parts.length >= 4 ? Themes.intensity(Double.parseDouble(parts[3])) : 1;
                 return new Theme.Control(bar, 1, "", 0, parts[2], level);
@@ -279,6 +309,9 @@ final class ThemeCli {
         fields.put("bars", bars);
         fields.put("notes", Integer.toString(shown.notes().size()));
         fields.put("hash", EventLog.hash(shown.score()));
+        if (shown.themeSwitchBar() > 0) {
+            fields.put("themeSwitch.bar", Integer.toString(shown.themeSwitchBar()));
+        }
         return KeyValue.line(fields);
     }
 
@@ -295,7 +328,7 @@ final class ThemeCli {
         return data;
     }
 
-    private record Loaded(Theme theme, List<Theme.Control> controls) {
+    private record Loaded(Theme theme, List<Theme.Control> controls, Map<String, Theme> alternates) {
     }
 
     record BarRange(int from, int to) {

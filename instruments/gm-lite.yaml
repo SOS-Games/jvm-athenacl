@@ -28,3 +28,10 @@ instruments:
   horn: {source: gu, bank: 0, program: 60}
   trumpet: {source: gu, bank: 0, program: 56}
   strings.slow: {source: gu, bank: 0, program: 49}
+  pad.newage: {source: gu, bank: 0, program: 88}
+  pad.warm: {source: gu, bank: 0, program: 89}
+  pad.sweep: {source: gu, bank: 0, program: 95}
+  lead.square: {source: gu, bank: 0, program: 80}
+  lead.saw: {source: gu, bank: 0, program: 81}
+  fx.atmosphere: {source: gu, bank: 0, program: 99}
+  celesta: {source: gu, bank: 0, program: 8}

@@ -28,7 +28,7 @@ import java.util.Set;
 public final class Themes {
     private static final ObjectMapper YAML = new ObjectMapper(new YAMLFactory());
     private static final Set<String> LAYERS = Set.of(
-            "pad", "bass", "lead", "drums", "drone", "harp", "taiko", "brass", "heartbeat");
+            "pad", "bass", "lead", "drums", "drone", "harp", "taiko", "brass", "heartbeat", "arp", "bell");
 
     private Themes() {
     }
@@ -192,7 +192,7 @@ public final class Themes {
         int motifEvery = motifEvery(root, errors);
         Theme.Hold hold = hold(root, states, errors);
         List<String> kits = kits(root);
-        if (kits.isEmpty() && "fantasy".equals(presetId)) {
+        if (kits.isEmpty() && ("fantasy".equals(presetId) || "scifi-space".equals(presetId))) {
             kits = List.of("gm-lite");
         }
         Map<String, Theme.OverlayDef> overlays = overlays(root, errors, warnings);

@@ -1,0 +1,9 @@
+id: scifi-space
+preset: scifi-space
+instruments:
+  kits: [gm-lite]
+bars: 14
+bpm: 100
+meter: "4/4"
+motif:
+  every: 4

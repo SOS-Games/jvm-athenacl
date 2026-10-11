@@ -56,7 +56,7 @@ public class PresetCommand implements Callable<Integer> {
             }
             Map<String, String> fields = new LinkedHashMap<>();
             fields.put("preset", preset.id());
-            fields.put("instruments", "harp,choir,strings,horn,flute,fiddle,taiko");
+            fields.put("instruments", preset.instruments());
             fields.put("limits", preset.limits());
             Map<String, Object> data = new LinkedHashMap<>();
             data.put("preset", preset.id());

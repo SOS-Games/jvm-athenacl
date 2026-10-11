@@ -17,7 +17,8 @@ import java.util.Map;
  * grid their rule names, and asks the stock layers for notes. Combat and danger land on
  * the next beat and drop notes already queued after that beat. An overlay adds a layer
  * on top of the state. Leaving combat can play a wind-down, and a loudness jump past
- * the contour step writes a CC11 ramp. The same seed and the same controls always
+ * the contour step writes a CC11 ramp. A theme change asked for on bar 8 is heard on
+ * bar 9. The same seed and the same controls always
  * build the same score. Nothing here reads the wall clock.
  */
 public final class Director {
@@ -35,7 +36,7 @@ public final class Director {
     }
 
     public record Performance(Score score, List<Played> notes, List<Transition> transitions, List<BarInfo> bars,
-                              List<String> overlays) {
+                              List<String> overlays, int themeSwitchBar) {
         public String stateList() {
             List<String> names = new ArrayList<>();
             for (BarInfo bar : bars) {
@@ -52,12 +53,26 @@ public final class Director {
     }
 
     public static Performance perform(Theme theme, List<Theme.Control> controls, long seed) {
+        return perform(theme, controls, seed, Map.of());
+    }
+
+    /**
+     * {@code alternates} holds themes named by a {@code theme} control, keyed by the path
+     * the control used. A missing entry is loaded from that path. A switch asked for on
+     * bar 8 is heard on bar 9, even when bar 8 beat 1 is already a bar line.
+     */
+    public static Performance perform(Theme theme, List<Theme.Control> controls, long seed,
+                                      Map<String, Theme> alternates) {
         StockLayers.prepareHooks(theme, seed);
         long barTicks = theme.barTicks();
         List<Scheduled> scheduled = new ArrayList<>();
         List<OverlayCue> overlayCues = new ArrayList<>();
+        List<ThemeCue> themeCues = new ArrayList<>();
         String previous = null;
         for (Theme.Control control : controls) {
+            if (control.hasTheme()) {
+                themeCues.add(new ThemeCue(control.themePath(), control.bar() + 1));
+            }
             long request = MusicalClock.tick(control.bar(), control.beat(), barTicks);
             request = MusicalClock.snapFrame(request, theme.frameMs(), theme.bpm());
             if (control.hasOverlay()) {
@@ -82,17 +97,14 @@ public final class Director {
         List<BarInfo> bars = new ArrayList<>();
         List<ControlEvent> events = new ArrayList<>();
         events.add(new ControlEvent.Meter(0, theme.numerator(), theme.denominator()));
-        events.add(new ControlEvent.ProgramChange(0, 0, 48));
-        events.add(new ControlEvent.ProgramChange(0, 1, 32));
-        events.add(new ControlEvent.ProgramChange(0, 2, 73));
-        events.add(new ControlEvent.ProgramChange(0, 3, 56));
-        events.add(new ControlEvent.ProgramChange(0, 9, 0));
 
         IntensityTrack intensity = new IntensityTrack();
         Ids ids = new Ids();
         int[] stingerBar = {-1000};
         Map<String, Double> activeOverlays = new LinkedHashMap<>();
         List<String> heardOverlays = new ArrayList<>();
+        int themeSwitchBar = 0;
+        Theme current = theme;
         String stateId = null;
         double target = theme.hold() == null ? 0.3 : theme.hold().intensity();
         int lastTempo = -1;
@@ -112,6 +124,25 @@ public final class Director {
             int stop = cursor;
             cursor = mark;
             foldOverlays(overlayCues, bar, activeOverlays, heardOverlays);
+            boolean swapped = false;
+            for (ThemeCue cue : themeCues) {
+                if (cue.appliedBar != bar) {
+                    continue;
+                }
+                Theme nextTheme = alternate(cue.path, alternates);
+                if (nextTheme == null) {
+                    continue;
+                }
+                current = nextTheme;
+                swapped = true;
+                if (themeSwitchBar == 0) {
+                    themeSwitchBar = bar;
+                }
+                StockLayers.prepareHooks(current, seed);
+                if (stateId != null && current.state(stateId) == null) {
+                    stateId = current.hold() == null ? current.firstState() : current.hold().state();
+                }
+            }
             if (!mid) {
                 boolean changed = false;
                 String bridge = "";
@@ -132,7 +163,10 @@ public final class Director {
                     target = next.control.intensity();
                 }
                 if (stateId == null) {
-                    stateId = theme.hold() == null ? theme.firstState() : theme.hold().state();
+                    stateId = current.hold() == null ? current.firstState() : current.hold().state();
+                    changed = true;
+                }
+                if (swapped) {
                     changed = true;
                 }
                 if (changed) {
@@ -140,7 +174,7 @@ public final class Director {
                 } else {
                     held++;
                 }
-                leadDegree = playBar(theme, stateId, target, changed, bar, barStart, seed, ids, notes, events,
+                leadDegree = playBar(current, stateId, target, changed, bar, barStart, seed, ids, notes, events,
                         bars, intensity, leadDegree, held, lastTempo, true, barStart, bridge,
                         activeOverlays, stingerBar);
                 lastTempo = bars.get(bars.size() - 1).bpm();
@@ -165,7 +199,10 @@ public final class Director {
                     target = next.control.intensity();
                 }
                 if (stateId == null) {
-                    stateId = theme.hold() == null ? theme.firstState() : theme.hold().state();
+                    stateId = current.hold() == null ? current.firstState() : current.hold().state();
+                    changed = true;
+                }
+                if (swapped) {
                     changed = true;
                 }
                 if (changed) {
@@ -173,7 +210,7 @@ public final class Director {
                 } else {
                     held++;
                 }
-                leadDegree = playBar(theme, stateId, target, changed, bar, barStart, seed, ids, notes, events,
+                leadDegree = playBar(current, stateId, target, changed, bar, barStart, seed, ids, notes, events,
                         bars, intensity, leadDegree, held, lastTempo, true, barStart, bridge,
                         activeOverlays, stingerBar);
                 lastTempo = bars.get(bars.size() - 1).bpm();
@@ -186,7 +223,7 @@ public final class Director {
                     int bpm = lastTempo > 0 ? lastTempo : theme.bpm();
                     int removed = retract(notes, next.applied, barTicks);
                     String left = stateId == null
-                            ? (theme.hold() == null ? theme.firstState() : theme.hold().state())
+                            ? (current.hold() == null ? current.firstState() : current.hold().state())
                             : stateId;
                     String arrival = bridgeName(theme, left, next.control.state());
                     transitions.add(landed(left, next, removed, bpm, arrival));
@@ -196,7 +233,7 @@ public final class Director {
                     leadDegree = -1;
                     held = 0;
                     List<Played> fresh = new ArrayList<>();
-                    leadDegree = playBar(theme, stateId, target, true, bar, barStart, seed, ids, fresh, events,
+                    leadDegree = playBar(current, stateId, target, true, bar, barStart, seed, ids, fresh, events,
                             bars, intensity, leadDegree, held, lastTempo, false, next.applied, arrival,
                             activeOverlays, stingerBar);
                     adopt(notes, fresh, next.applied, barTicks);
@@ -212,7 +249,7 @@ public final class Director {
         int bpm = bars.isEmpty() ? theme.bpm() : bars.get(0).bpm();
         Score score = new Score(events, eventsNotes, bpm, theme.numerator(), theme.denominator(), theme.bars());
         return new Performance(score, List.copyOf(notes), List.copyOf(transitions), List.copyOf(bars),
-                List.copyOf(heardOverlays));
+                List.copyOf(heardOverlays), themeSwitchBar);
     }
 
     /** A motif that spills into the next bar wins over the plain scale line on the same pitch. */
@@ -422,7 +459,7 @@ public final class Director {
         }
         int bpm = bars.isEmpty() ? full.score().bpm() : bars.get(0).bpm();
         Score score = new Score(controls, eventsNotes, bpm, full.score().numerator(), full.score().denominator(), to);
-        return new Performance(score, notes, full.transitions(), bars, full.overlays());
+        return new Performance(score, notes, full.transitions(), bars, full.overlays(), full.themeSwitchBar());
     }
 
     /** Later control at the same bar and beat replaces an earlier one. An overlay does not replace a state. */
@@ -456,6 +493,9 @@ public final class Director {
     }
 
     private static String controlKey(Theme.Control control) {
+        if (control.hasTheme() && !control.hasState() && !control.hasOverlay()) {
+            return "t:" + control.bar() + ":" + control.beat() + ":" + control.themePath();
+        }
         if (control.hasOverlay() && !control.hasState()) {
             return "o:" + control.bar() + ":" + control.beat() + ":" + control.overlay();
         }
@@ -466,6 +506,21 @@ public final class Director {
     }
 
     private record OverlayCue(String id, double level, int appliedBar) {
+    }
+
+    private record ThemeCue(String path, int appliedBar) {
+    }
+
+    private static Theme alternate(String path, Map<String, Theme> alternates) {
+        Theme found = alternates.get(path);
+        if (found != null) {
+            return found;
+        }
+        try {
+            return Themes.load(java.nio.file.Path.of(path));
+        } catch (java.io.IOException | ThemeException e) {
+            return null;
+        }
     }
 
     static final class Ids {

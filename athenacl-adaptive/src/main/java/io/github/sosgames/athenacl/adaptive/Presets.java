@@ -15,18 +15,22 @@ public final class Presets {
     private Presets() {
     }
 
-    public record Preset(String id, String limits, Map<String, Theme.StateDef> states, LoudnessContour loudness) {
+    public record Preset(String id, String limits, Map<String, Theme.StateDef> states, LoudnessContour loudness,
+                         String instruments) {
     }
 
     public static Preset get(String id) {
         if ("fantasy".equals(id)) {
             return fantasy();
         }
+        if ("scifi-space".equals(id)) {
+            return scifi();
+        }
         return null;
     }
 
     public static List<String> ids() {
-        return List.of("fantasy");
+        return List.of("fantasy", "scifi-space");
     }
 
     /**
@@ -67,7 +71,51 @@ public final class Presets {
         return new Preset("fantasy",
                 "GM choir, harp, horn, flute, fiddle, and taiko. No sung lyrics.",
                 states,
-                new LoudnessContour(-23, offsets, 6));
+                new LoudnessContour(-23, offsets, 6),
+                "harp,choir,strings,horn,flute,fiddle,taiko");
+    }
+
+    /**
+     * Space music: Lydian pads, an arpeggio on the eighth-note grid, and a synth bass.
+     * Combat doubles the arp into sixteenths and adds an 808 kit. Trading uses celesta.
+     * There is no whole-tone scale in the theory layer, so the raised fourth stands in for it.
+     * Loudness uses the same contour as the dungeon.
+     */
+    public static Preset scifi() {
+        Map<String, Theme.StateDef> states = new LinkedHashMap<>();
+        states.put("peaceful", state("peaceful", "C lydian", 100, List.of("pad", "arp", "bass"),
+                Map.of("pad", 89, "arp", 80, "bass", 38),
+                Map.of("pad", "pad.warm", "arp", "lead.square", "bass", "bass.synth")));
+        states.put("sneaking", state("sneaking", "A lydian", 100, List.of("pad", "arp", "bass"),
+                Map.of("pad", 95, "arp", 80, "bass", 38),
+                Map.of("pad", "pad.sweep", "arp", "lead.square", "bass", "bass.synth")));
+        states.put("combat", state("combat", "F lydian", 100, List.of("pad", "arp", "bass", "lead", "drums"),
+                Map.of("pad", 95, "arp", 80, "bass", 38, "lead", 81, "drums", 25),
+                Map.of("pad", "pad.sweep", "arp", "lead.square", "bass", "bass.synth",
+                        "lead", "lead.saw", "drums", "drums.808")));
+        states.put("danger", state("danger", "E lydian", 100, List.of("pad", "arp", "bass"),
+                Map.of("pad", 99, "arp", 80, "bass", 38),
+                Map.of("pad", "fx.atmosphere", "arp", "lead.square", "bass", "bass.synth")));
+        states.put("trading", state("trading", "G lydian", 100, List.of("bell", "pad", "arp", "bass"),
+                Map.of("bell", 8, "pad", 88, "arp", 80, "bass", 38),
+                Map.of("bell", "celesta", "pad", "pad.newage", "arp", "lead.square", "bass", "bass.synth")));
+        states.put("partying", state("partying", "D lydian", 100, List.of("pad", "arp", "bass", "lead", "drums"),
+                Map.of("pad", 89, "arp", 80, "bass", 38, "lead", 81, "drums", 25),
+                Map.of("pad", "pad.warm", "arp", "lead.square", "bass", "bass.synth",
+                        "lead", "lead.saw", "drums", "drums.808")));
+        Map<String, Double> offsets = new LinkedHashMap<>();
+        offsets.put("sneaking", -1.5);
+        offsets.put("peaceful", -1.0);
+        offsets.put("trading", -1.0);
+        offsets.put("partying", 1.5);
+        offsets.put("danger", 2.0);
+        offsets.put("combat", 4.0);
+        return new Preset("scifi-space",
+                "GM synth pads, square and saw leads, synth bass, celesta, and an 808 kit. "
+                        + "No filter sweeps until the effects stage. No sung lyrics.",
+                states,
+                new LoudnessContour(-23, offsets, 6),
+                "pad,square,saw,bass,celesta,808");
     }
 
     private static Theme.StateDef state(String id, String key, int tempo, List<String> layers,

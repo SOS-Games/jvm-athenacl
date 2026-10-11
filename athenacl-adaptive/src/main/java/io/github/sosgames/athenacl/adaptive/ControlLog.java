@@ -53,6 +53,12 @@ public final class ControlLog {
                         .append("\",\"level\":").append(Themes.number(control.overlayLevel()))
                         .append("}\n");
             }
+            if (control.hasTheme()) {
+                text.append("{\"type\":\"theme\",\"bar\":").append(control.bar())
+                        .append(",\"beat\":").append(control.beat())
+                        .append(",\"theme\":\"").append(escape(control.themePath()))
+                        .append("\"}\n");
+            }
         }
         return text.toString().getBytes(StandardCharsets.UTF_8);
     }
@@ -91,6 +97,15 @@ public final class ControlLog {
                         0,
                         node.path("overlay").asText(""),
                         Themes.intensity(node.path("level").asDouble())));
+            } else if (type.equals("theme")) {
+                controls.add(new Theme.Control(
+                        node.path("bar").asInt(1),
+                        node.path("beat").asInt(1),
+                        "",
+                        0,
+                        "",
+                        0,
+                        node.path("theme").asText("")));
             }
         }
         if (theme == null || theme.isBlank()) {

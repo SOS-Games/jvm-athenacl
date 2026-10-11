@@ -6,6 +6,7 @@ import org.junit.jupiter.api.Test;
 
 import java.nio.file.Path;
 import java.util.List;
+import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -145,5 +146,30 @@ class DirectorTest {
             }
         }
         assertEquals(1, hits);
+    }
+
+    @Test
+    void aThemeSwitchWaitsForTheNextBar() throws Exception {
+        Theme fantasy = Themes.load(Path.of("themes/fantasy-dungeon.yaml"));
+        Theme scifi = Themes.load(Path.of("themes/scifi-space.yaml"));
+        Director.Performance performance = Director.perform(fantasy, List.of(
+                new Theme.Control(8, 1, "", 0, "", 0, "themes/scifi-space.yaml")),
+                1, Map.of("themes/scifi-space.yaml", scifi));
+        assertEquals(9, performance.themeSwitchBar());
+        boolean arpBefore = false;
+        boolean arpAfter = false;
+        for (Director.Played played : performance.notes()) {
+            if (!"arp".equals(played.note().layer())) {
+                continue;
+            }
+            if (played.note().bar() < 9) {
+                arpBefore = true;
+            }
+            if (played.note().bar() >= 9) {
+                arpAfter = true;
+            }
+        }
+        assertTrue(!arpBefore);
+        assertTrue(arpAfter);
     }
 }

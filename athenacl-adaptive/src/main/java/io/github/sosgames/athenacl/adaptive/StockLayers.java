@@ -28,6 +28,7 @@ import java.util.List;
  * When the theme has {@code hooks:}, the lead's idea is the critic's pick. That pick is
  * made once per state, before the bar loop. A theme without the block still calls
  * {@code MotifGenerator}, so L7's notes stay the same.
+ * {@code arp} is an even grid: eighths, or sixteenths in combat. {@code bell} is a slow celesta.
  */
 public final class StockLayers {
     private StockLayers() {
@@ -114,6 +115,14 @@ public final class StockLayers {
                     brass(state, info, start, seed, ids, notes);
                     yield degree;
                 }
+                case "arp" -> {
+                    arp(state, info, start, seed, ids, notes);
+                    yield degree;
+                }
+                case "bell" -> {
+                    bell(state, info, start, seed, ids, notes);
+                    yield degree;
+                }
                 default -> degree;
             };
         }
@@ -198,6 +207,8 @@ public final class StockLayers {
             case "harp" -> 6;
             case "brass" -> 7;
             case "drums" -> 9;
+            case "arp" -> 10;
+            case "bell" -> 6;
             default -> 0;
         };
     }
@@ -211,6 +222,8 @@ public final class StockLayers {
             case "taiko" -> 116;
             case "harp" -> 46;
             case "brass" -> 60;
+            case "arp" -> 80;
+            case "bell" -> 8;
             default -> layer.equals("pad") ? 48 : 0;
         };
         return state.program(layer, fallback);
@@ -296,6 +309,32 @@ public final class StockLayers {
         long id = ids.take();
         notes.add(played(id, start + beat * TimeBase.PPQ, duration, midi, PitchName.name(midi),
                 velocity, 9, "drums", info, seed, state.id(), "drum-grid"));
+    }
+
+    /** Even notes on the eighth, or the sixteenth in combat. Every attack sits on that grid. */
+    private static void arp(Theme.StateDef state, Director.BarInfo info, long start, long seed,
+                            Director.Ids ids, List<Director.Played> notes) {
+        int[] degrees = "lydian".equals(state.key().mode().id()) ? new int[] {0, 2, 4, 3} : new int[] {0, 2, 4, 2};
+        int steps = combat(state) ? 16 : 8;
+        String duration = combat(state) ? "1/16" : "1/8";
+        long cell = TimeBase.PPQ / (combat(state) ? 4 : 2);
+        for (int i = 0; i < steps; i++) {
+            long id = ids.take();
+            int midi = scaleMidi(state.key(), degrees[i % degrees.length], 5);
+            notes.add(played(id, start + i * cell, duration, midi, PitchName.name(midi),
+                    velocity(info.intensity()), 10, "arp", info, seed, state.id(), "arp"));
+        }
+    }
+
+    /** Two held bell tones, the root and the fifth. */
+    private static void bell(Theme.StateDef state, Director.BarInfo info, long start, long seed,
+                             Director.Ids ids, List<Director.Played> notes) {
+        for (int degree : new int[] {0, 4}) {
+            long id = ids.take();
+            int midi = scaleMidi(state.key(), degree, 5);
+            notes.add(played(id, start, "1/1", midi, PitchName.name(midi), velocity(info.intensity()),
+                    6, "bell", info, seed, state.id(), "bell"));
+        }
     }
 
     private static boolean combat(Theme.StateDef state) {

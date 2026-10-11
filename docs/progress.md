@@ -64,6 +64,12 @@ A note list such as `samples/notes/c-major-scale.yaml` renders to `score.mid`, `
 
 ## L8 — Overlays and wind-downs
 
-`gradlew layerCheck -Player=L8` passes (5 checks). The full `gradlew layerCheck` passes (89 checks).
+`gradlew layerCheck -Player=L8` passes (5 checks).
 
 `lowHealth` is a quiet heartbeat on top of the current state. `--at "4 overlay lowHealth 1"` turns it on, and `analyze` prints `loudness.overlayDelta=` within 1 LU. Leaving combat waits for the bar and plays a falling wind-down. A jump larger than 4 LU ramps CC11 instead of stepping. Entering combat still lands on the beat. A render with no timeline still stays on the first state.
+
+## L9 — Sci-fi space
+
+`gradlew layerCheck -Player=L9` passes (6 checks). The full `gradlew layerCheck` passes (95 checks).
+
+`themes/scifi-space.yaml` is the space preset: Lydian pads, a synth bass, and an arp on the eighth-note grid. Combat stays at 100 bpm and doubles that arp into sixteenths, with an 808 kit. Trading uses celesta. There is no whole-tone scale, so the raised fourth stands in for it. `describe-music` prints `arp.grid=` and `programs=`. `render themes/fantasy-dungeon.yaml --at "8 theme themes/scifi-space.yaml"` prints `themeSwitch.bar=9`. The window still swaps the combat kit on its own. A Space button plays this theme instead, with the track length and how far through it you are.

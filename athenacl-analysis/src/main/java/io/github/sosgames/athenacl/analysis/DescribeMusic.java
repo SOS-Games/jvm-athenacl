@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 package io.github.sosgames.athenacl.analysis;
 
+import io.github.sosgames.athenacl.events.ControlEvent;
 import io.github.sosgames.athenacl.events.NoteEvent;
 import io.github.sosgames.athenacl.events.Score;
 import io.github.sosgames.athenacl.events.TimeBase;
@@ -90,7 +91,53 @@ public final class DescribeMusic {
         if (!layers.isEmpty()) {
             line.append(" layers=").append(layers);
         }
+        String grid = arpGrid(inBar);
+        if (grid != null) {
+            line.append(" arp.grid=").append(grid);
+        }
+        String programs = programs(score, bar);
+        if (!programs.isEmpty()) {
+            line.append(" programs=").append(programs);
+        }
         return line.toString();
+    }
+
+    /** Eighths when every arp attack sits on an eighth. Sixteenths otherwise. */
+    private static String arpGrid(List<NoteEvent> inBar) {
+        boolean any = false;
+        boolean eighth = true;
+        for (NoteEvent note : inBar) {
+            if (!"arp".equals(note.layer())) {
+                continue;
+            }
+            any = true;
+            if (note.startTick() % (TimeBase.PPQ / 2) != 0) {
+                eighth = false;
+            }
+        }
+        if (!any) {
+            return null;
+        }
+        return eighth ? "8th" : "16th";
+    }
+
+    /** Program numbers heard by this bar, in order, skipping a repeat of the same number. */
+    private static String programs(Score score, int bar) {
+        long end = bar * score.barTicks();
+        TreeSet<Integer> numbers = new TreeSet<>();
+        for (ControlEvent event : score.controls()) {
+            if (event instanceof ControlEvent.ProgramChange change && change.startTick() < end) {
+                numbers.add(change.program());
+            }
+        }
+        StringBuilder text = new StringBuilder();
+        for (int program : numbers) {
+            if (!text.isEmpty()) {
+                text.append(',');
+            }
+            text.append(program);
+        }
+        return text.toString();
     }
 
     private static String layers(List<NoteEvent> inBar) {

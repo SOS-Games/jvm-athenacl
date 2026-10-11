@@ -6,6 +6,7 @@ eclipse.project.name = appName + '-gdx'
 
 dependencies {
   implementation project(':athenacl-adaptive')
+  implementation project(':athenacl-instruments')
   implementation project(':athenacl-render')
   implementation "com.badlogicgames.gdx:gdx:$gdxVersion"
   implementation "com.badlogicgames.gdx:gdx-backend-lwjgl3:$gdxVersion"

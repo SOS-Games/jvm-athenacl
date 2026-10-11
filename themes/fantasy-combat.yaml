@@ -1,5 +1,7 @@
 id: fantasy-combat
 preset: fantasy
+instruments:
+  kits: [gm-lite]
 bars: 14
 bpm: 100
 meter: "4/4"

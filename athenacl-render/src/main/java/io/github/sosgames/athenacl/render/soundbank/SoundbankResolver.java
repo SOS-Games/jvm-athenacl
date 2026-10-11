@@ -20,7 +20,7 @@ public final class SoundbankResolver {
         }
     }
 
-    public static Selection select(String request, Path cache) throws IOException {
+    public static Selection select(String request, Path cache) throws IOException, SoundbankRejected {
         if (request == null || request.isBlank()) {
             Path cached = cache.resolve(SoundbankCatalog.GENERAL_USER.fileName());
             if (SoundbankInstaller.matches(cached, SoundbankCatalog.GENERAL_USER)) {
@@ -56,6 +56,7 @@ public final class SoundbankResolver {
         }
         Path path = Path.of(text);
         if (Files.isRegularFile(path)) {
+            rejectSf3(path);
             String name = path.getFileName().toString();
             int dot = name.lastIndexOf('.');
             if (dot > 0) {
@@ -64,6 +65,13 @@ public final class SoundbankResolver {
             return new Selection(name, path, false);
         }
         return Selection.emergency(true);
+    }
+
+    /** SF3 is rejected before Gervill can turn its compressed samples into noise. */
+    public static void rejectSf3(Path path) throws IOException, SoundbankRejected {
+        if (path != null && SoundbankSniff.inspect(path) == SoundbankSniff.Kind.SF3) {
+            throw SoundbankRejected.sf3(path.toString().replace('\\', '/'));
+        }
     }
 
     private static Path systemBank() {

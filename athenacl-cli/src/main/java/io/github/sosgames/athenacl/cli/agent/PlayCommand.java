@@ -12,6 +12,7 @@ import io.github.sosgames.athenacl.events.ScoreException;
 import io.github.sosgames.athenacl.render.SpeakerPlayer;
 import io.github.sosgames.athenacl.render.WavRenderer;
 import io.github.sosgames.athenacl.render.soundbank.SoundbankPaths;
+import io.github.sosgames.athenacl.render.soundbank.SoundbankRejected;
 import io.github.sosgames.athenacl.render.soundbank.SoundbankResolver;
 import picocli.CommandLine;
 
@@ -100,6 +101,8 @@ public class PlayCommand implements Callable<Integer> {
         try {
             String request = soundbank != null ? soundbank : Config.get("athenacl.soundbank");
             selection = SoundbankResolver.select(request, SoundbankPaths.cache(cache));
+        } catch (SoundbankRejected e) {
+            return parent.fail(ExitCode.INVALID_INPUT, e.code(), e.path(), e.getMessage(), e.fix());
         } catch (IOException e) {
             return parent.fail(ExitCode.RUNTIME, "IO_ERROR", "--soundbank", e.getMessage(),
                     "Check that the soundbank file is readable.");

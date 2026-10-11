@@ -30,7 +30,7 @@ public class SoundbankCommand implements Callable<Integer> {
         parent.commandName = "soundbank";
         return parent.fail(ExitCode.USAGE, "USAGE", "argv[1]",
                 "usage: soundbank install <id> | soundbank list | soundbank show <id>",
-                "Known ids: generaluser.");
+                "Known ids: generaluser, musescore-general.");
     }
 
     AgentCli cli() {
@@ -51,11 +51,11 @@ public class SoundbankCommand implements Callable<Integer> {
             parent.commandName = "soundbank install";
             if (id == null || id.isBlank()) {
                 return parent.fail(ExitCode.USAGE, "USAGE", "argv[2]", "usage: soundbank install <id>",
-                        "Known ids: generaluser.");
+                        "Known ids: generaluser, musescore-general.");
             }
             if (SoundbankCatalog.byId(id) == null) {
                 return parent.fail(ExitCode.NOT_FOUND, "NOT_FOUND", "argv[2]", "unknown soundbank " + id,
-                        "Known ids: generaluser.");
+                        "Known ids: generaluser, musescore-general.");
             }
             try {
                 SoundbankInstaller.Plan plan = SoundbankInstaller.install(id, SoundbankPaths.cache(cache), parent.dryRun);
@@ -79,15 +79,17 @@ public class SoundbankCommand implements Callable<Integer> {
     }
 
     private static String installLine(SoundbankInstaller.Plan plan) {
+        SoundbankCatalog.Entry entry = SoundbankCatalog.byId(plan.id());
+        String license = entry == null || entry.license() == null ? "" : " license=" + entry.license();
         if (plan.dryRun() && "download".equals(plan.action())) {
             return "action=download size=" + plan.size() + " sha256=" + plan.sha256()
-                    + " soundbank=" + plan.id() + " status=" + plan.status() + " dryRun=true";
+                    + " soundbank=" + plan.id() + " status=" + plan.status() + " dryRun=true" + license;
         }
         if ("installed".equals(plan.status())) {
             return "soundbank=" + plan.id() + " status=installed sha256=" + plan.sha256()
-                    + " changed=true size=" + plan.size();
+                    + " changed=true size=" + plan.size() + license;
         }
-        return "soundbank=" + plan.id() + " status=present changed=false sha256=" + plan.sha256();
+        return "soundbank=" + plan.id() + " status=present changed=false sha256=" + plan.sha256() + license;
     }
 
     @CommandLine.Command(name = "list", description = "List catalog soundbanks and whether each is installed.")
@@ -138,12 +140,12 @@ public class SoundbankCommand implements Callable<Integer> {
             parent.commandName = "soundbank show";
             if (id == null || id.isBlank()) {
                 return parent.fail(ExitCode.USAGE, "USAGE", "argv[2]", "usage: soundbank show <id>",
-                        "Known ids: generaluser.");
+                        "Known ids: generaluser, musescore-general.");
             }
             SoundbankCatalog.Entry entry = SoundbankCatalog.byId(id);
             if (entry == null) {
                 return parent.fail(ExitCode.NOT_FOUND, "NOT_FOUND", "argv[2]", "unknown soundbank " + id,
-                        "Known ids: generaluser.");
+                        "Known ids: generaluser, musescore-general.");
             }
             try {
                 Path file = SoundbankPaths.cache(cache).resolve(entry.fileName());

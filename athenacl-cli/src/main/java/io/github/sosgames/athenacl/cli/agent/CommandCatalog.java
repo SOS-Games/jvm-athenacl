@@ -136,7 +136,27 @@ public final class CommandCatalog {
                     "adapt prints the scheduler snapshot: state, intensity, bar, lookahead, and build time.",
                     List.of(gradle("adapt themes/fantasy-dungeon.yaml --seed 1")),
                     true,
-                    "athenacl.result.adapt/1"));
+                    "athenacl.result.adapt/1"),
+            new CommandInfo(
+                    "instruments",
+                    "instruments list, show, audition, and compare named instruments from a kit. gm-lite is the default.",
+                    List.of(
+                            gradle("instruments list --kit gm-lite"),
+                            gradle("instruments show harp --kit gm-lite")),
+                    true,
+                    "athenacl.result.instrument/1"),
+            new CommandInfo(
+                    "kit",
+                    "kit validate checks sources, licenses, SF3 files, and slot assignment.",
+                    List.of(gradle("kit validate instruments/gm-lite.yaml")),
+                    false,
+                    "athenacl.result.kit/1"),
+            new CommandInfo(
+                    "credits",
+                    "credits writes CREDITS.md for the soundfonts a theme's kits use.",
+                    List.of(gradle("credits samples/themes/two-banks.yaml --out build/credits")),
+                    true,
+                    "athenacl.result.credits/1"));
 
     private CommandCatalog() {
     }

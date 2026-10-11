@@ -6,7 +6,7 @@
 applying the decisions the user settled on Oct 9, 2026 (updated 1:07 PM with genre presets and the
 agent-authoring non-goal, at 1:10 PM with the agentic CLI and debug tools, and at 1:25 PM: no server/MCP modes, conventions aligned
 with the user's [jvm-mw](https://github.com/SOS-Games/jvm-mw) repo, see [06](06-jvm-mw-cli-patterns.md); and at 1:35 PM: loudness contour,
-fantasy/sci-fi genre priority, transition defaults; and at 4:55 PM: layered plan with tools first, §7). File and line references point to the `pregui`
+fantasy/sci-fi genre priority, transition defaults; and at 4:55 PM: layered plan with tools first, §7; Oct 10, 9:58 AM: audio effects stage and sampled layers, §6.11; 10:17 AM: multi-soundfont instrument kits and SFZ loader, §6.12, from survey [07](07-soundfont-upgrade.md)). File and line references point to the `pregui`
 tag (`35b9869`) checked out at `/workspace/pregui/athenaCL/` unless marked HEAD. Effort figures are
 **estimates**. "athenaCL-J" is a working name.*
 
@@ -20,7 +20,7 @@ tag (`35b9869`) checked out at `/workspace/pregui/athenaCL/` unless marked HEAD.
 | License | **GPL-3.0-or-later** (allowed by athenaCL's "GPL v2 or later", 03 §10) |
 | Build | Gradle multi-module, built locally first, GitHub later |
 | Platform | **libGDX, desktop (LWJGL3) only**. Web skipped for now. **Java 21 minimum** (matches jvm-mw). |
-| Synth | Java's built-in **Gervill** with **GeneralUser GS** on all platforms. Pluggable soundbank. |
+| Synth | Java's built-in **Gervill** on all platforms. **Several soundfonts loaded at once, with specific instruments chosen from each via reusable instrument kits** (`instruments/*.yaml`, §6.12). Default kit `gm-lite` = GeneralUser GS; optional `gm-full` = MuseScore_General SF2 (MIT, 206 MB). SF3 is rejected; SFZ via an in-house loader (L6b). |
 | Game states | Defined per game, with a **starter set of 6** (peaceful, sneaking, combat, danger, trading, partying). **One main state plus layered overlays**, continuous **intensity**, **stingers**. |
 | Transitions | Next **bar** by default. **Combat and danger switch on the next beat, with retraction** of already-queued notes. Immediate is available but not a default. **Each theme can override** this (§6.4). |
 | Loudness | **Designed relative contour**: peaceful/trading/sneaking quieter, partying/danger mid, combat a few LU louder but never jarring, **total spread ≤ ~6 LU**. Set per theme with defaults, **calibrated automatically** (§6.4.1). |
@@ -73,14 +73,16 @@ tag (`35b9869`) checked out at `/workspace/pregui/athenaCL/` unless marked HEAD.
   replacing FMOD/Wwise.
 - ML/neural music generation.
 - Bundling or reading Microsoft `gm.dls` (01 §2). An opt-in system soundbank lookup can come later.
-- SF3 (Ogg) soundfonts: Gervill can't read them (01 §3.1).
+- SF3 (Ogg) soundfonts: Gervill plays their compressed samples as noise without an error (07 §2), so they're **rejected with a clear error** (§6.12.5). Use SF2 editions.
 - Byte-exact parity with the **HEAD** fork's Rust RNG (ChaCha12) (03 §1). Only pregui/CPython parity is targeted.
 - A GUI editor (a later candidate; the CLI preview and YAML hot-reload cover authoring first).
 - **A song-to-theme tool** (analyzing a reference song/recording and producing a theme). External agents
   do this outside the library. The project only provides the schema, docs, validator and preview CLI they
   need (§6.8).
-- Vocals with lyrics, modern production (sidechain, mastering chains, sampled loops, 808 glides) and
-  genre-authentic mixes. These are limits of GM/GS soundfonts through Gervill, not features to emulate (§6.7.3).
+- Vocals with lyrics, and genre-authentic professional mixes/mastering. These are limits of GM/GS soundfonts through
+  Gervill. Some modern-production tools (filter sweeps, sidechain ducking, saturation, 808 glides, loops/crackle)
+  arrive later through the effects stage and sampled layers (§6.11, L9b–L9d), but they don't make GM sound like
+  a produced record (§6.7.3).
 - A graphical debugger/IDE plugin. Debug tools are CLI, JSON, ASCII and an in-game overlay; a GUI can build on
   the same JSON later.
 - **Server modes of any kind:** no JSON-RPC session server, no MCP server, no socket for attaching to a running game.
@@ -95,7 +97,7 @@ tag (`35b9869`) checked out at `/workspace/pregui/athenaCL/` unless marked HEAD.
 |---|---|
 | Java baseline | **17** (records, sealed types, switch patterns, `java.util.random.RandomGenerator` incl. `L64X128MixRandom` [JEP 356]). Test on 17, 21 and 25. |
 | Synth | Gervill (`MidiSystem.getSynthesizer()`), real time through `Receiver` with µs timestamps. Offline and libGDX pull-mode through `com.sun.media.sound.AudioSynthesizer.openStream`, which needs `--add-exports java.desktop/com.sun.media.sound=ALL-UNNAMED` (verified on JDK 21, 01 §3.3). Wrap this in **one class** (`GervillStreams`) so a future JDK change touches one place. The fallback path when it's not exported is Gervill on its own `javax.sound.sampled` line instead of libGDX's OpenAL. |
-| Soundbank default | **GeneralUser GS 2.0.3** (32,319,396 bytes, 287 instruments, 13 GS kits; 02 §1). See §2.1. |
+| Soundbank default | **Instrument kits** (§6.12): default `gm-lite` = **GeneralUser GS 2.0.3** (32,319,396 bytes, 287 instruments, 13 GS kits; 02 §1); optional `gm-full` = **MuseScore_General v0.2 SF2** (206 MB, MIT, 309 instruments / 37 kits; 07). See §2.1. |
 | RNG | Two implementations of one `RandomSource` interface: **`CompatRandom`** (CPython MT19937 algorithms, for the ported athenaCL core and golden tests) and **`DefaultRandom`** (`L64X128MixRandom`, splittable, used by the adaptive engine, seeded per (seed, scope, bar, layer)). |
 | Time model | **Ticks at 960 PPQ** (athenaCL's own `midiTools.MidiScore.tickPerBeat = 960`) plus a tempo map. athenaCL's seconds-based events are converted at the boundary. Exact rational musical time (bars/beats/ticks) inside the adaptive engine. |
 | Config | YAML through **SnakeYAML Engine** (Apache-2.0) or Jackson-YAML (Apache-2.0), mapped to records. JSON schema published for editor validation. |
@@ -127,8 +129,12 @@ License text ([LICENSE.txt v2.0](https://github.com/mrbumpy409/GeneralUser-GS/bl
 2. The CLI and dev tooling **download on first run** from **our own GitHub release asset** (mirror,
    pinned SHA-256, like athenaCL's own `make init` for FluidR3, 01 §1.1) into
    `~/.cache/athenacl-j/soundbanks/`.
-3. The resolver chain stays pluggable (01 §4.2): explicit path → theme `soundbank:` → cache/bundled
+3. The resolver chain stays pluggable (01 §4.2): explicit path → kit source → cache/bundled
    GeneralUser GS → Gervill emergency bank (never silent).
+4. **Since Oct 10, soundbanks are reached through instrument kits** (§6.12). The same mirror also hosts
+   **MuseScore_General v0.2 SF2** (MIT) for the optional `gm-full` kit, downloaded with `soundbank install
+   musescore-general` and shipped with its License.md. GeneralUser GS stays the small default because the user heard
+   no difference (07).
 
 ---
 
@@ -161,8 +167,15 @@ athenacl-j/
 ├─ athenacl-adaptive/    [L4–L8] Director, state machine, overlays, intensity, transition rules, stingers, musical clock,
 │                        lookahead scheduler with retraction, theme model + YAML loader (resolves `preset:`),
 │                        theme validator (schema + semantic checks), loudness calibration, control log/replay
+├─ athenacl-instruments/ [L1b,L6b] Instrument kits: kit YAML model/loader/resolver (extends, overrides, fallbacks),
+│                        canonical instrument names, multi-soundbank loading + deterministic patch allocator (remap via
+│                        SimpleInstrument), selective loading, normalization cache, license policy + credits, SF3/format
+│                        checks, SFZ loader (L6b)
 ├─ athenacl-render/      [L0b,L1] SMF writer (port of midiTools.MidiScore), javax.sound Sequence export, Gervill real-time +
 │                        offline (GervillStreams), soundbank resolver/cache, EBU R128 loudness meter, MIDI-device output
+├─ athenacl-fx/          [L9b–L9d] Pure-Java DSP: bus mixer (one Gervill instance per bus), filters/EQ/compressor+
+│                        sidechain/saturation/bitcrush/reverb/delay/chorus/limiter, automation on the musical clock,
+│                        sampler for `type: sample` layers (WAV, OGG via JOrbis), meters, CPU budget
 ├─ athenacl-gdx/         [L6] libGDX desktop integration: pull-mode PCM into AudioDevice, lifecycle, main-thread callbacks,
 │                        `…gdx.debug`: F4 debug overlay (scene2d), debug hooks, F3 snapshot + log dump for repro
 ├─ athenacl-analysis/    [L0b+] Music analysis over event logs: metrics (loudness from WAV or a velocity proxy, density,
@@ -199,10 +212,11 @@ athenacl-j/
 
 Dependency graph (bottom-up, so the tool modules exist before the music modules; `[Lnn]` = the layer that introduces each, §7):
 ```
-events [L0b] ← render [L0b,L1]
+events [L0b] ← instruments [L1b,L6b] ← render [L0b,L1]
 events ← analysis [L0b] ← debug [L0b]
 events ← theory [L2] ← rhythm [L3] ← motif [L7] ← presets [L5] ← adaptive [L4]
 compat [L12] ← core/athenaCL port [L13–L20] → used by theory/rhythm (sieves, set classes) and adaptive (`po:` generators)
+events, rhythm ← fx [L9b] ← render (the PCM path runs Gervill → fx → sink once L9b exists)
 {adaptive, render, debug} ← gdx [L6]
 everything ← cli [L0a, extended by every layer]
 ```
@@ -213,6 +227,7 @@ Debug *hooks* (`DebugSink`, event ids, seed paths) live in `events` as tiny inte
 The `debug` module only consumes them, so games don't pay for tooling they don't load.
 `presets` is mostly data. Its Java code only models and merges presets, so new genres need no code.
 `core` has **no** `javax.sound` dependency (pure model and generation). `render` is the only module touching `com.sun.media.sound`.
+`fx` works on float PCM blocks only (no `javax.sound`), so it's testable with synthetic signals.
 
 ---
 
@@ -305,7 +320,7 @@ public interface DevelopmentPlanner { List<MotifTransform> planPhrase(PhraseForm
 public enum PhraseForm { SENTENCE, PERIOD, AABA, ABAC, FREE }
 
 // ---- adaptive ----
-public record Theme(String id, SoundbankRef soundbank, Map<String, StateDef> states, Map<String, OverlayDef> overlays,
+public record Theme(String id, InstrumentSelection instruments /* kits + overrides, §6.12 */, Map<String, StateDef> states, Map<String, OverlayDef> overlays,
                     Map<String, StingerDef> stingers, List<TransitionRule> transitions, Map<String, InstrumentDef> instruments) {}
 public record StateDef(String id, TempoRange tempo, Meter meter, KeySpec key, HarmonySpec harmony,
                        List<LayerDef> layers, MotifSpec motifs, LoudnessTarget loudness) {}
@@ -314,6 +329,27 @@ public record TransitionRule(String from, String to, Quantize quantize, boolean 
                              Optional<String> stinger, Optional<BridgeSpec> bridge, int crossfadeBars, int minDwellBars) {}
 public enum Quantize { IMMEDIATE, BEAT, BAR, PHRASE }
 public interface LayerGenerator { List<NoteEvent> generate(BarContext ctx, LayerState st, RandomSource rng); }
+
+// ---- effects stage (fx, L9b–L9d; §6.11) ----
+public record BusDef(String id, List<String> layers, List<FxUnitDef> fx) {}
+public sealed interface FxUnit permits Biquad, Eq, Compressor, Saturator, Bitcrusher, Reverb, Delay, Chorus, Limiter {
+    void process(float[][] block, int frames, AutomationContext ctx); }      // allocation-free, 64-frame blocks
+public sealed interface Automation permits Constant, ByIntensity, ByState, Lfo, Sweep, BeatEnvelope, Combined {
+    double valueAt(MusicalTime t, DirectorView v); }                        // musical clock, never wall clock
+public record SlideSpec(String mode /* bend|portamento */, Rational time, int bendRange, double probability) {}
+public record SampleClip(Path file, ClipKind kind /* LOOP|ONE_SHOT|BED */, Optional<Double> bpm, OptionalInt bars, String license) {}
+// ---- instrument kits (instruments, L1b/L6b; §6.12) ----
+public record InstrumentKit(String id, Optional<String> extendsKit, Map<String, SoundbankSource> sources, Map<String, InstrumentDef> instruments) {}
+public record SoundbankSource(String key, Optional<String> id, Optional<Path> path, SoundbankFormat format /* SF2|DLS|SFZ */,
+                              String sha256, LicenseInfo license) {}
+public record LicenseInfo(String spdx, String attribution, URI url, boolean redistribute, boolean commercial, Optional<Path> file) {}
+public record InstrumentDef(String name, String source, OptionalInt bank, OptionalInt program, Optional<String> preset,
+                            OptionalInt drumkit, Optional<Path> sfz, double gainDb, int transpose, KeyRange keyRange,
+                            OutOfRange outOfRange, List<InstrumentRef> fallbacks) {}
+public record InstrumentRef(String kit, String name) {}                       // "gm-lite:harp" or "gm:46"
+public record SynthSlot(int bank, int program, boolean percussion) {}         // allocated, never the source's own patch
+public interface KitResolver { ResolvedInstruments resolve(Theme t, List<InstrumentKit> kits, LicensePolicy p); } // + fallbacks taken
+public interface MixEngine { void renderBlock(float[][] out, int frames); FxMeters meters(); }  // Gervill buses → fx → master
 
 // ---- presets ----
 public record GenrePreset(String id, List<String> extendsIds, TempoRange tempo, List<Meter> meters, List<ModeRef> modes,
@@ -597,7 +633,9 @@ loudness:
 - **Calibration (automatic):** at theme load (cached by theme + soundbank hash), render each state at
   intensity {0, 0.5, 1} over several seeds offline, measure EBU R128 integrated and short-term loudness in Java, and
   solve per-state/per-layer CC7 gains so each state lands on `reference + contour[state]` within **±1 LU**. The
-  `theme explain` and `analyze` commands print the calibrated contour as `loudness.<state>=… LU` lines.
+  `theme explain` and `analyze` commands print the calibrated contour as `loudness.<state>=… LU` lines. Once the effects
+  stage exists (L9b), calibration measures **after effects**, before the limiter (§6.11.7). It runs after per-instrument
+  normalization (§6.12.4), and its cache key includes the resolved kits, because banks differ by ~7 LU (07).
 
 ### 6.5 Threading and latency (04 §4.7)
 Game thread → lock-free queue → **director thread** (generation, scheduling, retraction) → output
@@ -617,6 +655,8 @@ device buffer (~50–150 ms).
   fixed-timestep tick for lockstep and replay games.
 - Audio bytes may differ across JDK versions if Gervill changes, so **event logs**, not audio, are the
   canonical snapshot.
+- **Effects (§6.11.7):** DSP is a deterministic function of the event log, theme, soundbank and clips. It uses fixed
+  64-frame blocks and fixed bus order. The offline render with FX is bit-stable on a given JDK.
 
 ### 6.7 Genre presets
 
@@ -660,13 +700,25 @@ describe *scales and stock textures*, not claims of authentic traditional practi
 #### 6.7.3 GM/GS soundfont limits (documented per preset)
 - **No vocals:** GM/GS has only Choir Aahs/Concert Choir (52), Voice Oohs (53) and Synth Voice (54). No lyrics or
   rap. Hip-hop/trap presets are instrumental beats.
-- **No modern production:** no sidechain pumping, no synth filter sweeps (only volume/expression shaping is reliable), no
-  mastering, no sampled loops or vinyl crackle (lo-fi uses slow tempo, swing, detune via pitch bend,
-  Rhodes/EP, and soft drums instead), no 808 sub-bass glides (approximated with Synth Bass + pitch bend).
+- **Modern production: limited before L9b, partly covered after.** Without the effects stage (§6.11) there's no sidechain
+  pumping, no filter sweeps, no saturation and no loops/crackle. Lo-fi falls back to slow tempo, swing, pitch-bend detune,
+  Rhodes/EP and soft drums. **With L9b–L9d:**
+  - automatable filters/sweeps, kick- or beat-keyed ducking, saturation/bitcrush, tempo-synced delay, reverb, chorus
+    and a master limiter;
+  - 808 glides via generated pitch bend;
+  - optional sampled loops, one-shots and vinyl crackle (user-supplied clips).
+
+  Still missing: real vocals, mastering-grade processing, and the sound of modern synths and samples beyond what GM/GS
+  plus clips give. Presets declare `needs: fx` / `needs: samples` and fall back gracefully when those are off.
 - **Electric guitar realism** for rock/metal is limited (GM 29 Overdriven/30 Distortion Guitar). Metal relies on
   power-chord voicing, palm-mute articulation (short durations) and double-kick patterns.
 - **Ethnic instruments** are few (Sitar 104, Shamisen 106, Koto 107, Kalimba 108, Bagpipes 109, Fiddle 110, Steel
   Drums 114, Taiko 116, Agogo 113, etc.). Presets suggest the closest available ones.
+- Genres that gain most from the effects stage: house/techno, hip-hop/trap and lo-fi (ducking, filters, 808 glides,
+  crackle), sci-fi space (sweeps, delay), chiptune (bitcrush) and metal (saturation on guitars).
+- **Instrument kits (§6.12) widen the palette:** presets name roles → canonical instruments, so a theme can pull a
+  better harp or choir from another SF2, or orchestral sections from SFZ libraries (L6b). No free bank has a true lute
+  (07), so fantasy uses nylon guitar/harpsichord until one is found (Q29).
 - Each preset carries a `limits:` note shown by `preset show` and in the docs, and can name a better custom
   soundbank as an option (pluggable soundbank, §2.1).
 
@@ -674,7 +726,7 @@ describe *scales and stock textures*, not claims of authentic traditional practi
 ```yaml
 id: tavern
 preset: celtic                 # or [celtic, folk] (merged left to right)
-soundbank: default
+instruments: {kits: [gm-lite]}   # instrument kits (§6.12); default kit
 overrides:                     # theme-wide overrides of preset fields
   tempo: [104, 124]
   modes: [dorian, mixolydian]
@@ -845,6 +897,312 @@ generation context (not extra parameters on every generator). Event ids are dete
 (latency, CPU) live in separate trace records that are excluded from canonical hashes. Debug off is a no-op
 `DebugSink` (target: < 1% overhead); full provenance in dev builds should stay under ~15% generation time [estimate].
 
+### 6.11 Audio effects stage and sampled layers (approved Oct 10; layers L9b–L9d)
+
+A **pure-Java DSP chain** sits between Gervill's PCM output (`AudioSynthesizer.openStream`) and the two sinks: the
+libGDX `AudioDevice` pump (real time) and the WAV writer (offline). It lives in a new module, **`athenacl-fx`**.
+The MIDI/event side is unchanged; effects only shape audio.
+
+#### 6.11.1 Buses and Gervill's limits
+- **Gervill has no per-channel audio taps.** I checked OpenJDK 21's `SoftMainMixer`: all 16 MIDI channels are mixed
+  into one internal set of left/right/mono buffers (plus Gervill's own reverb/chorus sends), and the output format
+  is mono or stereo only. So one synth instance gives one stereo mix. Gervill's info properties (`SoftSynthesizer`)
+  do let us turn off its built-in `reverb`, `chorus` and `auto gain control`. We do that when our FX chain is active,
+  so loudness and dynamics are under our control and calibration is predictable.
+- **Default: one Gervill instance per bus.** Each bus (e.g. `drums`, `bass`, `music`, `fx`) gets its own `SoftSynthesizer`
+  opened with `openStream`, receives only its layers' MIDI events, and renders in lock-step blocks on the director's
+  audio thread. All instances load the **same `Soundbank` object**. Whether Gervill then shares the sample data in
+  memory instead of copying it is **unverified**; L9b measures it. Cost scales with the number of buses: voices only
+  play on one instance, but each instance has fixed per-block overhead. Default cap: 4 buses [estimate].
+- **Alternatives**, selectable per theme:
+  1. **Single-bus mode:** one instance, master FX only. Cheapest; no sidechain or per-layer filters.
+  2. **Render-twice ("stem by muting"):** offline only. Render each bus separately with other channels muted, then mix.
+     Exact, but slower. Useful for `render --stems` and tests.
+  3. **Per-channel tap by patching Gervill:** vendoring and patching `SoftMainMixer` (GPL-2.0 + Classpath Exception)
+     to expose per-channel buffers. Most efficient, but we'd own a fork of a JDK internal. Not planned; noted as an
+     option if CPU becomes the problem.
+- **Signal flow:** `bus synths → per-layer/bus FX → bus faders (calibrated) → master FX (EQ → glue compressor →
+  limiter) → sink`. Sampled layers (§6.11.5) enter as their own buses.
+
+#### 6.11.2 Effect set (in-house, allocation-free, block-based)
+| Effect | Notes |
+|---|---|
+| **Filters** | LP/HP/BP/notch, RBJ-cookbook biquads (12 dB) and cascades (24 dB), resonance (Q), smoothed automatable cutoff for sweeps; optional state-variable filter for fast modulation |
+| **EQ** | Low/high shelf + 2–3 peaking bands; master and per bus |
+| **Compressor / sidechain ducking** | Feed-forward RMS/peak detector, attack/release/ratio/knee. **Key sources:** another bus (e.g. `kick` lane), or a **beat-synced envelope** generated from the musical clock (duck on every beat/quarter without needing a real kick) |
+| **Reverb** | Freeverb/Schroeder-style (comb + allpass), room/damping/width/mix |
+| **Delay** | Tempo-synced (`1/8`, `3/16`, `1/4.`) from the tempo map, feedback with LP in the loop, ping-pong |
+| **Distortion** | Saturation (tanh/soft clip), hard clip, **bitcrush** (bit depth + sample-rate reduction), 2× oversampled where aliasing matters |
+| **Chorus** | 2–3 modulated delay voices, tempo-synced or Hz rate |
+| **Limiter** | Master look-ahead (≈1.5 ms) brickwall limiter with 4× oversampled true-peak detection, ceiling −1 dBTP |
+| **Meters** | Per-bus and master peak/RMS/short-term LUFS and gain reduction (debug, §6.11.6) |
+
+**Libraries are optional.** The set above is small (well-known public-domain formulas such as the RBJ cookbook and
+Freeverb) and written in-house for determinism, zero allocation and a stable API. Candidates if we want more:
+- **TarsosDSP**, GPL-3.0 (compatible with GPL-3.0-or-later; [LICENSE](https://github.com/JorenSix/TarsosDSP/blob/master/LICENSE)).
+  Useful mainly for **WSOLA time-stretch / pitch-shift** for sampled loops (§6.11.5). It has its own dispatcher
+  model, so we'd call individual processors, not its pipeline.
+- **JSyn**, Apache-2.0 ([license](https://jsyn.com/jsyn/developers/)). Filters/delays as unit generators, but it runs
+  its own engine thread, which fights our lock-step determinism.
+- **Beads**, GPL-3.0 ([repo](https://github.com/orsjb/beads)). Same concern, and it pulls in mp3/JACK dependencies.
+
+Recommendation: in-house core FX, TarsosDSP only if time-stretch is needed.
+
+#### 6.11.3 Automation (musical clock, intensity, state)
+Every numeric FX parameter can be a constant or an automation source, evaluated per DSP block (64 frames) from
+the **musical clock**, so it's sample-accurate and deterministic:
+- `byIntensity`: a curve over intensity 0–1 (e.g. the pad filter opens with intensity).
+- `byState`: values per state (e.g. combat adds saturation); changes glide over the transition's quantization unit.
+- `lfo`: tempo-synced LFO (`rate: 1bar`, sine/triangle/saw/square/random-step seeded).
+- `sweep`: a one-shot ramp triggered by an event (transition, stinger, bar N, phrase start), `over: 4bars`.
+- `envelope`: beat-synced envelope (e.g. for ducking).
+- Automation sources combine (`mul`/`add`), and the result is clamped to the parameter range.
+
+#### 6.11.4 808 slides
+A **bass layer option** generates monophonic legato lines with **pitch glides between notes**:
+- **Generated pitch bend** (default): set RPN 0 bend range (e.g. ±12 semitones), then emit pitch-bend ramps at control
+  rate over `slide.timeMs` or a musical length (`1/16`). Deterministic and works on any GM program.
+- **Portamento CC5/CC65**: only if Gervill honors it, which is **unverified**; L9c tests it and falls back to bend.
+- A sub-bass sound comes from a GM program (Synth Bass 38/39, or a sine-like lead) plus saturation, or from a **sampled
+  808 one-shot** played by the sampler (§6.11.5) with the same glide curve applied to its playback rate.
+
+#### 6.11.5 Sampled-audio layers (separate sub-feature, L9d)
+A new layer type, `type: sample`, plays user-supplied clips outside Gervill:
+- **Formats:** WAV through `javax.sound.sampled`; OGG Vorbis through **JOrbis** (LGPL, [jcraft.com/jorbis](https://www.jcraft.com/jorbis/),
+  usable from GPL-3.0 code) for offline/CLI. In-game, libGDX's own OGG decoding is an alternative. All clips are decoded
+  and resampled to the engine rate **at theme load**, never during playback.
+- **Kinds:**
+  - **loops:** declare `bpm` and `bars`; they start on bar lines. A small tempo mismatch (≤ ±6%) uses varispeed, which
+    also changes pitch. Larger mismatches use beat-slice retriggering (slices at beat markers). Optional true
+    time-stretch via TarsosDSP WSOLA.
+  - **one-shots:** triggered by generated note events (pitched by playback rate for 808s, or fixed).
+  - **beds:** free-running textures such as vinyl crackle or room tone, with crossfaded loop points.
+- **Determinism:** clip starts are sample-accurate from ticks; random clip choice uses `RandomSource`; no wall clock.
+- **Licensing:** themes must list each clip's source and license (`license:` field, validated). The project bundles
+  only CC0 example clips.
+
+#### 6.11.6 YAML syntax
+```yaml
+buses:                          # omit for single-bus mode
+  drums: {layers: [kick, snare, hats, perc]}
+  bass:  {layers: [bass808]}
+  music: {layers: [pad, lead, arp]}
+  beds:  {layers: [crackle]}
+layers:
+  bass808:
+    program: {gm: 38}
+    mono: true
+    slide: {mode: bend, time: "1/16", bendRange: 12, probability: 0.4}
+    fx:
+      - saturate: {drive: {byState: {combat: 0.6, danger: 0.4, default: 0.15}}}
+  pad:
+    fx:
+      - filter: {type: lowpass, slope: 24, resonance: 0.35,
+                 cutoff: {byIntensity: [[0, 600], [0.5, 2500], [1, 9000]], curve: exp,
+                          mul: {lfo: {rate: 2bars, shape: sine, depth: 0.25}}}}
+      - duck: {key: bus:drums.kick, depthDb: 6, attackMs: 4, releaseMs: 140}   # or key: {envelope: {every: "1/4"}}
+      - delay: {time: "3/16", feedback: 0.35, mix: {byIntensity: [[0, 0.1], [1, 0.25]]}}
+      - reverb: {room: 0.7, damping: 0.4, mix: 0.25}
+  crackle:
+    type: sample
+    clip: {file: samples/vinyl-crackle.ogg, kind: bed, license: CC0}
+    gainDb: -24
+    fx: [{filter: {type: highpass, cutoff: 300}}]
+  loopTop:
+    type: sample
+    clip: {file: samples/top-loop-90bpm.wav, kind: loop, bpm: 90, bars: 2, license: "own work"}
+    activeAbove: 0.6            # intensity threshold, like other layers
+master:
+  fx:
+    - eq: {lowShelf: {freq: 80, gainDb: 1}, highShelf: {freq: 10000, gainDb: 0.5}}
+    - compressor: {ratio: 2, thresholdDb: -18, attackMs: 20, releaseMs: 200}
+    - limiter: {ceilingDbtp: -1}
+  sweeps:
+    - {on: "transition to=combat", target: music.pad.filter.cutoff, from: 400, to: 8000, over: 1bar}
+fxBudget: {cpuPercentOfBuffer: 25, onExceed: warn}   # warn | degrade (live only; see 6.11.7)
+```
+`sci-fi space` uses these first (L9c): filter sweeps on pads, tempo-synced ping-pong delay on arps, light chorus,
+ducking pads to the kick in combat. `fantasy-dungeon` gets reverb sized per state (bigger in dungeon exploration,
+dry in combat) and a slight master glue compressor.
+
+#### 6.11.7 Determinism, loudness and CPU
+- **Determinism:** the DSP is a pure function of (event log, theme, soundbank, sample clips, block size). Fixed 64-frame
+  internal blocks are independent of the device buffer size. Buses are processed in a fixed order on one thread,
+  denormals are flushed explicitly, and there are no wall-clock or unordered-map reads. The offline render is
+  **bit-stable on a given JDK**. Gervill or JDK updates may change bytes, so event logs stay the canonical snapshot
+  (§6.6). Live output equals the offline render for the same recorded log, **unless** `fxBudget.onExceed: degrade`
+  kicks in. That mode is logged and is off by default.
+- **Loudness calibration measures after effects:** the §6.4.1 calibration renders through the full FX chain and
+  measures post-master, before the limiter. It also checks that the limiter's gain reduction stays ≤ 1 dB on average,
+  so the contour isn't achieved by squashing. FX changes invalidate the calibration cache (the hash includes the FX
+  config and clip hashes).
+- **CPU budget:** DSP time per audio buffer is measured (e.g. 512 frames at 48 kHz ≈ 10.7 ms; default budget 25% ≈ 2.7 ms
+  for FX, Gervill excluded). `fx.cpu.pct` and `fx.cpu.maxMs` appear in the F3 snapshot, the F4 overlay and
+  `debug perf --fx`. Over budget: `warn` (default) or `degrade`, which bypasses reverb/chorus first.
+
+#### 6.11.8 CLI and debug
+```
+athenacl render themes/scifi-space.yaml --seed 1 --bars 1-16 --out build/fx --fx on|off   # A/B with and without FX
+athenacl render … --bypass music.pad.filter,master.limiter          # bypass selected units
+athenacl render … --stems                                            # per-bus WAVs (render-twice mode)
+athenacl analyze build/fx --by bus  → "bus=drums lufs=… peak=… gr.maxDb=…" per bus + master
+athenacl debug fx themes/scifi-space.yaml   → chain listing: "unit=music.pad.filter type=lowpass cutoff.auto=byIntensity…"
+athenacl debug fx-curve themes/scifi-space.yaml --param music.pad.filter.cutoff --bars 1-8   → per-bar values
+athenacl debug perf themes/scifi-space.yaml --fx --buffer 512   → "fx.cpu.pct.p99=… budget=25 ok=true"
+```
+F4 overlay gains per-bus meters and gain-reduction bars, and F3 snapshots gain `bus.<name>.lufs`, `fx.cpu.*` and
+`limiter.grDb`.
+
+### 6.12 Instrument kits: several soundfonts, chosen instruments (decided Oct 10; layers L1b, L6b)
+
+The user couldn't hear a difference between GeneralUser GS and MuseScore_General ([07](07-soundfont-upgrade.md)), so the
+decision is not "pick one bank". Instead the engine **loads several soundfonts at once and selects specific instruments
+from each, defined in config**. That config is a reusable **instrument kit** (`instruments/*.yaml`), separate from themes
+and presets.
+
+#### 6.12.1 Kit format
+A kit declares **sources** (soundbanks) and **named instruments**:
+```yaml
+# instruments/gm-lite.yaml (DEFAULT kit, small)
+kit: gm-lite
+version: 1
+sources:
+  gu:
+    id: generaluser-gs-2.0.3          # resolved via the soundbank cache/mirror (§2.1); or path: ...
+    format: sf2                        # sf2 | dls | sfz (L6b). sf3 is rejected (§6.12.5)
+    sha256: 0f3c…                      # verified on load
+    license: {spdx: LicenseRef-GeneralUser-GS-2.0, url: "https://www.schristiancollins.com/generaluser",
+              attribution: "GeneralUser GS by S. Christian Collins", redistribute: true, commercial: true,
+              file: licenses/GeneralUser-GS-LICENSE.txt}
+instruments:                           # canonical names (docs/instrument-names.md), GM-derived
+  piano:          {source: gu, bank: 0, program: 0}
+  harp:           {source: gu, bank: 0, program: 46, gainDb: -1.5, keyRange: [C1, G7], outOfRange: fold}
+  strings:        {source: gu, bank: 0, program: 48}
+  choir:          {source: gu, bank: 0, program: 52}
+  flute:          {source: gu, bank: 0, program: 73}
+  fiddle:         {source: gu, bank: 0, program: 110}
+  taiko:          {source: gu, bank: 0, program: 116, transpose: -12}
+  pad.halo:       {source: gu, bank: 0, program: 94}
+  bass.synth:     {source: gu, bank: 0, program: 38}
+  drums.orchestral: {source: gu, drumkit: 48}
+  drums.808:      {source: gu, drumkit: 25}
+```
+```yaml
+# instruments/gm-full.yaml (OPTIONAL larger kit)
+kit: gm-full
+extends: gm-lite                       # inherit names; override where MSG is preferred
+sources:
+  msg:
+    id: musescore-general-0.2
+    format: sf2                        # the 206 MB SF2 edition; the 38 MB SF3 edition is rejected
+    sha256: 9a1e…
+    license: {spdx: MIT, attribution: "MuseScore_General (S. Christian Collins), based on FluidR3Mono / FluidR3",
+              redistribute: true, commercial: true, file: licenses/MuseScore_General_License.md}
+instruments:
+  piano:   {source: msg, bank: 0, program: 0, fallback: [gm-lite:piano]}
+  choir:   {source: msg, preset: "Choir Aahs Expr.", fallback: [gm-lite:choir]}   # select by preset name; exact MSG names to be checked against a dump in L1b
+  drums.808: {source: msg, drumkit: 25}
+```
+- **Instrument fields:** `source` + `bank`/`program` (or `preset:` by name, or `drumkit:` for percussion, or `sfz:` in
+  L6b); `gainDb` (manual trim on top of automatic normalization); `transpose` (semitones); `keyRange` + `outOfRange:
+  fold|clamp|drop`; `velocityCurve` (optional); `fallback:` (ordered list of `kit:name` or `gm:<program>`). A fallback
+  is used when a source is missing, fails its checksum or license policy, or is an unsupported format. `kit validate`
+  reports every fallback taken.
+- **References from presets and themes:** presets name **roles → canonical instrument names** (e.g. `lead: [fiddle, flute]`).
+  Themes pick kits and may override single instruments:
+  ```yaml
+  # themes/fantasy-dungeon.yaml (excerpt)
+  instruments:
+    kits: [fantasy-orchestra, gm-lite]   # lookup order; first kit defining a name wins (fantasy-orchestra arrives in L6b)
+    override:
+      lead:  {use: gm-full:flute, gainDb: -2}
+      pad:   {use: strings}
+  layers:
+    harp:  {instrument: harp}
+    drums: {instrument: drums.orchestral}
+  ```
+  A state block may override instruments too (e.g. `combat: {instruments: {drums: drums.808}}` in sci-fi).
+- **Default:** `gm-lite` (GeneralUser GS, 31 MB) is the default kit everywhere. `gm-full` (MuseScore_General SF2, MIT,
+  206 MB) is optional. It's installed with `soundbank install musescore-general` from **our own mirror** (MIT allows
+  redistribution; its License.md must ship alongside), and can be bundled by games that want it.
+
+#### 6.12.2 Several soundbanks in one Gervill synth (verified Oct 10)
+Tested on this box with OpenJDK 21 (harness `research/tools/MultiBank.java`):
+- `loadInstrument` accepts instruments from **different `Soundbank` objects in one synth**. A GeneralUser piano and a
+  MuseScore_General piano loaded together render as their own references: lag-tolerant correlation 1.000 and 0.972,
+  RMS matching within 1%.
+- **Bank/program collisions:** loading a second instrument at the same patch silently **replaces** the first. Only one
+  instrument stayed loaded, and it rendered as the last-loaded bank. So collisions must be handled before loading.
+- **Remapping works:** wrapping an instrument in `com.sun.media.sound.SimpleInstrument` with a new `Patch` (bank 1,
+  program 0) let both pianos coexist and be selected by bank select (MSB/LSB). This uses the same internal package as
+  `openStream`, so it needs no new `--add-exports`.
+- **Not yet verified (L1b):** remapping **percussion kits** (`ModelPatch` with the percussion flag) to non-colliding slots,
+  and whether `preset:`-by-name lookup is unambiguous in MSG.
+
+**Patch allocator:** the engine never uses the source's own bank/program in the synth. Every resolved instrument gets a
+**synth slot** allocated deterministically (sorted by kit order, then name): melodic slots in banks 1…n (128 programs
+per bank), percussion kits in percussion slots. Layers then send bank select + program change for their slot. SMF export
+writes either the slots (exact replay with the same kits) or the instruments' GM program hints (`--midi-programs gm`,
+for external synths). With buses (§6.11.1), each bus's Gervill instance loads only its layers' instruments.
+
+#### 6.12.3 Memory: load only what's referenced
+`getSoundbank` is lazy, and sample data is pulled in when instruments are loaded (07 §2). The resolver collects the
+instruments a theme can reach (all states, overlays, stingers and fallbacks actually needed), then calls `loadInstrument`
+for those only. Measured: two pianos from two banks added **≈6.7 MB** of heap, versus **≈183 MB** for `loadAllInstruments`
+on MuseScore_General. `athenacl instruments show --theme … --memory` reports per-instrument sample memory, and theme
+switching preloads the next theme's set off-thread.
+
+#### 6.12.4 Per-instrument loudness normalization
+Banks differ by about 7 LU (07 §2). The same piano measured 0.0132 vs 0.0413 RMS (≈10 dB) between GeneralUser and MSG.
+So before the per-state contour (§6.4.1) runs, each instrument is normalized:
+- **Probe:** render a fixed phrase per instrument (melodic: C3–C5 notes at velocities 64/100, 1 s each; kits: a standard
+  groove), measure EBU R128 integrated loudness (L1 meter), and store a correction so every instrument hits the kit's probe
+  reference (default −20 LUFS) ±0.5 LU. Manual `gainDb` is added on top.
+- **Cache key:** source sha256, bank/program/preset, transpose, probe version.
+- **Applied as** the channel's CC7 baseline (or bus gain with the effects stage).
+- The state calibration then runs per resolved instrument set, so its cache key includes the kit hashes. Swapping kits
+  re-calibrates automatically.
+
+#### 6.12.5 License, credits, formats
+- **License policy** (project-level `athenacl.yaml`, with defaults): `allow: [MIT, CC0-1.0, CC-BY-3.0, CC-BY-4.0,
+  LicenseRef-GeneralUser-GS-2.0]`, `warn: [LicenseRef-CC-Sampling-Plus-1.0, CC-BY-SA-3.0, CC-BY-SA-4.0]`, `deny:
+  everything without redistribute+commercial`. `kit validate` and `theme validate` fail (exit 3,
+  `KIT_LICENSE_DENIED`) on denied or missing licenses. Banks that 07 §3 rules out (SGM, Timbres of Heaven, Arachno, …)
+  can be used locally only with `--allow-unlicensed` and are never written into credits as redistributable.
+- **Credits:** `athenacl credits <theme…>` writes `build/credits/CREDITS.md` plus copies of the license files for **only
+  the sources actually used**. A Gradle task (`athenaclCredits`) does the same for game packaging. Attribution licenses
+  (CC-BY, Sampling+, BY-SA) appear with their required text.
+- **SF3 is rejected with a clear error** (exit 3, `SOUNDBANK_SF3_UNSUPPORTED`). Gervill would otherwise play its Vorbis
+  data as noise (07 §2: 9 LU louder, 0 dBFS peaks). Detection reads the RIFF `ifil` version (major 3) and the `shdr`
+  sample-type compression bit, before Gervill sees the file. Fix hint: "use the SF2 edition or convert (e.g. Polyphone)".
+  Unreadable files give `SOUNDBANK_UNREADABLE` (e.g. Timbres of Heaven's Vorbis build in 07). DLS and SF2 are accepted.
+
+#### 6.12.6 SFZ loader (L6b)
+SFZ libraries (VSCO 2 CE: CC0; Sonatina: CC Sampling+ 1.0; Virtual Playing Orchestra: mixed CC; Salamander piano:
+CC-BY 3.0; 07 §3) need an in-house loader, because Gervill reads only SF2/DLS:
+- **Parse the opcode subset** from 07 §6: `<group>/<region>`, `sample`, `lokey/hikey/key`, `lovel/hivel`,
+  `pitch_keycenter`, `tune`, `transpose`, `volume`, `pan`, `ampeg_attack/decay/sustain/release`, `loop_mode/start/end`,
+  `seq_length/seq_position`, `default_path`, `#define`/`#include`. Unknown opcodes produce warnings listed by `kit validate`.
+- **Build Gervill instruments in memory** (`SimpleInstrument` + `ModelPerformer` + `ModelByteBufferWavetable`), so no new
+  synth is needed. Same internal API as above.
+- **Decode WAV at load** (FLAC/OGG later: OGG via JOrbis when L9d exists, FLAC decoder TBD). Load only regions whose
+  key and velocity ranges the theme's layers can reach.
+- **Round-robin** (`seq_position`): Gervill has no native round-robin. The plan is to load each RR set as a separate slot
+  and have the engine alternate slots deterministically (seeded). This is unverified until L6b.
+- **Optional `athenacl bank convert in.sfz out.sf2`** writes the same instrument as SF2 for inspection in Polyphone.
+- **First user:** `instruments/fantasy-orchestra.yaml` built from **VSCO 2 CE (CC0)**: section strings, horns, timpani.
+  SSO chorus/harp is added only after the license question (Q28) is answered. All entries fall back to `gm-lite`.
+
+#### 6.12.7 CLI and debug
+```
+athenacl instruments list [--kit gm-lite] [--theme themes/fantasy-dungeon.yaml]   → "instrument=harp kit=gm-lite source=gu bank=0 program=46 slot=1:3"
+athenacl instruments show harp --kit gm-lite        → source, license, keyRange, normalization gain, sample memory, fallbacks
+athenacl instruments audition harp --kit gm-full --notes C4,E4,G4 --out build/aud   → WAV + "loudness.probe=-20.1 LUFS"
+athenacl instruments compare piano --kits gm-lite,gm-full --out build/cmp           → A/B WAVs + loudness/spectral summary
+athenacl kit validate instruments/gm-full.yaml      → checksums, licenses, SF3/format checks, unresolved names, fallbacks taken
+athenacl credits themes/fantasy-dungeon.yaml --out build/credits   → "sources=2 licenses=MIT,LicenseRef-GeneralUser-GS-2.0"
+```
+
 ---
 
 ## 7. Layered plan: tools first, then bottom-up layers [estimates: full-time-equivalent weeks, one experienced developer + coding agent]
@@ -864,8 +1222,8 @@ generation context (not extra parameters on every generator). Event ids are dete
    hash that must be identical across repeated runs. Numbers in brackets are tolerances.
 4. **Small, 1–3 weeks each.** The phase-spec format follows jvm-mw: `docs/phaseNN-*.md` with Goal / Why / In scope /
    Out of scope / Exit check (doc 06).
-5. **Order:** tools (L0–L1) → music foundations (L2–L4) → **fantasy-dungeon playable in-game (L6)** → fantasy
-   depth (L7–L8) → **sci-fi space (L9)** → harmony/debug depth (L10–L11) → athenaCL port track (L12–L20, which can run
+5. **Order:** tools (L0–L1) → instrument kits (L1b) → music foundations (L2–L4) → **fantasy-dungeon playable in-game (L6)** →
+   SFZ loader + fantasy-orchestra kit (L6b) → fantasy depth (L7–L8) → **sci-fi space (L9)** → **effects stage + sampled layers (L9b–L9d)** → harmony/debug depth (L10–L11) → athenaCL port track (L12–L20, which can run
    in parallel after L1) → remaining genres and release (L21–L23) → optional outputs (L24–L26).
 
 Commands are written as `athenacl …` (the `installDist` launcher). The same commands work through the jvm-mw-style
@@ -915,6 +1273,24 @@ athenacl analyze build/l0/                         → "loudness.integrated=<x> 
                                                      (x within ±0.2 LU of ffmpeg ebur128, checked by test)
 athenacl render samples/notes/c-major-scale.yaml --soundbank /nonexistent.sf2
    → exit 0; "soundbank=emergency warning=SOUNDBANK_FALLBACK"
+```
+
+**L1b: Instrument kits (1–2 wk).** `athenacl-instruments`: kit YAML (sources, named instruments, gain/transpose/keyRange/
+fallbacks), canonical instrument-name list, multi-soundbank loading into one synth, deterministic patch allocator (remap via
+`SimpleInstrument`; percussion remap verified here), selective loading, per-instrument loudness normalization, license
+policy + `credits`, SF3/unreadable rejection, `instruments list|show|audition|compare`, `kit validate`. Default kit
+`gm-lite` (GeneralUser GS); optional `gm-full` (MuseScore_General) via `soundbank install musescore-general`. *(new, §6.12)*
+```
+athenacl kit validate instruments/gm-lite.yaml      → exit 0; "kit=gm-lite sources=1 instruments=<n> fallbacksTaken=0"
+athenacl soundbank install musescore-general         → "status=installed sha256=<h> license=MIT"
+athenacl kit validate instruments/gm-full.yaml      → exit 0; "sources=2 slots.collisions=0"
+athenacl kit validate samples/kits/sf3.yaml         → exit 3; "error code=SOUNDBANK_SF3_UNSUPPORTED path=/sources/x fix=use the SF2 edition…"
+athenacl kit validate samples/kits/denied.yaml      → exit 3; "error code=KIT_LICENSE_DENIED"
+athenacl instruments compare piano --kits gm-lite,gm-full --out build/l1b
+   → both probes "loudness.probe=-20.0[±0.5] LUFS" after normalization; raw difference reported ("raw.deltaLu=<≈10>")
+athenacl instruments show piano --kit gm-full --memory → "sampleMB=<small>" (selective load, not ~183 MB)
+athenacl render samples/notes/two-banks.yaml --kit gm-full --out build/l1b2  → both pianos audible on separate slots ("slots=2")
+athenacl credits samples/themes/two-banks.yaml --out build/credits → CREDITS.md lists exactly the used sources
 ```
 
 **L2: Theory (2–3 wk).** Pitch/pitch class/scale/mode/key, chords + Roman numerals, progressions + harmonic rhythm,
@@ -983,6 +1359,18 @@ gradlew :samples:gdx-demo:run   (manual) F3 → build/athenacl-snapshot.txt has 
 athenacl debug replay build/athenacl-control.jsonl → "hash=" equal to build/athenacl-events.jsonl hash
 ```
 
+**L6b: SFZ loader + fantasy-orchestra kit (2–3 wk).** SFZ opcode subset → Gervill `ModelInstrument`s in memory, WAV decode at
+load, region-level selective loading, seeded round-robin via alternating slots, `bank convert sfz→sf2`,
+`instruments/fantasy-orchestra.yaml` from VSCO 2 CE (CC0) with `gm-lite` fallbacks, adopted by `fantasy-dungeon`. *(new, §6.12.6)*
+```
+athenacl kit validate instruments/fantasy-orchestra.yaml → exit 0; "format=sfz regions=<n> unknownOpcodes=<list or 0>"
+athenacl instruments audition violins --kit fantasy-orchestra --notes G3,D4,A4,E5 --out build/l6b → WAV; "regionsLoaded=<subset>"
+athenacl bank convert libs/VSCO-2-CE/Strings/Violin\ Section\ Sus.sfz build/l6b/vln.sf2 → "presets=1 samples=<n>"
+athenacl render themes/fantasy-dungeon.yaml --seed 1 --bars 1-16 --out build/l6b-t → "kits=fantasy-orchestra,gm-lite"; contour within ±1 LU
+athenacl debug inspect build/l6b-t/events.jsonl --where "layer=strings" → round-robin slots alternate deterministically (same on rerun)
+athenacl kit validate instruments/fantasy-orchestra.yaml --without-source vsco → "fallbacksTaken=<n>" exit 0 (all resolve to gm-lite)
+```
+
 **L7: Motif engine → fantasy v2 (2–3 wk).** Motif model, 10 transforms, development planner (sentence/period), motif
 banks per state (leitmotif across states), composer MIDI/YAML import, mixed mode. `analyze` gains motif reuse,
 `debug explain` shows transform chains. *(old M5)*
@@ -1010,6 +1398,45 @@ athenacl theme validate themes/scifi-space.yaml   → "states=6 warnings=0"
 athenacl render themes/scifi-space.yaml --timeline samples/timelines/dungeon-tour.json --seed 1 --out build/l9
 athenacl analyze build/l9 --by state → contour within ±1 LU; describe-music shows only scifi program set, arps on grid
 athenacl render themes/fantasy-dungeon.yaml --at "8 theme themes/scifi-space.yaml" --bars 1-16 → "themeSwitch.bar=9"
+```
+
+**L9b: Effects core (2–3 wk).** `athenacl-fx`: bus model (one Gervill instance per bus, Gervill reverb/chorus/AGC off),
+filters with automatable cutoff, EQ, compressor + sidechain ducking (bus key or beat-synced envelope), saturation/
+bitcrush, master limiter, automation sources (`byIntensity`, `byState`, `lfo`, `sweep`, `envelope`), post-FX loudness
+calibration, per-bus meters, `--fx on|off`, `--bypass`, `--stems`, `debug fx`, `debug fx-curve`, `debug perf --fx`,
+F3/F4 bus meters. *(new, §6.11)*
+```
+athenacl render themes/fantasy-dungeon.yaml --seed 1 --bars 1-8 --out build/l9b --fx off   → "hash=<h0>"
+athenacl render samples/themes/fx-null.yaml --seed 1 --bars 1-8 --out build/l9b0 --fx on
+   → PCM identical to --fx off ("nullTest=true"; all units at neutral settings)
+athenacl debug fx-curve samples/themes/fx-sweep.yaml --param music.pad.filter.cutoff --at "1 intensity 0" --at "5 intensity 1"
+   → "bar=1 value=600" … "bar=5 value=9000[±1%]"
+athenacl analyze build/l9b --by bus → "bus=drums …", "bus=music …", "master truePeak<=-1.0"
+athenacl analyze build/l9b --by state → contour within ±1 LU (post-FX); "limiter.gr.avgDb<=1.0"
+athenacl render … --fx on (twice) → identical "hash=<h1>" (bit-stable on this JDK)
+athenacl debug perf themes/fantasy-dungeon.yaml --fx --buffer 512 → "fx.cpu.pct.p99<=25 ok=true"
+```
+
+**L9c: Time-based FX + 808 slides + sci-fi/fantasy FX passes (1–2 wk).** Reverb, tempo-synced delay, chorus; 808 slide
+generator (pitch-bend glides; CC5/CC65 tested); FX settings for `scifi-space` (sweeps, ping-pong delay, ducking) and
+`fantasy-dungeon` (per-state reverb). *(new, §6.11)*
+```
+athenacl debug fx samples/themes/delay.yaml → "unit=music.arp.delay time=3/16 samples=<exact for bpm>"
+athenacl render samples/themes/808.yaml --seed 1 --bars 1-4 --out build/l9c
+   → debug inspect: pitch-bend ramps between slid notes; "slides=<n> bendRange=12"
+athenacl render themes/scifi-space.yaml --timeline samples/timelines/dungeon-tour.json --seed 1 --out build/l9c-s
+   → "fx=on buses=4"; analyze --by state within ±1 LU; listening review
+```
+
+**L9d: Sampled-audio layers (2–3 wk).** `type: sample` layers: WAV + OGG (JOrbis) decode at load, loops (bpm/bars,
+varispeed or beat-slice), one-shots (pitched, with glides), beds (vinyl crackle), clip license validation, optional
+TarsosDSP time-stretch. *(new, §6.11.5)*
+```
+athenacl theme validate samples/themes/loops-nolicense.yaml → exit 3; "error code=CLIP_LICENSE_MISSING path=/layers/loopTop/clip"
+athenacl render samples/themes/loops.yaml --seed 1 --bars 1-8 --out build/l9d
+   → "clips=3 loopStarts=bar1,bar3,bar5,bar7 offsetSamples=0"
+athenacl debug inspect build/l9d/events.jsonl --where "type=clip" → each start on a bar line, sample-accurate
+athenacl render samples/themes/loops.yaml --tempo 96 (clip at 90 bpm) → "loopTop.mode=varispeed ratio=1.067"
 ```
 
 **L10: Harmony and time depth (2–3 wk).** Pivot/direct modulation and mode mixture, key policies across state
@@ -1050,22 +1477,32 @@ athenacl render … --debug provenance vs --debug off → same "hash=<h>"
 | **L22** Hardening | final schemas + docs + agent guide, JSONL batch mode, perf (< 5 ms/bar), scripted agent e2e (old M6c remainder, M10) | `athenacl batch < checks/batch.jsonl` → same results as one-by-one; `athenacl debug perf themes/fantasy-dungeon.yaml` → "gen.msPerBar.p99<5"; `gradlew layerCheck` (all layers) green | 2–3 |
 | **L23** Publish | GitHub repo, CI, release artifacts, soundbank mirror (old M10) | CI green on Windows/macOS/Linux; `athenacl version` from the release zip | 1–2 |
 
+Note: L9b–L9d come right after sci-fi, so neither fantasy nor sci-fi waits for them. They can also slide after
+L10–L11 without affecting anything else. Before L9b, all renders are dry Gervill output, and every later layer's exit
+checks run with `--fx off` and `--fx on`.
+
 **Optional (last):** **L24** graphics commands (old M9, 2–4 wk; may split), **L25** Csound output (old M11, 2–3 wk), **L26**
 SuperCollider output (old M11, 1–2 wk), each with golden text-output checks.
 
 ### 7.3 Totals and timeline [estimates]
-- **Sum of core layers L0a–L23:** about **45–70 FTE-weeks**. With a **~10% integration buffer** (layers built bottom-up get
-  revisited when a higher layer needs a change), that's **about 50–77**. With optional L24–L26: **50–79** raw, **about 55–87** with the buffer.
+- **Sum of core layers L0a–L23 incl. L1b, L6b and L9b–L9d:** about **53–83 FTE-weeks**. The instrument kits add 3–5 (L1b 1–2,
+  L6b 2–3), and the effects stage adds 5–8 (L9b 2–3, L9c 1–2, L9d 2–3). With a **~10% integration buffer** (layers built
+  bottom-up get revisited when a higher layer needs a change), that's **about 58–91**. With optional L24–L26: **58–92** raw,
+  **about 64–101** with the buffer. For comparison, before the kits it was 50–78 (55–86 buffered), and before the effects
+  stage 45–70 (50–77).
 - Compared with the previous 56–80, the main saving is that the CLI/debug tooling (old M6c/M6d, 7–9 wk) is now built
   once in L0 and extended inside each layer, instead of being a separate pass. The per-layer CLI/test work is included in
   each layer's estimate.
 - **Milestones that matter to the user:**
-  - **Fantasy-dungeon offline renders:** end of L5, about **11–18 weeks** in.
-  - **Fantasy playable in the dungeon crawler:** end of L6, about **13–21 weeks**.
-  - **Fantasy complete (motifs, overlays):** end of L8, about **17–27 weeks**.
-  - **Sci-fi space:** end of L9, about **18–29 weeks**.
+  - **Fantasy-dungeon offline renders:** end of L5, about **12–20 weeks** in.
+  - **Fantasy playable in the dungeon crawler:** end of L6, about **14–23 weeks**.
+  - **Fantasy with the SFZ orchestra kit:** end of L6b, about **16–26 weeks**. L6b can also be deferred until after L9
+    if sci-fi matters more; nothing else depends on it.
+  - **Fantasy complete (motifs, overlays):** end of L8, about **20–32 weeks**.
+  - **Sci-fi space:** end of L9, about **21–34 weeks**.
+  - **Effects + 808 slides (sci-fi enriched):** end of L9c, about **24–39 weeks**; **sampled layers** end of L9d, about **26–42**.
   - Running the port track (L12–L20, 18–27 wk) in parallel with L2–L11 shortens the calendar but not the effort.
-- **Cheapest cuts:** L21 (other genres, 2–3 wk), batch mode, bisect delta-debugging, multi-JVM determinism (about 1.5–2.5 wk
+- **Cheapest cuts:** L6b (SFZ loader, 2–3 wk; fantasy keeps `gm-lite`), L9d (sampled layers, 2–3 wk), L21 (other genres, 2–3 wk), batch mode, bisect delta-debugging, multi-JVM determinism (about 1.5–2.5 wk
   together). L0's contract, event log, provenance hooks and determinism check shouldn't be cut.
 
 ### 7.4 Where the old milestones went
@@ -1087,6 +1524,8 @@ SuperCollider output (old M11, 1–2 wk), each with golden text-output checks.
 | M9 Graphics | L24 |
 | M10 Hardening/publish | L22, L23 |
 | M11 Csound/SC | L25, L26 |
+| *(new, Oct 10)* Effects stage | L9b, L9c, L9d |
+| *(new, Oct 10)* Instrument kits + SFZ | L1b, L6b |
 
 ---
 
@@ -1195,6 +1634,43 @@ suites prove it in depth. A layer is done only when both are green and its AGENT
 
 ---
 
+### 8.8 Effects stage (L9b–L9d)
+- **DSP unit tests on synthetic signals:** biquad magnitude response vs the analytic curve (±0.1 dB); compressor gain
+  reduction on step signals; limiter never exceeds the ceiling (4× oversampled true peak) over fuzzed input; delay time
+  equals the tempo-synced sample count exactly; bitcrush/saturation transfer curves; reverb tail decay within
+  tolerance; no NaN/denormal blow-ups (fuzzed parameters, extreme automation).
+- **Null test:** an FX chain at neutral settings is bit-identical to `--fx off`; `--bypass` of a unit equals removing it.
+- **Determinism:** two offline FX renders are bit-identical on the same JDK; the live block pipeline fed the recorded
+  log equals the offline render (with `degrade` off); internal 64-frame blocks give identical output for device buffers
+  of 256/512/1024.
+- **Automation:** `debug fx-curve` goldens for `byIntensity`/`byState`/`lfo`/`sweep`; state changes glide over the
+  transition's unit.
+- **Loudness:** post-FX contour within ±1 LU, average limiter gain reduction ≤ 1 dB, master true peak ≤ −1 dBTP.
+- **808 slides:** pitch-bend curve matches the requested glide time and range; no stuck bends after retraction.
+- **Sampled layers:** loop starts are sample-accurate on bar lines; varispeed ratio correct; slice retrigger aligned to
+  beats; clips without a license fail validation; OGG and WAV decodes equal reference PCM.
+- **CPU:** JMH per effect and per typical chain; `debug perf --fx` p99 under budget on a reference machine; bus-count
+  scaling measured (and soundbank memory sharing across Gervill instances verified).
+
+### 8.9 Instrument kits and SFZ (L1b, L6b)
+- **Multi-bank:** the `MultiBank` harness as a JUnit test. Instruments from two banks in one synth each correlate
+  ≥ 0.95 with their single-bank reference. The allocator never produces two instruments in one slot (property test over
+  random kits). Percussion-kit remap gets the same test.
+- **Determinism:** slot allocation is identical across runs and machines for the same kit list; renders with the same kits
+  give the same hash.
+- **Selective loading:** heap delta for a theme's instruments stays below a set fraction of `loadAllInstruments`
+  (e.g. two pianos < 20 MB vs ~183 MB).
+- **Normalization:** after normalization, probe loudness for the same instrument across `gm-lite` and `gm-full` is within
+  ±0.5 LU; the cache invalidates when the checksum changes.
+- **Validation:** fixtures for an SF3 file (exit 3, `SOUNDBANK_SF3_UNSUPPORTED`), an unreadable file, a checksum mismatch,
+  a denied license, a missing source (fallback taken and reported), unknown names (did-you-mean hint), and `extends`/override
+  merge goldens.
+- **Credits:** golden CREDITS.md for themes using one or two kits. Only the used sources appear, with their license files
+  copied.
+- **SFZ:** opcode parser goldens (incl. `#define`/`#include`), region mapping (key/velocity), envelope and loop opcodes,
+  round-robin alternation that is deterministic and seeded, `bank convert` round-trip (SFZ → SF2 → load → same regions),
+  render sanity (non-silent, pitch matches `pitch_keycenter`), unknown-opcode warnings.
+
 ## 9. Risks
 
 | Risk | Impact | Mitigation |
@@ -1219,6 +1695,18 @@ suites prove it in depth. A layer is done only when both are green and its AGENT
 | Text descriptions and key/motif metrics mislead agents (lossy roll, key-estimation errors) | Bad automated decisions | Confidence values, labelled estimates, structured JSON alongside ASCII, provenance-based (exact) reuse figures where possible |
 | CLI writes files on an agent's behalf | Accidental overwrites, path escapes | Outputs only under `--out` (default `build/`); inputs never modified; atomic writes; `--dry-run`; no network fetches except `soundbank install` |
 | JVM startup cost for many small agent CLI calls (no server to amortize it) | Slow agent loops | Batch mode keeps one JVM; AppCDS archive in the launcher; native-image as an open question. jvm-mw accepts Gradle-task startup for its debug CLI, which suggests it's tolerable. |
+| Several Gervill instances (one per bus) cost CPU/memory; soundbank sample sharing across instances unverified | Frame drops or high RAM with many buses | Cap buses (default 4); measure in L9b; single-bus mode; render-twice for offline stems; patched-mixer option as last resort |
+| Gervill has no per-channel audio taps (verified in OpenJDK 21 `SoftMainMixer`) | Per-layer FX need a bus split | Per-bus instances (§6.11.1); route by layer, not by MIDI channel |
+| DSP CPU spikes (reverb, oversampling, denormals) on low-end machines | Audio underruns in game | 25% buffer budget with metering, flush denormals, `degrade` mode (logged), quality settings per effect |
+| FX hide or exaggerate loudness differences | Contour drifts | Calibrate post-FX, before the limiter; cap limiter gain reduction; cache keyed by FX config |
+| Sampled clips: licensing, decode cost, tempo-sync artifacts | Legal risk or poor sound | Required `license:` field, CC0-only bundled examples, decode at load, varispeed/slice by default, time-stretch optional |
+| OGG decoder (JOrbis, LGPL) and TarsosDSP (GPL-3.0) add dependencies | Maintenance | Both optional; WAV-only and no-time-stretch builds work |
+| Kit remapping relies on `com.sun.media.sound.SimpleInstrument` (internal), and the percussion-kit remap is unverified | Breaks on a JDK change; kits from two banks collide | Same isolation as `GervillStreams` (one class); verified melodic remap (§6.12.2); percussion verified in L1b; fallback to one kit per bus instance |
+| Silent patch collisions (a later `loadInstrument` replaces an earlier one, verified) | Wrong instrument plays | The engine never loads at source patches; deterministic slot allocator; validator checks `slots.collisions=0` |
+| Large banks/SFZ libraries exhaust heap (MSG full load ≈183 MB; SFZ libraries 1–3 GB on disk) | OOM or long loads in game | Load only referenced instruments/regions; per-instrument memory report; preload off-thread; budget check in `kit validate` |
+| SFZ coverage gaps (opcodes, round-robin, FLAC) | Libraries sound wrong or fail to load | Opcode subset with warnings; RR via slots; WAV first; fallbacks to `gm-lite`; `bank convert` for inspection in Polyphone |
+| Licenses of mixed sources (CC Sampling+ 1.0 untested with GPL; BY-SA share-alike; GeneralUser provenance caveat; MSG "v0.2 work in progress") | Legal risk for commercial games | License policy with allow/warn/deny, credits generation, banks kept as separate data (aggregation); user/legal check before release (Q28) |
+| Per-bank loudness differences (~7 LU, ~10 dB on one piano) | Unbalanced mixes when kits change | Per-instrument normalization + per-kit state calibration |
 | Stateless stepping gets slow for long timelines (always regenerating from bar 1) | Slow bar-by-bar debugging | Per-bar generation budget (< 5 ms); optional file-based `--checkpoint` later |
 
 ---
@@ -1241,7 +1729,8 @@ suites prove it in depth. A layer is done only when both are green and its AGENT
    determinism needed for multiplayer?
 9. **CPU and memory budget** on minimum target hardware, and the maximum simultaneous layers/voices.
 10. **Distribution of GeneralUser GS:** confirm the plan in §2.1 (optional bundled artifact for shipped games +
-    CLI download from our mirror). Is the sample-provenance caveat acceptable for the user's games?
+    CLI download from our mirror). Is the sample-provenance caveat acceptable for the user's games? *(Since Oct 10 it's
+    the default `gm-lite` kit; see also Q27.)*
 11. **Microtonal/temperament support** in the adaptive engine (athenaCL has it; adds MIDI Tuning complexity)?
 12. **Licensing of starter themes and demo assets** (GPL-3.0 like the code, or CC-BY for themes so games can
     reuse them freely?)
@@ -1261,6 +1750,23 @@ suites prove it in depth. A layer is done only when both are green and its AGENT
 20. ~~Java 17 vs 21~~ **Resolved (Oct 9, 2026): Java 21 minimum, matching jvm-mw.**
 21. ~~Is `--json` needed?~~ **Resolved (Oct 9, 2026): keep `--json` as an optional flag; `key=value` stays the default.**
 22. ~~Package/group naming~~ **Resolved (Oct 9, 2026): the user is fine with any name; use `io.github.sosgames.athenacl` as the working default (refines Q1).**
+23. **Effects budget and buses:** max buses (Gervill instances) and FX CPU budget on the dungeon crawler's minimum hardware?
+    Is the default `warn` (keep bit-identical) right, or should live play `degrade` under load?
+24. **Sampled layers:** which clips do the user's games need (loops, 808 one-shots, crackle, ambiences)? Who supplies them,
+    and under which licenses? WAV only, or OGG too (adds JOrbis)?
+25. **Time-stretch:** is varispeed/beat-slicing enough for loops, or is true time-stretch (TarsosDSP WSOLA) needed?
+26. **Effects scope per starter theme:** should fantasy-dungeon use effects at all beyond reverb/glue (more "authentic"
+    GM orchestral), or only sci-fi space by default?
+27. **`gm-full` distribution:** should games ship MuseScore_General (206 MB) inside the build, download it on first run
+    from our mirror, or use it only for development? Its "v0.2 work in progress" status and FluidR3 provenance caveat (07)
+    apply.
+28. **SFZ library licenses:** OK to use Sonatina (CC Sampling+ 1.0, GPL compatibility untested) and VPO's BY-SA parts as
+    separate data next to GPL-3 code in commercial games? VSCO 2 CE (CC0) is fine. Legal confirmation before release?
+29. **Lute and other folk instruments for fantasy:** no license-clean free lute/oud/hurdy-gurdy was found (07). Accept
+    nylon guitar/harpsichord, build a CC0 bank from freesound recordings, or commission one?
+30. **SFZ sample formats:** WAV only, or also FLAC/OGG (needs decoders; FLAC library and license TBD)?
+31. **Canonical instrument names:** OK to standardize on GM-derived names (`docs/instrument-names.md`) that presets and kits
+    share, with kit-specific extras namespaced (`fantasy-orchestra:violins.spiccato`)?
 (Former Q17 on MCP priority and Q18 on attaching to a running game were removed on Oct 9, 1:25 PM: no server or MCP modes.)
 
 ---

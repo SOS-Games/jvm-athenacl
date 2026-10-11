@@ -11,6 +11,8 @@ name: explain the preset contour
 args: theme explain themes/fantasy-dungeon.yaml
 exit: 0
 stdout-contains: preset=fantasy
+stdout-contains: kit=gm-lite
+stdout-contains: instruments=harp,strings,cello,flute
 stdout-contains: motif.every=4
 stdout-contains: loudness.combat=+4.0
 
@@ -27,6 +29,7 @@ args: render themes/fantasy-dungeon.yaml --timeline samples/timelines/dungeon-to
 exit: 0
 delete-before: build/l5
 stdout-contains: bars=14
+stdout-contains: kit=gm-lite
 stdout-contains: states=sneaking,peaceful,danger,combat,trading,partying
 file-exists: build/l5/score.wav
 file-exists: build/l5/events.jsonl

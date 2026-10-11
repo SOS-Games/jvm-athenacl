@@ -1,0 +1,70 @@
+# L1b instrument kits. Directive list: AGENTS.md, section "Layer checks".
+
+name: install generaluser for kits
+args: soundbank install generaluser
+exit: 0
+stdout-regex: status=(installed|present)
+
+---
+name: gm-lite kit
+args: kit validate instruments/gm-lite.yaml
+exit: 0
+stdout-contains: kit=gm-lite sources=1
+stdout-contains: fallbacksTaken=0
+
+---
+name: install musescore general
+args: soundbank install musescore-general
+exit: 0
+stdout-contains: license=MIT
+stdout-regex: status=(installed|present)
+
+---
+name: gm-full kit
+args: kit validate instruments/gm-full.yaml
+exit: 0
+stdout-contains: sources=2
+stdout-contains: slots.collisions=0
+
+---
+name: sf3 kit is rejected
+args: kit validate samples/kits/sf3.yaml
+exit: 3
+stdout-contains: error code=SOUNDBANK_SF3_UNSUPPORTED path=/sources/x
+stdout-contains: SF2 edition
+
+---
+name: denied license
+args: kit validate samples/kits/denied.yaml
+exit: 3
+stdout-contains: error code=KIT_LICENSE_DENIED
+
+---
+name: compare pianos
+args: instruments compare piano --kits gm-lite,gm-full --out build/l1b
+exit: 0
+delete-before: build/l1b
+stdout-contains: loudness.probe=
+stdout-contains: raw.deltaLu=
+stdout-contains: normalized=ok
+
+---
+name: selective sample size
+args: instruments show piano --kit gm-full --memory
+exit: 0
+stdout-regex: sampleMB=[0-9]{1,2}(\.[0-9]+)?
+
+---
+name: two banks on separate slots
+args: render samples/notes/two-banks.yaml --kit gm-full --out build/l1b2 --formats events,txt
+exit: 0
+stdout-contains: slots=2
+
+---
+name: credits list the used sources
+args: credits samples/themes/two-banks.yaml --out build/credits
+exit: 0
+stdout-contains: sources=2
+stdout-contains: MIT
+stdout-contains: LicenseRef-GeneralUser-GS-2.0
+file-exists: build/credits/CREDITS.md

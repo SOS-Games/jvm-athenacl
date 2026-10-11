@@ -1,0 +1,18 @@
+kit: gm-full
+version: 1
+extends: gm-lite
+sources:
+  msg:
+    id: musescore-general
+    format: sf2
+    sha256: ee51d2c4b1525e70f19a45909c4fd7a2e26d91d115fa89dbf5a6bc413d8b9bf3
+    license:
+      spdx: MIT
+      attribution: "MuseScore_General (S. Christian Collins), based on FluidR3Mono / FluidR3"
+      redistribute: true
+      commercial: true
+      file: licenses/MuseScore_General_License.md
+instruments:
+  piano: {source: msg, bank: 0, program: 0, fallback: [gm-lite:piano]}
+  choir: {source: msg, bank: 0, program: 52, fallback: [gm-lite:choir]}
+  drums.808: {source: msg, drumkit: 25, fallback: [gm-lite:drums.808]}

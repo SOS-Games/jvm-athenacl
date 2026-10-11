@@ -5,6 +5,7 @@ args: render themes/fantasy-dungeon.yaml --timeline samples/timelines/ambush.jso
 exit: 0
 delete-before: build/l6
 stdout-contains: transitions=1
+stdout-contains: kit=gm-lite
 capture: hash hash=([0-9a-f]+)
 file-exists: build/l6/events.jsonl
 file-exists: build/l6/control.jsonl
@@ -49,3 +50,5 @@ stdout-contains: intensity=
 stdout-contains: bar=
 stdout-contains: sched.lookaheadMs=150
 stdout-contains: cpu.msPerBar=
+stdout-contains: kit=gm-lite
+stdout-contains: instruments=harp,strings,cello,flute

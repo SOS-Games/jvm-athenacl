@@ -186,11 +186,31 @@ public final class Themes {
         }
         int motifEvery = motifEvery(root, errors);
         Theme.Hold hold = hold(root, states, errors);
+        List<String> kits = kits(root);
+        if (kits.isEmpty() && "fantasy".equals(presetId)) {
+            kits = List.of("gm-lite");
+        }
         if (!errors.isEmpty()) {
             throw new ThemeException(errors);
         }
         return new Theme(id, bars, bpm, numerator, denominator, states, stingers, quantize, rules, timeline,
-                presetId.isBlank() ? null : presetId, loudness, warnings, motifEvery, hold);
+                presetId.isBlank() ? null : presetId, loudness, warnings, motifEvery, hold, kits);
+    }
+
+    /** {@code instruments.kits} is the lookup order. The first kit that names an instrument wins. */
+    private static List<String> kits(JsonNode root) {
+        JsonNode node = root.path("instruments").path("kits");
+        if (!node.isArray()) {
+            return List.of();
+        }
+        List<String> kits = new ArrayList<>();
+        for (JsonNode item : node) {
+            String name = item.asText("").trim();
+            if (!name.isEmpty()) {
+                kits.add(name);
+            }
+        }
+        return kits;
     }
 
     /** {@code hold} is the state used when a render has no timeline. */
@@ -289,7 +309,8 @@ public final class Themes {
         String stinger = body.has("stinger")
                 ? (body.hasNonNull("stinger") ? body.get("stinger").asText() : null)
                 : existing.stinger();
-        return new Theme.StateDef(existing.id(), key, tempo, layers, stinger, existing.programs());
+        return new Theme.StateDef(existing.id(), key, tempo, layers, stinger, existing.programs(),
+                existing.instruments());
     }
 
     private static List<String> layers(String id, JsonNode body, List<ThemeIssue> issues) {

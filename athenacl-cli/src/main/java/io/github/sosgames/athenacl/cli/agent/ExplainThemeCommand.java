@@ -58,6 +58,9 @@ public class ExplainThemeCommand implements Callable<Integer> {
         if (loaded.preset() != null) {
             head.put("preset", loaded.preset());
         }
+        if (!loaded.kits().isEmpty()) {
+            head.put("kit", String.join(",", loaded.kits()));
+        }
         head.put("bars", Integer.toString(loaded.bars()));
         head.put("states", String.join(",", loaded.states().keySet()));
         head.put("quantize", loaded.defaultQuantize().id());
@@ -72,6 +75,9 @@ public class ExplainThemeCommand implements Callable<Integer> {
             fields.put("state", state.id());
             fields.put("key", state.key().name());
             fields.put("layers", String.join(",", state.layers()));
+            if (!state.instruments().isEmpty()) {
+                fields.put("instruments", loaded.instrumentList(state.id()));
+            }
             fields.put("tempo", Integer.toString(state.tempo()));
             if (state.stinger() != null) {
                 fields.put("stinger", state.stinger());

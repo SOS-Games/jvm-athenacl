@@ -2,6 +2,7 @@
 package io.github.sosgames.athenacl.render.soundbank;
 
 import java.io.IOException;
+import java.io.InputStream;
 import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
@@ -60,7 +61,7 @@ public final class SoundbankInstaller {
                 .connectTimeout(Duration.ofSeconds(30))
                 .build();
         HttpRequest request = HttpRequest.newBuilder(URI.create(url))
-                .timeout(Duration.ofMinutes(5))
+                .timeout(Duration.ofMinutes(20))
                 .header("User-Agent", "athenacl-soundbank-install")
                 .GET()
                 .build();
@@ -101,7 +102,13 @@ public final class SoundbankInstaller {
     public static String sha256(Path file) throws IOException {
         try {
             MessageDigest digest = MessageDigest.getInstance("SHA-256");
-            digest.update(Files.readAllBytes(file));
+            try (InputStream in = Files.newInputStream(file)) {
+                byte[] buffer = new byte[1024 * 1024];
+                int read;
+                while ((read = in.read(buffer)) > 0) {
+                    digest.update(buffer, 0, read);
+                }
+            }
             return HexFormat.of().formatHex(digest.digest());
         } catch (NoSuchAlgorithmException e) {
             throw new IllegalStateException(e);

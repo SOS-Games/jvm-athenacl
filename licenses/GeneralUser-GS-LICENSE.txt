@@ -1,0 +1,7 @@
+GeneralUser GS
+Copyright (c) S. Christian Collins
+
+You may use this soundfont in your software projects, and you may modify the bank or its packaging.
+It is a separate data work, not GPL code. Keep this notice with any copy you ship.
+
+https://www.schristiancollins.com/generaluser

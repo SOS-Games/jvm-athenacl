@@ -24,7 +24,7 @@ import java.util.List;
  * every beat, horn stabs, and a kick-snare drum pattern.
  * A dorian pad also sounds the sixth, so the key guess can tell dorian from aeolian.
  */
-final class StockLayers {
+public final class StockLayers {
     private StockLayers() {
     }
 
@@ -141,7 +141,7 @@ final class StockLayers {
         return degree;
     }
 
-    static int channel(String layer) {
+    public static int channel(String layer) {
         return switch (layer) {
             case "bass" -> 1;
             case "lead" -> 2;
@@ -155,7 +155,7 @@ final class StockLayers {
         };
     }
 
-    static int program(Theme.StateDef state, String layer) {
+    public static int program(Theme.StateDef state, String layer) {
         int fallback = switch (layer) {
             case "bass" -> 32;
             case "lead" -> 73;

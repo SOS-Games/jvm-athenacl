@@ -1,0 +1,30 @@
+kit: gm-lite
+version: 1
+sources:
+  gu:
+    id: generaluser
+    format: sf2
+    sha256: 9575028c7a1f589f5770fccc8cff2734566af40cd26ed836944e9a5152688cfe
+    license:
+      spdx: LicenseRef-GeneralUser-GS-2.0
+      url: "https://www.schristiancollins.com/generaluser"
+      attribution: "GeneralUser GS by S. Christian Collins"
+      redistribute: true
+      commercial: true
+      file: licenses/GeneralUser-GS-LICENSE.txt
+instruments:
+  piano: {source: gu, bank: 0, program: 0}
+  harp: {source: gu, bank: 0, program: 46, gainDb: -1.5, keyRange: [C1, G7], outOfRange: fold}
+  strings: {source: gu, bank: 0, program: 48}
+  choir: {source: gu, bank: 0, program: 52}
+  flute: {source: gu, bank: 0, program: 73}
+  fiddle: {source: gu, bank: 0, program: 110}
+  taiko: {source: gu, bank: 0, program: 116, transpose: -12}
+  pad.halo: {source: gu, bank: 0, program: 94}
+  bass.synth: {source: gu, bank: 0, program: 38}
+  drums.orchestral: {source: gu, drumkit: 48}
+  drums.808: {source: gu, drumkit: 25}
+  cello: {source: gu, bank: 0, program: 43}
+  horn: {source: gu, bank: 0, program: 60}
+  trumpet: {source: gu, bank: 0, program: 56}
+  strings.slow: {source: gu, bank: 0, program: 49}

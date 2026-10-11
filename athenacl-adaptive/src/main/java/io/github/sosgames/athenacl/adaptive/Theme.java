@@ -30,7 +30,8 @@ public record Theme(
         LoudnessContour loudness,
         List<ThemeIssue> warnings,
         int motifEvery,
-        Hold hold) {
+        Hold hold,
+        List<String> kits) {
 
     public Theme {
         states = Collections.unmodifiableMap(new LinkedHashMap<>(states));
@@ -38,11 +39,21 @@ public record Theme(
         rules = List.copyOf(rules);
         timeline = List.copyOf(timeline);
         warnings = List.copyOf(warnings);
+        kits = kits == null ? List.of() : List.copyOf(kits);
     }
 
     public Theme withBars(int bars) {
         return new Theme(id, bars, bpm, numerator, denominator, states, stingers, defaultQuantize, rules,
-                timeline, preset, loudness, warnings, motifEvery, hold);
+                timeline, preset, loudness, warnings, motifEvery, hold, kits);
+    }
+
+    /** Instrument names for one state, in layer order. Empty when that state is missing. */
+    public String instrumentList(String stateId) {
+        StateDef state = states.get(stateId);
+        if (state == null) {
+            return "";
+        }
+        return String.join(",", state.layers().stream().map(state::instrument).toList());
     }
 
     public long barTicks() {
@@ -68,9 +79,14 @@ public record Theme(
     }
 
     public record StateDef(String id, Key key, int tempo, List<String> layers, String stinger,
-                           Map<String, Integer> programs) {
+                           Map<String, Integer> programs, Map<String, String> instruments) {
         public StateDef(String id, Key key, int tempo, List<String> layers, String stinger) {
-            this(id, key, tempo, layers, stinger, Map.of());
+            this(id, key, tempo, layers, stinger, Map.of(), Map.of());
+        }
+
+        public StateDef(String id, Key key, int tempo, List<String> layers, String stinger,
+                        Map<String, Integer> programs) {
+            this(id, key, tempo, layers, stinger, programs, Map.of());
         }
 
         public StateDef {
@@ -78,10 +94,22 @@ public record Theme(
             programs = programs == null || programs.isEmpty()
                     ? Map.of()
                     : Collections.unmodifiableMap(new LinkedHashMap<>(programs));
+            instruments = instruments == null || instruments.isEmpty()
+                    ? Map.of()
+                    : Collections.unmodifiableMap(new LinkedHashMap<>(instruments));
         }
 
         public int program(String layer, int fallback) {
             return programs.getOrDefault(layer, fallback);
+        }
+
+        /** Kit instrument for this layer. The layer name is the fallback. */
+        public String instrument(String layer) {
+            String name = instruments.get(layer);
+            if (name == null || name.isBlank()) {
+                return layer;
+            }
+            return name;
         }
     }
 

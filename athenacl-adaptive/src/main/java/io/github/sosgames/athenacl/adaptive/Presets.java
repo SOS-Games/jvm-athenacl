@@ -37,18 +37,26 @@ public final class Presets {
     public static Preset fantasy() {
         Map<String, Theme.StateDef> states = new LinkedHashMap<>();
         states.put("peaceful", state("peaceful", "A aeolian", 100, List.of("harp", "pad", "bass", "lead"),
-                Map.of("pad", 48, "harp", 46, "bass", 43, "lead", 73)));
+                Map.of("pad", 48, "harp", 46, "bass", 43, "lead", 73),
+                Map.of("harp", "harp", "pad", "strings", "bass", "cello", "lead", "flute")));
         states.put("sneaking", state("sneaking", "D dorian", 100, List.of("drone", "pad", "bass", "harp"),
-                Map.of("drone", 49, "pad", 52, "bass", 43, "harp", 46)));
+                Map.of("drone", 49, "pad", 52, "bass", 43, "harp", 46),
+                Map.of("drone", "strings.slow", "pad", "choir", "bass", "cello", "harp", "harp")));
         states.put("combat", state("combat", "D aeolian", 100,
                 List.of("pad", "brass", "bass", "lead", "taiko", "drums"),
-                Map.of("pad", 48, "brass", 60, "bass", 43, "lead", 56, "taiko", 116)));
+                Map.of("pad", 48, "brass", 60, "bass", 43, "lead", 56, "taiko", 116),
+                Map.of("pad", "strings", "brass", "horn", "bass", "cello", "lead", "trumpet",
+                        "taiko", "taiko", "drums", "drums.orchestral")));
         states.put("danger", state("danger", "E phrygian", 100, List.of("drone", "pad", "bass", "brass", "taiko"),
-                Map.of("drone", 49, "pad", 52, "bass", 43, "brass", 60, "taiko", 116)));
+                Map.of("drone", 49, "pad", 52, "bass", 43, "brass", 60, "taiko", 116),
+                Map.of("drone", "strings.slow", "pad", "choir", "bass", "cello", "brass", "horn", "taiko", "taiko")));
         states.put("trading", state("trading", "D dorian", 100, List.of("harp", "pad", "bass", "lead"),
-                Map.of("harp", 46, "pad", 52, "bass", 43, "lead", 73)));
+                Map.of("harp", 46, "pad", 52, "bass", 43, "lead", 73),
+                Map.of("harp", "harp", "pad", "choir", "bass", "cello", "lead", "flute")));
         states.put("partying", state("partying", "D dorian", 100, List.of("harp", "pad", "bass", "lead", "drums"),
-                Map.of("harp", 46, "pad", 48, "bass", 43, "lead", 110)));
+                Map.of("harp", 46, "pad", 48, "bass", 43, "lead", 110),
+                Map.of("harp", "harp", "pad", "strings", "bass", "cello", "lead", "fiddle",
+                        "drums", "drums.orchestral")));
         Map<String, Double> offsets = new LinkedHashMap<>();
         offsets.put("sneaking", -1.5);
         offsets.put("peaceful", -1.0);
@@ -63,7 +71,7 @@ public final class Presets {
     }
 
     private static Theme.StateDef state(String id, String key, int tempo, List<String> layers,
-                                        Map<String, Integer> programs) {
-        return new Theme.StateDef(id, Key.parse(key), tempo, layers, null, programs);
+                                        Map<String, Integer> programs, Map<String, String> instruments) {
+        return new Theme.StateDef(id, Key.parse(key), tempo, layers, null, programs, instruments);
     }
 }

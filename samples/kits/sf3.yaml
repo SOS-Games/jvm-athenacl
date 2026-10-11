@@ -1,0 +1,13 @@
+kit: sf3-fixture
+version: 1
+sources:
+  x:
+    path: samples/kits/fake.sf3
+    format: sf3
+    license:
+      spdx: MIT
+      attribution: "fixture"
+      redistribute: true
+      commercial: true
+instruments:
+  piano: {source: x, bank: 0, program: 0}

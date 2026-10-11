@@ -20,6 +20,7 @@ dependencies {
   implementation project(':athenacl-motif')
   implementation project(':athenacl-adaptive')
   implementation project(':athenacl-render')
+  implementation project(':athenacl-instruments')
   implementation project(':athenacl-analysis')
   implementation project(':athenacl-debug')
   implementation project(':athenacl-soundbank-generaluser')

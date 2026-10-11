@@ -43,7 +43,10 @@ public final class SchemaRegistry {
             "athenacl.result.preset/1",
             "athenacl.result.motif/1",
             "athenacl.result.fuzz/1",
-            "athenacl.result.adapt/1");
+            "athenacl.result.adapt/1",
+            "athenacl.result.instrument/1",
+            "athenacl.result.kit/1",
+            "athenacl.result.credits/1");
 
     private SchemaRegistry() {
     }

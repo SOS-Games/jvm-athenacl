@@ -1,0 +1,6 @@
+dependencies {
+  api project(':athenacl-render')
+  implementation project(':athenacl-adaptive')
+  implementation "com.fasterxml.jackson.core:jackson-databind:$jacksonVersion"
+  implementation "com.fasterxml.jackson.dataformat:jackson-dataformat-yaml:$jacksonVersion"
+}

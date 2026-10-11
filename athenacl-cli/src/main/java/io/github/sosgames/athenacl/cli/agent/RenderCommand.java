@@ -13,7 +13,14 @@ import io.github.sosgames.athenacl.events.ScoreException;
 import io.github.sosgames.athenacl.render.SmfWriter;
 import io.github.sosgames.athenacl.render.TextDump;
 import io.github.sosgames.athenacl.render.WavRenderer;
+import io.github.sosgames.athenacl.instruments.KitException;
+import io.github.sosgames.athenacl.instruments.KitScore;
+import io.github.sosgames.athenacl.instruments.KitSession;
+import io.github.sosgames.athenacl.instruments.Kits;
+import io.github.sosgames.athenacl.instruments.ProbeNormalizer;
+import io.github.sosgames.athenacl.render.SlotSpec;
 import io.github.sosgames.athenacl.render.soundbank.SoundbankPaths;
+import io.github.sosgames.athenacl.render.soundbank.SoundbankRejected;
 import io.github.sosgames.athenacl.render.soundbank.SoundbankResolver;
 import io.github.sosgames.athenacl.rhythm.Durations;
 import io.github.sosgames.athenacl.rhythm.Groove;
@@ -52,6 +59,8 @@ public class RenderCommand implements Callable<Integer> {
     long seed;
     @CommandLine.Option(names = "--soundbank", paramLabel = "<id|file>")
     String soundbank;
+    @CommandLine.Option(names = "--kit", paramLabel = "<id|file>")
+    String kit;
     @CommandLine.Option(names = "--cache", paramLabel = "<dir>")
     Path cache;
     @CommandLine.Option(names = "--groove", paramLabel = "<swing=0.62>")
@@ -87,14 +96,20 @@ public class RenderCommand implements Callable<Integer> {
                         "Use swing=0.62. 0.50 is straight and 1 is the next downbeat.");
             }
         }
-        if (outDir == null && soundbank == null) {
+        if (outDir == null && soundbank == null && kit == null) {
             return parent.fail(ExitCode.USAGE, "USAGE", "--out", "usage: render <notes.yaml> --out <dir>",
                     "Pass --out as a directory this command may create.");
         }
         SoundbankResolver.Selection selection;
         try {
-            String request = soundbank != null ? soundbank : Config.get("athenacl.soundbank");
-            selection = SoundbankResolver.select(request, SoundbankPaths.cache(cache));
+            if (kit != null && soundbank == null) {
+                selection = new SoundbankResolver.Selection(kit, null, false);
+            } else {
+                String request = soundbank != null ? soundbank : Config.get("athenacl.soundbank");
+                selection = SoundbankResolver.select(request, SoundbankPaths.cache(cache));
+            }
+        } catch (SoundbankRejected e) {
+            return parent.fail(ExitCode.INVALID_INPUT, e.code(), e.path(), e.getMessage(), e.fix());
         } catch (IOException e) {
             return parent.fail(ExitCode.RUNTIME, "IO_ERROR", "--soundbank", e.getMessage(),
                     "Check that the soundbank file is readable.");
@@ -121,10 +136,29 @@ public class RenderCommand implements Callable<Integer> {
         if (parsedGroove != null) {
             score = Swing.apply(score, parsedGroove);
         }
+        List<SlotSpec> slots = null;
+        if (kit != null) {
+            try {
+                KitSession session = KitSession.open(Kits.find(kit), SoundbankPaths.cache(cache), false);
+                KitScore.Bound bound = KitScore.bind(notes, score, session);
+                score = bound.score();
+                slots = bound.used().stream().map(ProbeNormalizer::spec).toList();
+            } catch (KitException e) {
+                KitException.Issue issue = e.issues().get(0);
+                return parent.fail(ExitCode.INVALID_INPUT, issue.code(), issue.path(), issue.message(), issue.fix());
+            } catch (IOException e) {
+                return parent.fail(ExitCode.RUNTIME, "IO_ERROR", "--kit", e.getMessage(),
+                        "Check that the kit file and the soundfont cache are readable.");
+            } catch (MidiUnavailableException e) {
+                return parent.fail(ExitCode.ENVIRONMENT, "GERVILL_ABSENT", "gervill",
+                        "this JDK cannot open an offline Gervill stream",
+                        "Use a JDK that includes com.sun.media.sound and keep --add-exports java.desktop/com.sun.media.sound=ALL-UNNAMED.");
+            }
+        }
         Map<String, byte[]> bodies = new LinkedHashMap<>();
         try {
             for (String format : requested) {
-                bodies.put(format, body(format, score, selection.file()));
+                bodies.put(format, body(format, score, selection.file(), slots));
             }
         } catch (MidiUnavailableException e) {
             return parent.fail(ExitCode.ENVIRONMENT, "GERVILL_ABSENT", "gervill",
@@ -160,6 +194,10 @@ public class RenderCommand implements Callable<Integer> {
         fields.put("maxDurBeats", Durations.maxBeats(score));
         if (parsedGroove != null) {
             Swing.measure(score).ifPresent(measured -> fields.put("swing.measured", Swing.format(measured)));
+        }
+        if (slots != null) {
+            fields.put("slots", Integer.toString(slots.size()));
+            fields.put("kit", kit);
         }
         Map<String, Object> data = new LinkedHashMap<>();
         data.put("files", requested.size());
@@ -206,9 +244,16 @@ public class RenderCommand implements Callable<Integer> {
 
     static byte[] body(String format, Score score, Path soundbank)
             throws IOException, MidiUnavailableException {
+        return body(format, score, soundbank, null);
+    }
+
+    static byte[] body(String format, Score score, Path soundbank, List<SlotSpec> slots)
+            throws IOException, MidiUnavailableException {
         return switch (format) {
             case "mid" -> SmfWriter.write(score);
-            case "wav" -> WavRenderer.write(score, soundbank);
+            case "wav" -> slots == null
+                    ? WavRenderer.write(score, soundbank)
+                    : WavRenderer.write(score, null, slots);
             case "events" -> EventLog.encode(score);
             case "txt" -> TextDump.write(score);
             default -> throw new IllegalArgumentException(format);

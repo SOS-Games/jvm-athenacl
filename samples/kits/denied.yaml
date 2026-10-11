@@ -1,0 +1,12 @@
+kit: denied
+version: 1
+sources:
+  x:
+    format: sf2
+    license:
+      spdx: LicenseRef-AllRightsReserved
+      attribution: "closed bank"
+      redistribute: false
+      commercial: false
+instruments:
+  piano: {source: x, bank: 0, program: 0}

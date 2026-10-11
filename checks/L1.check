@@ -52,3 +52,10 @@ name: missing soundbank falls back
 args: render samples/notes/c-major-scale.yaml --soundbank /nonexistent.sf2
 exit: 0
 stdout-contains: soundbank=emergency warning=SOUNDBANK_FALLBACK
+
+---
+name: sf3 is rejected
+args: render samples/notes/c-major-scale.yaml --soundbank samples/kits/fake.sf3 --out build/l1sf3
+exit: 3
+stdout-contains: error code=SOUNDBANK_SF3_UNSUPPORTED
+stdout-contains: SF2 edition

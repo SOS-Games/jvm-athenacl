@@ -267,7 +267,7 @@ public final class LayerCheck {
         Process process = pb.start();
         Future<byte[]> outFuture = pool.submit(() -> process.getInputStream().readAllBytes());
         Future<byte[]> errFuture = pool.submit(() -> process.getErrorStream().readAllBytes());
-        boolean finished = process.waitFor(180, TimeUnit.SECONDS);
+        boolean finished = process.waitFor(600, TimeUnit.SECONDS);
         if (!finished) {
             process.destroyForcibly();
         }

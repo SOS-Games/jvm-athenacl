@@ -9,35 +9,43 @@ import com.badlogic.gdx.graphics.g2d.BitmapFont;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.utils.ScreenUtils;
 import io.github.sosgames.athenacl.adaptive.ControlLog;
+import io.github.sosgames.athenacl.adaptive.Director;
 import io.github.sosgames.athenacl.adaptive.LiveClock;
 import io.github.sosgames.athenacl.adaptive.Theme;
+import io.github.sosgames.athenacl.adaptive.ThemeSwitch;
 import io.github.sosgames.athenacl.adaptive.Themes;
-import io.github.sosgames.athenacl.render.WavRenderer;
-import io.github.sosgames.athenacl.render.soundbank.SoundbankPaths;
-import io.github.sosgames.athenacl.render.soundbank.SoundbankResolver;
+import io.github.sosgames.athenacl.instruments.ThemeMix;
 
 import javax.sound.sampled.AudioInputStream;
 import javax.sound.sampled.AudioSystem;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
-import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
- * Plays the ambush and shows the scheduler line. F3 writes {@code build/athenacl-snapshot.txt}.
- * F4 hides the line. The notes are built before the first sample, then the speakers play that WAV.
+ * Plays the ambush through the theme's kit, then can swap to the combat theme at a bar line.
+ * The next kit is rendered on a background thread and becomes audible on the next bar after bar 8.
+ * F3 writes {@code build/athenacl-snapshot.txt}. F4 hides the line.
  */
 public class MusicDemo extends ApplicationAdapter {
+    private static final int SWAP_BAR = 8;
+
     private SpriteBatch batch;
     private BitmapFont font;
     private AudioDevice device;
     private LiveClock clock;
     private Thread playback;
+    private Thread preload;
     private volatile boolean stop;
     private volatile boolean started;
     private volatile String error;
+    private volatile byte[] standbyWav;
+    private volatile boolean playStandby;
     private boolean overlay = true;
+    private final ThemeSwitch swap = new ThemeSwitch("fantasy-dungeon", SWAP_BAR);
 
     @Override
     public void create() {
@@ -47,6 +55,7 @@ public class MusicDemo extends ApplicationAdapter {
             Theme theme = Themes.load(Path.of("themes/fantasy-dungeon.yaml"));
             clock = LiveClock.start(theme, ControlLog.readTimeline(Path.of("samples/timelines/ambush.json")), 1);
             device = Gdx.audio.newAudioDevice(44100, false);
+            swap.arm("fantasy-combat");
             playback = new Thread(this::playScore, "athenacl-speakers");
             playback.setDaemon(true);
             playback.start();
@@ -65,6 +74,15 @@ public class MusicDemo extends ApplicationAdapter {
         }
         if (clock != null && started) {
             clock.poll(Gdx.graphics.getDeltaTime());
+            if (!playStandby && standbyWav != null && "fantasy-combat".equals(swap.poll(clock.bar()))) {
+                try {
+                    Theme combat = Themes.load(Path.of("themes/fantasy-combat.yaml"));
+                    clock = LiveClock.start(combat, combat.timeline(), 1);
+                    playStandby = true;
+                } catch (Exception e) {
+                    error = e.getMessage();
+                }
+            }
         }
         ScreenUtils.clear(0.08f, 0.08f, 0.1f, 1f);
         if (!overlay) {
@@ -85,66 +103,63 @@ public class MusicDemo extends ApplicationAdapter {
         return clock.snapshot();
     }
 
+    private void preloadCombat() {
+        try {
+            Theme combat = Themes.load(Path.of("themes/fantasy-combat.yaml"));
+            LiveClock next = LiveClock.start(combat, combat.timeline(), 1);
+            standbyWav = ThemeMix.wav(combat, next.performance().score(), states(next));
+            swap.preloaded();
+        } catch (Exception e) {
+            error = e.getMessage() == null ? e.getClass().getSimpleName() : e.getMessage();
+        }
+    }
+
     private void playScore() {
         try {
-            SoundbankResolver.Selection selection = SoundbankResolver.select(soundbankRequest(), SoundbankPaths.cache(null));
-            byte[] wav = WavRenderer.write(clock.performance().score(), selection.file());
-            try (AudioInputStream audio = AudioSystem.getAudioInputStream(new ByteArrayInputStream(wav))) {
-                byte[] buffer = new byte[4096];
-                int read;
-                while (!stop && (read = audio.read(buffer)) > 0) {
-                    int samples = read / 2;
-                    if (samples == 0) {
-                        continue;
-                    }
-                    short[] pcm = new short[samples];
-                    for (int i = 0; i < samples; i++) {
-                        int low = buffer[i * 2] & 0xff;
-                        int high = buffer[i * 2 + 1];
-                        pcm[i] = (short) ((high << 8) | low);
-                    }
-                    started = true;
-                    device.writeSamples(pcm, 0, samples);
-                }
+            byte[] wav = ThemeMix.wav(Themes.load(Path.of("themes/fantasy-dungeon.yaml")),
+                    clock.performance().score(), states(clock));
+            preload = new Thread(this::preloadCombat, "athenacl-kit");
+            preload.setDaemon(true);
+            preload.start();
+            play(wav);
+            if (!stop && playStandby && standbyWav != null) {
+                play(standbyWav);
             }
         } catch (Exception e) {
             error = e.getMessage() == null ? e.getClass().getSimpleName() : e.getMessage();
         }
     }
 
-    /** Same lookup as the CLI: {@code -Dathenacl.soundbank}, then {@code ATHENACL_SOUNDBANK}, then {@code local.properties}. */
-    private static String soundbankRequest() {
-        String prop = System.getProperty("athenacl.soundbank");
-        if (prop != null && !prop.isBlank()) {
-            return prop.trim();
-        }
-        String env = System.getenv("ATHENACL_SOUNDBANK");
-        if (env != null && !env.isBlank()) {
-            return env.trim();
-        }
-        Path file = Path.of("local.properties");
-        if (!Files.isRegularFile(file)) {
-            return null;
-        }
-        try {
-            for (String raw : Files.readAllLines(file, StandardCharsets.UTF_8)) {
-                String line = raw.trim();
-                if (line.isEmpty() || line.startsWith("#") || line.startsWith("!")) {
+    private void play(byte[] wav) throws Exception {
+        try (AudioInputStream audio = AudioSystem.getAudioInputStream(new ByteArrayInputStream(wav))) {
+            byte[] buffer = new byte[4096];
+            int read;
+            while (!stop && (read = audio.read(buffer)) > 0) {
+                if (wav != standbyWav && playStandby && standbyWav != null) {
+                    return;
+                }
+                int samples = read / 2;
+                if (samples == 0) {
                     continue;
                 }
-                int eq = line.indexOf('=');
-                if (eq < 0) {
-                    continue;
+                short[] pcm = new short[samples];
+                for (int i = 0; i < samples; i++) {
+                    int low = buffer[i * 2] & 0xff;
+                    int high = buffer[i * 2 + 1];
+                    pcm[i] = (short) ((high << 8) | low);
                 }
-                if (line.substring(0, eq).trim().equals("athenacl.soundbank")) {
-                    String value = line.substring(eq + 1).trim();
-                    return value.isBlank() ? null : value;
-                }
+                started = true;
+                device.writeSamples(pcm, 0, samples);
             }
-        } catch (IOException ignored) {
-            return null;
         }
-        return null;
+    }
+
+    private static List<String> states(LiveClock clock) {
+        List<String> names = new ArrayList<>();
+        for (Director.BarInfo bar : clock.performance().bars()) {
+            names.add(bar.state());
+        }
+        return names;
     }
 
     private void writeSnapshot() {
@@ -163,6 +178,13 @@ public class MusicDemo extends ApplicationAdapter {
         if (playback != null) {
             try {
                 playback.join(2000);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+            }
+        }
+        if (preload != null) {
+            try {
+                preload.join(2000);
             } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
             }

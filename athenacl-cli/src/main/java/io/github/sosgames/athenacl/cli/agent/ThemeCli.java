@@ -14,8 +14,11 @@ import io.github.sosgames.athenacl.cli.model.KeyValue;
 import io.github.sosgames.athenacl.cli.model.TextPaths;
 import io.github.sosgames.athenacl.events.EventLog;
 import io.github.sosgames.athenacl.events.Score;
+import io.github.sosgames.athenacl.instruments.KitException;
+import io.github.sosgames.athenacl.instruments.ThemeMix;
 import io.github.sosgames.athenacl.render.loudness.StateLoudness;
 import io.github.sosgames.athenacl.render.soundbank.SoundbankPaths;
+import io.github.sosgames.athenacl.render.soundbank.SoundbankRejected;
 import io.github.sosgames.athenacl.render.soundbank.SoundbankResolver;
 
 import javax.sound.midi.MidiUnavailableException;
@@ -76,6 +79,8 @@ final class ThemeCli {
         try {
             String request = soundbank != null ? soundbank : Config.get("athenacl.soundbank");
             selection = SoundbankResolver.select(request, SoundbankPaths.cache(cache));
+        } catch (SoundbankRejected e) {
+            return parent.fail(ExitCode.INVALID_INPUT, e.code(), e.path(), e.getMessage(), e.fix());
         } catch (IOException e) {
             return parent.fail(ExitCode.RUNTIME, "IO_ERROR", "--soundbank", e.getMessage(),
                     "Check that the soundbank file is readable.");
@@ -88,13 +93,21 @@ final class ThemeCli {
         Map<String, byte[]> bodies = new LinkedHashMap<>();
         try {
             for (String format : requested) {
-                byte[] body = RenderCommand.body(format, score, selection.file());
-                if ("wav".equals(format) && loaded.theme.loudness() != null) {
-                    body = StateLoudness.fit(body, score.bpm(), score.barTicks(), stateByBar,
-                            loaded.theme.loudness().reference(), loaded.theme.loudness().offsets());
+                byte[] body;
+                if ("wav".equals(format) && !loaded.theme.kits().isEmpty()) {
+                    body = ThemeMix.wav(loaded.theme, score, stateByBar);
+                } else {
+                    body = RenderCommand.body(format, score, selection.file());
+                    if ("wav".equals(format) && loaded.theme.loudness() != null) {
+                        body = StateLoudness.fit(body, score.bpm(), score.barTicks(), stateByBar,
+                                loaded.theme.loudness().reference(), loaded.theme.loudness().offsets());
+                    }
                 }
                 bodies.put(format, body);
             }
+        } catch (KitException e) {
+            KitException.Issue issue = e.issues().get(0);
+            return parent.fail(ExitCode.INVALID_INPUT, issue.code(), issue.path(), issue.message(), issue.fix());
         } catch (MidiUnavailableException e) {
             return parent.fail(ExitCode.ENVIRONMENT, "GERVILL_ABSENT", "gervill",
                     "this JDK cannot open an offline Gervill stream",
@@ -123,6 +136,9 @@ final class ThemeCli {
         fields.put("states", full.stateList());
         fields.put("transitions", Integer.toString(full.transitions().size()));
         fields.put("hash", hash);
+        if (!loaded.theme.kits().isEmpty()) {
+            fields.put("kit", String.join(",", loaded.theme.kits()));
+        }
         fields.put("dryRun", Boolean.toString(parent.dryRun));
         fields.put("changed", Boolean.toString(changed));
         Map<String, Object> payload = data(full, hash, changed, parent.dryRun, seed);

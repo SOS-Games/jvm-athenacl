@@ -9,12 +9,14 @@ import java.util.List;
  * and it is not part of the event-log hash.
  */
 public final class LiveClock {
+    private final Theme theme;
     private final Director.Performance performance;
     private final double barSeconds;
     private final long cpuMsPerBar;
     private double seconds;
 
-    private LiveClock(Director.Performance performance, double barSeconds, long cpuMsPerBar) {
+    private LiveClock(Theme theme, Director.Performance performance, double barSeconds, long cpuMsPerBar) {
+        this.theme = theme;
         this.performance = performance;
         this.barSeconds = barSeconds;
         this.cpuMsPerBar = cpuMsPerBar;
@@ -27,7 +29,7 @@ public final class LiveClock {
         int bars = Math.max(1, performance.score().bars());
         int bpm = performance.score().bpm();
         double barSeconds = bpm <= 0 ? 1 : 60.0 * theme.numerator() / theme.denominator() / bpm;
-        return new LiveClock(performance, barSeconds, elapsedMs / bars);
+        return new LiveClock(theme, performance, barSeconds, elapsedMs / bars);
     }
 
     public void poll(double deltaSeconds) {
@@ -40,25 +42,32 @@ public final class LiveClock {
         return performance;
     }
 
-    public String snapshot() {
+    public int bar() {
         int count = Math.max(1, performance.score().bars());
         int number = (int) (seconds / barSeconds) + 1;
         if (number < 1) {
-            number = 1;
+            return 1;
         }
-        if (number > count) {
-            number = count;
-        }
+        return Math.min(number, count);
+    }
+
+    public String snapshot() {
         Director.BarInfo bar = performance.bars().get(0);
+        int number = bar();
         for (Director.BarInfo info : performance.bars()) {
             if (info.bar() == number) {
                 bar = info;
             }
         }
-        return "state=" + bar.state()
+        String line = "state=" + bar.state()
                 + " intensity=" + Themes.number(bar.intensity())
                 + " bar=" + bar.bar()
                 + " sched.lookaheadMs=" + Scheduler.LOOKAHEAD_MS
                 + " cpu.msPerBar=" + cpuMsPerBar;
+        if (theme.kits().isEmpty()) {
+            return line;
+        }
+        return line + " kit=" + String.join(",", theme.kits())
+                + " instruments=" + theme.instrumentList(bar.state());
     }
 }

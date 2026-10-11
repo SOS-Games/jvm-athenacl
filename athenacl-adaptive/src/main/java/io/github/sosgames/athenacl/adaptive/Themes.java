@@ -28,7 +28,7 @@ import java.util.Set;
 public final class Themes {
     private static final ObjectMapper YAML = new ObjectMapper(new YAMLFactory());
     private static final Set<String> LAYERS = Set.of(
-            "pad", "bass", "lead", "drums", "drone", "harp", "taiko", "brass");
+            "pad", "bass", "lead", "drums", "drone", "harp", "taiko", "brass", "heartbeat");
 
     private Themes() {
     }
@@ -130,7 +130,9 @@ public final class Themes {
                 JsonNode body = entry.getValue();
                 String pitch = body.path("pitch").asText("C5");
                 String dur = body.path("dur").asText("1/8");
-                stingers.put(entry.getKey(), new Theme.StingerDef(entry.getKey(), pitch, dur));
+                int degree = body.has("degree") ? body.get("degree").asInt(-1) : -1;
+                int cooldown = body.path("cooldownBars").asInt(0);
+                stingers.put(entry.getKey(), new Theme.StingerDef(entry.getKey(), pitch, dur, degree, cooldown));
             }
         }
         for (Theme.StateDef state : states.values()) {
@@ -193,11 +195,63 @@ public final class Themes {
         if (kits.isEmpty() && "fantasy".equals(presetId)) {
             kits = List.of("gm-lite");
         }
+        Map<String, Theme.OverlayDef> overlays = overlays(root, errors, warnings);
+        int frameMs = root.path("clock").path("frameMs").asInt(0);
+        if (frameMs < 0) {
+            errors.add(issue("THEME_CLOCK", "/clock/frameMs", "frameMs " + frameMs,
+                    "Use 0, or a positive frame length in milliseconds."));
+            frameMs = 0;
+        }
         if (!errors.isEmpty()) {
             throw new ThemeException(errors);
         }
         return new Theme(id, bars, bpm, numerator, denominator, states, stingers, quantize, rules, timeline,
-                presetId.isBlank() ? null : presetId, loudness, warnings, motifEvery, hold, kits, hooks(root));
+                presetId.isBlank() ? null : presetId, loudness, warnings, motifEvery, hold, kits, hooks(root),
+                overlays, frameMs);
+    }
+
+    /** {@code overlays:} add a layer on top of the state. Extra loudness is capped at 1 LU. */
+    private static Map<String, Theme.OverlayDef> overlays(JsonNode root, List<ThemeIssue> errors,
+                                                          List<ThemeIssue> warnings) {
+        Map<String, Theme.OverlayDef> overlays = new LinkedHashMap<>();
+        JsonNode node = root.get("overlays");
+        if (node == null || !node.isObject()) {
+            return overlays;
+        }
+        var fields = node.fields();
+        while (fields.hasNext()) {
+            var entry = fields.next();
+            JsonNode body = entry.getValue();
+            List<String> layers = new ArrayList<>();
+            JsonNode layerNode = body.get("layers");
+            if (layerNode != null && layerNode.isArray()) {
+                for (int i = 0; i < layerNode.size(); i++) {
+                    String layer = layerNode.get(i).asText("");
+                    if (!LAYERS.contains(layer)) {
+                        errors.add(issue("THEME_LAYER", "/overlays/" + entry.getKey() + "/layers/" + i,
+                                "unknown layer " + layer,
+                                "Use a layer such as heartbeat."));
+                    }
+                    layers.add(layer);
+                }
+            }
+            if (layers.isEmpty()) {
+                layers.add("heartbeat");
+            }
+            double loudness = body.path("loudness").asDouble(1);
+            if (loudness < 0) {
+                errors.add(issue("THEME_LOUDNESS", "/overlays/" + entry.getKey() + "/loudness",
+                        "loudness " + number(loudness), "Use a value from 0 to 1."));
+                loudness = 0;
+            } else if (loudness > 1) {
+                warnings.add(issue("THEME_LOUDNESS", "/overlays/" + entry.getKey() + "/loudness",
+                        "overlay loudness " + number(loudness),
+                        "An overlay may add at most 1 LU. The extra is capped."));
+                loudness = 1;
+            }
+            overlays.put(entry.getKey(), new Theme.OverlayDef(entry.getKey(), layers, loudness));
+        }
+        return overlays;
     }
 
     /** {@code instruments.kits} is the lookup order. The first kit that names an instrument wins. */
@@ -339,7 +393,7 @@ public final class Themes {
     private static Theme.Rule rule(JsonNode body, int index, Map<String, Theme.StateDef> states, List<ThemeIssue> issues) {
         String path = "/transitions/rules/" + index;
         String from = body.path("from").asText("*");
-        if (!from.equals("*") && !states.containsKey(from)) {
+        if (!"*".equals(from) && !states.containsKey(from)) {
             issues.add(issue("THEME_UNKNOWN_STATE", path + "/from", "unknown state " + from,
                     "Use a state declared under states, such as " + example(states) + "."));
         }
@@ -352,7 +406,7 @@ public final class Themes {
             for (int j = 0; j < toNode.size(); j++) {
                 String name = toNode.get(j).asText("");
                 to.add(name);
-                if (!states.containsKey(name)) {
+                if (!"*".equals(name) && !states.containsKey(name)) {
                     issues.add(issue("THEME_UNKNOWN_STATE", path + "/to/" + j, "unknown state " + name,
                             "Use a state declared under states, such as " + example(states) + "."));
                 }
@@ -360,7 +414,7 @@ public final class Themes {
         } else {
             String name = toNode.asText("");
             to.add(name);
-            if (!states.containsKey(name)) {
+            if (!"*".equals(name) && !states.containsKey(name)) {
                 issues.add(issue("THEME_UNKNOWN_STATE", path + "/to", "unknown state " + name,
                         "Use a state declared under states, such as " + example(states) + "."));
             }
@@ -374,7 +428,9 @@ public final class Themes {
                         "Use bar, beat, or immediate."));
             }
         }
-        return new Theme.Rule(from, to, quantize, body.path("retract").asBoolean(false));
+        String bridge = body.path("bridge").asText("");
+        int crossfade = body.path("crossfadeBars").asInt(0);
+        return new Theme.Rule(from, to, quantize, body.path("retract").asBoolean(false), bridge, crossfade);
     }
 
     static Theme.Control control(JsonNode body, String path, Map<String, Theme.StateDef> states, List<ThemeIssue> issues) {

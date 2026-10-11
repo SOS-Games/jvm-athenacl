@@ -33,3 +33,12 @@ critic:
     contour: 0.08
     closure: 0.12
     distinctiveness: 0.04
+overlays:
+  lowHealth:
+    layers: [heartbeat]
+    loudness: 0.6
+transitions:
+  defaults: {quantize: bar}
+  rules:
+    - {to: [combat, danger], quantize: beat, retract: true}
+    - {from: combat, to: "*", quantize: bar, bridge: windDown, crossfadeBars: 1}

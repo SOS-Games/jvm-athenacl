@@ -1,0 +1,36 @@
+# L8 overlays, wind-downs, and loudness ramps. Directive list: AGENTS.md, section "Layer checks".
+# The no-timeline render stays on the first state, so this render asks for the combat exit itself.
+
+name: render the low-health overlay
+args: render themes/fantasy-dungeon.yaml --at "1 state sneaking 0.35" --at "3 state combat 0.8" --at "4 overlay lowHealth 1" --at "6 state peaceful 0.4" --bars 1-8 --seed 1 --out build/l8 --formats mid,wav,events,txt
+exit: 0
+delete-before: build/l8
+stdout-contains: overlays=lowHealth
+file-exists: build/l8/score.wav
+file-exists: build/l8/events.jsonl
+
+---
+name: the overlay stays within one LU
+args: analyze build/l8
+exit: 0
+stdout-regex: loudness\.overlayDelta=([+-]0\.[0-9]|[+-]1\.0)
+
+---
+name: leaving combat winds down on the bar
+args: debug trace build/l8 --transitions
+exit: 0
+stdout-contains: from=combat to=peaceful
+stdout-contains: quantize=bar
+stdout-contains: bridge=windDown
+
+---
+name: a loud jump is ramped
+args: debug check build/l8 --loudness
+exit: 0
+stdout-contains: loudness.integrated=
+
+---
+name: the wind-down does not stick
+args: debug check build/l8 --stuck-notes
+exit: 0
+stdout-contains: stuck=0

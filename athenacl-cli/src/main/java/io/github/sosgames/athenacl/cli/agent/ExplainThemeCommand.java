@@ -69,6 +69,9 @@ public class ExplainThemeCommand implements Callable<Integer> {
             head.put("hold", loaded.hold().state());
             head.put("intensity", Themes.number(loaded.hold().intensity()));
         }
+        if (!loaded.overlays().isEmpty()) {
+            head.put("overlays", String.join(",", loaded.overlays().keySet()));
+        }
         text.append(KeyValue.line(head));
         for (Theme.StateDef state : loaded.states().values()) {
             Map<String, String> fields = new LinkedHashMap<>();

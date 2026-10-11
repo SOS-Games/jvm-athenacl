@@ -69,4 +69,81 @@ class DirectorTest {
         Director.Performance replay = Director.perform(replayTheme, read.controls(), read.seed());
         assertEquals(EventLog.hash(full.score()), EventLog.hash(replay.score()));
     }
+
+    @Test
+    void aFrameSnapsDownBeforeTheMusicalGrid() {
+        assertEquals(960, MusicalClock.snapFrame(1000, 500, 120));
+        assertEquals(1000, MusicalClock.snapFrame(1000, 0, 120));
+    }
+
+    @Test
+    void anOverlayDoesNotReplaceTheState() {
+        List<Theme.Control> merged = Director.merge(
+                List.of(new Theme.Control(4, 1, "combat", 0.8)),
+                List.of(new Theme.Control(4, 1, "", 0, "lowHealth", 1)));
+        assertEquals(2, merged.size());
+    }
+
+    @Test
+    void leavingCombatWindsDownOnTheBar() throws Exception {
+        Theme theme = Themes.load(Path.of("themes/fantasy-dungeon.yaml"));
+        List<Theme.Control> controls = List.of(
+                new Theme.Control(1, 1, "sneaking", 0.35),
+                new Theme.Control(4, 3, "combat", 0.8),
+                new Theme.Control(6, 1, "peaceful", 0.4),
+                new Theme.Control(4, 1, "", 0, "lowHealth", 1));
+        Director.Performance performance = Director.perform(theme, controls, 1);
+        assertEquals("lowHealth", performance.overlayList());
+        boolean entered = false;
+        boolean left = false;
+        for (Director.Transition transition : performance.transitions()) {
+            if ("combat".equals(transition.to())) {
+                assertEquals("beat", transition.quantize());
+                assertEquals(13440, transition.appliedTick());
+                entered = true;
+            }
+            if ("combat".equals(transition.from()) && "peaceful".equals(transition.to())) {
+                assertEquals("bar", transition.quantize());
+                assertEquals("windDown", transition.bridge());
+                left = true;
+            }
+        }
+        assertTrue(entered);
+        assertTrue(left);
+    }
+
+    @Test
+    void aDegreeStingerFollowsTheKeyAndThenWaits() throws Exception {
+        String yaml = """
+                id: sting
+                bars: 4
+                states:
+                  peaceful:
+                    key: "D dorian"
+                    layers: [pad]
+                    stinger: hit
+                  combat:
+                    key: "D aeolian"
+                    layers: [pad]
+                stingers:
+                  hit:
+                    degree: 0
+                    dur: "1/8"
+                    cooldownBars: 4
+                """;
+        Theme theme = Themes.parse("sting.yaml", yaml);
+        Director.Performance performance = Director.perform(theme, List.of(
+                new Theme.Control(1, 1, "peaceful", 0.4),
+                new Theme.Control(2, 1, "combat", 0.6),
+                new Theme.Control(3, 1, "peaceful", 0.4)), 1);
+        int hits = 0;
+        for (Director.Played played : performance.notes()) {
+            if ("stinger".equals(played.note().layer())) {
+                assertEquals(74, played.note().pitch());
+                assertEquals(1, played.note().bar());
+                hits++;
+            }
+        }
+        assertEquals(1, hits);
+    }
 }

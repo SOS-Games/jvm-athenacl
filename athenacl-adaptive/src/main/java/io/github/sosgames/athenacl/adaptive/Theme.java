@@ -17,6 +17,8 @@ import java.util.Map;
  * {@code 1} plays it every bar.
  * {@code hooks} is empty when the theme has no hook block, and the lead then grows
  * {@code m1} the way L7 always has.
+ * {@code overlays} add a layer on top of the current state, such as {@code lowHealth}.
+ * {@code frameMs} is 0 unless the theme snaps requests to a fixed frame before the musical grid.
  */
 public record Theme(
         String id,
@@ -35,7 +37,9 @@ public record Theme(
         int motifEvery,
         Hold hold,
         List<String> kits,
-        HookSettings hooks) {
+        HookSettings hooks,
+        Map<String, OverlayDef> overlays,
+        int frameMs) {
 
     public Theme {
         states = Collections.unmodifiableMap(new LinkedHashMap<>(states));
@@ -44,11 +48,14 @@ public record Theme(
         timeline = List.copyOf(timeline);
         warnings = List.copyOf(warnings);
         kits = kits == null ? List.of() : List.copyOf(kits);
+        overlays = overlays == null
+                ? Map.of()
+                : Collections.unmodifiableMap(new LinkedHashMap<>(overlays));
     }
 
     public Theme withBars(int bars) {
         return new Theme(id, bars, bpm, numerator, denominator, states, stingers, defaultQuantize, rules,
-                timeline, preset, loudness, warnings, motifEvery, hold, kits, hooks);
+                timeline, preset, loudness, warnings, motifEvery, hold, kits, hooks, overlays, frameMs);
     }
 
     /** Instrument names for one state, in layer order. Empty when that state is missing. */
@@ -72,14 +79,40 @@ public record Theme(
         return states.keySet().iterator().next();
     }
 
-    /** Rule for this destination, or the theme default. Specific {@code to} wins. */
-    public Quantize quantizeTo(String to) {
+    public OverlayDef overlay(String id) {
+        return overlays.get(id);
+    }
+
+    /**
+     * The rule for this pair. A named state beats {@code *}, and a named
+     * {@code from} beats a named {@code to}, so leaving combat can wind down
+     * without stealing the beat rule that enters combat.
+     */
+    public Rule ruleFor(String from, String to) {
+        Rule best = null;
+        int bestScore = -1;
         for (Rule rule : rules) {
-            if (rule.to().contains(to)) {
-                return rule.quantize();
+            if (!rule.matches(from, to)) {
+                continue;
+            }
+            int score = rule.score();
+            if (score > bestScore) {
+                best = rule;
+                bestScore = score;
             }
         }
-        return defaultQuantize;
+        return best;
+    }
+
+    /** Grid for this pair, or the theme default when no rule matches. */
+    public Quantize quantize(String from, String to) {
+        Rule rule = ruleFor(from, to);
+        return rule == null ? defaultQuantize : rule.quantize();
+    }
+
+    /** Grid for this destination when the previous state is unknown. */
+    public Quantize quantizeTo(String to) {
+        return quantize("*", to);
     }
 
     public record StateDef(String id, Key key, int tempo, List<String> layers, String stinger,
@@ -117,31 +150,73 @@ public record Theme(
         }
     }
 
-    public record StingerDef(String id, String pitch, String duration) {
+    public record StingerDef(String id, String pitch, String duration, int degree, int cooldownBars) {
+        public StingerDef(String id, String pitch, String duration) {
+            this(id, pitch, duration, -1, 0);
+        }
+
+        /** A degree of 0 or more follows the state's key. A pitch-only stinger does not. */
+        public boolean followsKey() {
+            return degree >= 0;
+        }
     }
 
-    public record Rule(String from, List<String> to, Quantize quantize, boolean retract) {
+    /**
+     * One transition rule. {@code to} may be {@code *} for every state.
+     * {@code bridge} is empty when the change is only a grid and a retract flag.
+     */
+    public record Rule(String from, List<String> to, Quantize quantize, boolean retract,
+                       String bridge, int crossfadeBars) {
+        public Rule(String from, List<String> to, Quantize quantize, boolean retract) {
+            this(from, to, quantize, retract, "", 0);
+        }
+
         public Rule(String from, List<String> to, Quantize quantize) {
-            this(from, to, quantize, false);
+            this(from, to, quantize, false, "", 0);
         }
 
         public Rule {
             to = List.copyOf(to);
+            bridge = bridge == null ? "" : bridge;
+        }
+
+        boolean matches(String fromState, String toState) {
+            boolean fromOk = "*".equals(from) || from.equals(fromState);
+            boolean toOk = to.contains("*") || to.contains(toState);
+            return fromOk && toOk;
+        }
+
+        /** Named from beats a wildcard, and a named to beats {@code *}. */
+        int score() {
+            int fromScore = "*".equals(from) ? 0 : 2;
+            int toScore = to.contains("*") ? 0 : 1;
+            return fromScore + toScore;
         }
     }
 
-    /** The rule that names this destination, or null when the theme default applies. */
-    public Rule ruleFor(String to) {
-        for (Rule rule : rules) {
-            if (rule.to().contains(to)) {
-                return rule;
-            }
+    /** A layer added on top of the main state. {@code loudness} is the extra LU, at most 1. */
+    public record OverlayDef(String id, List<String> layers, double loudness) {
+        public OverlayDef {
+            layers = List.copyOf(layers);
         }
-        return null;
     }
 
-    /** A request to be in {@code state} at this bar and beat, with an optional intensity. */
-    public record Control(int bar, int beat, String state, double intensity) {
+    /**
+     * A request at this bar and beat. {@code state} is empty when the line only
+     * sets an overlay. {@code overlay} is empty when it only sets the state.
+     */
+    public record Control(int bar, int beat, String state, double intensity, String overlay, double overlayLevel) {
+        public Control(int bar, int beat, String state, double intensity) {
+            this(bar, beat, state, intensity, "", 0);
+        }
+
+        public boolean hasState() {
+            return state != null && !state.isBlank();
+        }
+
+        public boolean hasOverlay() {
+            return overlay != null && !overlay.isBlank();
+        }
     }
 
     /** The state an empty script stays on, and how hard that music plays. */

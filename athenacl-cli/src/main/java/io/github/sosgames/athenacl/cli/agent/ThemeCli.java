@@ -135,6 +135,9 @@ final class ThemeCli {
         fields.put("bars", Integer.toString(loaded.theme.bars()));
         fields.put("states", full.stateList());
         fields.put("transitions", Integer.toString(full.transitions().size()));
+        if (!full.overlayList().isEmpty()) {
+            fields.put("overlays", full.overlayList());
+        }
         fields.put("hash", hash);
         if (!loaded.theme.kits().isEmpty()) {
             fields.put("kit", String.join(",", loaded.theme.kits()));
@@ -213,11 +216,15 @@ final class ThemeCli {
             throw new IllegalArgumentException("at is empty");
         }
         String[] parts = text.trim().split("\\s+");
-        if (parts.length < 3 || !parts[1].equals("state")) {
+        if (parts.length < 3 || (!parts[1].equals("state") && !parts[1].equals("overlay"))) {
             throw new IllegalArgumentException("at " + text);
         }
         try {
             int bar = Integer.parseInt(parts[0]);
+            if (parts[1].equals("overlay")) {
+                double level = parts.length >= 4 ? Themes.intensity(Double.parseDouble(parts[3])) : 1;
+                return new Theme.Control(bar, 1, "", 0, parts[2], level);
+            }
             double intensity = parts.length >= 4 ? Themes.intensity(Double.parseDouble(parts[3])) : 0.3;
             return new Theme.Control(bar, 1, parts[2], intensity);
         } catch (NumberFormatException e) {

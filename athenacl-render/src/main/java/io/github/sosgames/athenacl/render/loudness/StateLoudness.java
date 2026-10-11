@@ -65,6 +65,53 @@ public final class StateLoudness {
         return encode(samples);
     }
 
+    /**
+     * How many LU the overlay bars sit above the same state's other bars.
+     * Null when a state never has both. The gap is a power ratio of those slices.
+     */
+    public static Double overlayDelta(byte[] wav, int bpm, long barTicks, List<String> stateByBar,
+                                      List<Boolean> overlayByBar) throws IOException {
+        if (stateByBar.isEmpty() || overlayByBar.size() != stateByBar.size()) {
+            return null;
+        }
+        short[] samples = decode(wav);
+        int frames = samples.length / CHANNELS;
+        TempoMap map = new TempoMap(bpm);
+        Map<String, double[]> energy = new LinkedHashMap<>();
+        for (int bar = 0; bar < stateByBar.size(); bar++) {
+            String state = stateByBar.get(bar);
+            if (state == null || state.isBlank()) {
+                continue;
+            }
+            int start = Math.max(0, Math.min(frames, frameAt(map, bar * barTicks)));
+            int end = bar == stateByBar.size() - 1
+                    ? frames
+                    : Math.max(start, Math.min(frames, frameAt(map, (bar + 1L) * barTicks)));
+            double sum = 0;
+            int count = 0;
+            for (int i = start * CHANNELS; i < end * CHANNELS; i++) {
+                double sample = samples[i] / 32768.0;
+                sum += sample * sample;
+                count++;
+            }
+            double[] pair = energy.computeIfAbsent(state, key -> new double[4]);
+            int side = Boolean.TRUE.equals(overlayByBar.get(bar)) ? 2 : 0;
+            pair[side] += sum;
+            pair[side + 1] += count;
+        }
+        Double widest = null;
+        for (double[] pair : energy.values()) {
+            if (pair[1] <= 0 || pair[3] <= 0 || pair[0] <= 0 || pair[2] <= 0) {
+                continue;
+            }
+            double delta = 10.0 * Math.log10((pair[2] / pair[3]) / (pair[0] / pair[1]));
+            if (widest == null || Math.abs(delta) > Math.abs(widest)) {
+                widest = delta;
+            }
+        }
+        return widest;
+    }
+
     /** Integrated loudness minus {@code reference}, in first-heard state order. */
     public static Map<String, Double> offsets(byte[] wav, int bpm, long barTicks, List<String> stateByBar,
                                                double reference) throws IOException {

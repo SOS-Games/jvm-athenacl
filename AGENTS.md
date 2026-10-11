@@ -4,7 +4,7 @@ Instructions for AI coding agents working in **jvm-athenacl**.
 
 ## Project
 
-GPL-3.0-or-later Java 21 rewrite of athenaCL as an adaptive game-music engine for libGDX desktop. Package `io.github.sosgames.athenacl`. Layer plan: [docs/research/05-project-plan.md](docs/research/05-project-plan.md). L0a–L7, L1b (instrument kits), and L7b (hook generator and melody critic) are in the tree. Do not start L6b or L8 until the user asks.
+GPL-3.0-or-later Java 21 rewrite of athenaCL as an adaptive game-music engine for libGDX desktop. Package `io.github.sosgames.athenacl`. Layer plan: [docs/research/05-project-plan.md](docs/research/05-project-plan.md). L0a–L8, L1b (instrument kits), and L7b (hook generator and melody critic) are in the tree. Do not start L6b or L9 until the user asks.
 
 - Java 21 (`options.release = 21`). Versions live in `gradle.properties`.
 - Groovy Gradle, same shape as SOS-Games/jvm-mw. Root `gradlew layerCheck`. CLI: `gradlew :athenacl-cli:agentCli --args="help"`.
@@ -293,6 +293,14 @@ Entering combat or danger waits for the next beat and drops notes already queued
 
 `adapt themes/fantasy-dungeon.yaml --seed 1` prints `state=`, `intensity=`, `bar=`, `sched.lookaheadMs=150`, `cpu.msPerBar=`, `kit=gm-lite`, and `instruments=`. `gradlew :athenacl-gdx:run` opens a small window that plays the ambush through that kit and shows the same line. The combat theme's kit is rendered on a background thread and takes over at the next bar from bar 8. F3 writes `build/athenacl-snapshot.txt`. F4 hides the line.
 
-## Not in L6
+## Overlays and wind-downs
 
-Overlays, bridges, and the sci-fi preset. Do not add them in a drive-by change.
+`--at "4 overlay lowHealth 1"` turns on an overlay at that bar. It does not replace a state change at the same time. `themes/fantasy-dungeon.yaml` defines `lowHealth` as a quiet heartbeat, capped at 1 LU. `analyze` of that render prints `loudness.overlayDelta=`.
+
+A named `from` beats a wildcard, so entering combat or danger still waits for the next beat. Leaving combat waits for the bar and plays `bridge=windDown`. `debug trace --transitions` prints `bridge=` on that line. A jump larger than 4 LU writes a CC11 ramp; `debug check --loudness` exits 6 when that ramp is missing. A render with no control log only measures the WAV.
+
+`clock.frameMs` snaps a request onto a fixed frame before the musical grid. It is 0 unless the theme sets it. A stinger with `degree` follows the state's key, and `cooldownBars` skips a repeat inside that many bars. A pitch-only stinger is unchanged. The window still preloads the next kit and swaps it at a bar line.
+
+## Not in L8
+
+The sci-fi preset, the effects stage, and SFZ kits. Do not add them in a drive-by change.

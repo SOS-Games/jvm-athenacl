@@ -33,4 +33,19 @@ public final class MusicalClock {
     public static boolean onBarLine(long tick, long barTicks) {
         return barTicks > 0 && tick % barTicks == 0;
     }
+
+    /**
+     * Snaps a request down onto a fixed frame before the musical grid.
+     * {@code frameMs} of 0 leaves the tick alone. Two requests in one frame share a tick.
+     */
+    public static long snapFrame(long tick, int frameMs, int bpm) {
+        if (frameMs <= 0 || bpm <= 0 || tick <= 0) {
+            return tick;
+        }
+        long grid = frameMs * (long) bpm * TimeBase.PPQ / 60_000L;
+        if (grid <= 1) {
+            return tick;
+        }
+        return tick - Math.floorMod(tick, grid);
+    }
 }

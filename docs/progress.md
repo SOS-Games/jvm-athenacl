@@ -56,8 +56,14 @@ A note list such as `samples/notes/c-major-scale.yaml` renders to `score.mid`, `
 
 ## L7b — Hooks and the melody critic
 
-`gradlew layerCheck -Player=L7b` passes (9 checks). The full `gradlew layerCheck` passes (84 checks).
+`gradlew layerCheck -Player=L7b` passes (9 checks).
 
 `melody generate --candidates 64 --explain` ranks seeded hook candidates and prints the same pick on a second run. A hook is 3–6 notes. Hard rules reject a leap that is too wide, a stuck pitch, an unresolved tritone, a cadence that does not land, and a line that copies a declared reference (`copyGuard`). `melody score` rates a MIDI file. `melody rate` writes one A/B row. `melody fit` turns those rows into weights.
 
 `themes/fantasy-dungeon.yaml` has a `hooks:` block, so that theme's lead is a picked hook (still motif `m1`) instead of the L7 generator. The pick happens once per state, before the bar loop. `debug explain` on a lead note prints `hook.cand=` and `score=`. `themes/fantasy-combat.yaml` has no `hooks:` block, so its fight line is unchanged. Loudness, stuck notes, and the ambush still pass with the dungeon hooks on.
+
+## L8 — Overlays and wind-downs
+
+`gradlew layerCheck -Player=L8` passes (5 checks). The full `gradlew layerCheck` passes (89 checks).
+
+`lowHealth` is a quiet heartbeat on top of the current state. `--at "4 overlay lowHealth 1"` turns it on, and `analyze` prints `loudness.overlayDelta=` within 1 LU. Leaving combat waits for the bar and plays a falling wind-down. A jump larger than 4 LU ramps CC11 instead of stepping. Entering combat still lands on the beat. A render with no timeline still stays on the first state.

@@ -39,11 +39,20 @@ public final class ControlLog {
         }
         text.append("}\n");
         for (Theme.Control control : controls) {
-            text.append("{\"type\":\"state\",\"bar\":").append(control.bar())
-                    .append(",\"beat\":").append(control.beat())
-                    .append(",\"state\":\"").append(escape(control.state()))
-                    .append("\",\"intensity\":").append(Themes.number(control.intensity()))
-                    .append("}\n");
+            if (control.hasState()) {
+                text.append("{\"type\":\"state\",\"bar\":").append(control.bar())
+                        .append(",\"beat\":").append(control.beat())
+                        .append(",\"state\":\"").append(escape(control.state()))
+                        .append("\",\"intensity\":").append(Themes.number(control.intensity()))
+                        .append("}\n");
+            }
+            if (control.hasOverlay()) {
+                text.append("{\"type\":\"overlay\",\"bar\":").append(control.bar())
+                        .append(",\"beat\":").append(control.beat())
+                        .append(",\"overlay\":\"").append(escape(control.overlay()))
+                        .append("\",\"level\":").append(Themes.number(control.overlayLevel()))
+                        .append("}\n");
+            }
         }
         return text.toString().getBytes(StandardCharsets.UTF_8);
     }
@@ -74,6 +83,14 @@ public final class ControlLog {
                         node.path("beat").asInt(1),
                         node.path("state").asText(""),
                         Themes.intensity(node.path("intensity").asDouble())));
+            } else if (type.equals("overlay")) {
+                controls.add(new Theme.Control(
+                        node.path("bar").asInt(1),
+                        node.path("beat").asInt(1),
+                        "",
+                        0,
+                        node.path("overlay").asText(""),
+                        Themes.intensity(node.path("level").asDouble())));
             }
         }
         if (theme == null || theme.isBlank()) {

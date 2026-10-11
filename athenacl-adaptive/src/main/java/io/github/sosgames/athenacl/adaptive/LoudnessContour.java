@@ -8,7 +8,11 @@ import java.util.Map;
  * How loud each state should sit, in LU relative to {@code reference}.
  * Combat is a few LU louder than sneaking. The spread is the distance between the loudest and quietest.
  */
-public record LoudnessContour(double reference, Map<String, Double> offsets, double maxSpread) {
+public record LoudnessContour(double reference, Map<String, Double> offsets, double maxSpread, double maxStep) {
+    public LoudnessContour(double reference, Map<String, Double> offsets, double maxSpread) {
+        this(reference, offsets, maxSpread, 4);
+    }
+
     public LoudnessContour {
         offsets = Map.copyOf(offsets);
     }

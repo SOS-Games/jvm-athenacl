@@ -2,7 +2,7 @@
 
 A Java rewrite of [athenaCL](https://github.com/ales-tsurko/athenaCL) as an adaptive game-music engine for libGDX desktop. Package `io.github.sosgames.athenacl`. License [GPL-3.0-or-later](LICENSE).
 
-The tree is early. Layers L0 through L7 are in, including L6: a headless CLI, note-list render to MIDI and WAV, a piano roll, the GeneralUser GS soundbank, an EBU R128 loudness meter, scale, chord, and progression commands, rhythm, an offline adaptive director, the fantasy preset with a loudness contour, motifs that a lead can remember and bring back, and beat-level combat switches that pull queued notes back. A small libGDX window plays the ambush and shows the scheduler. Overlays come later. The layer plan is [docs/research/05-project-plan.md](docs/research/05-project-plan.md). What is done is [docs/progress.md](docs/progress.md).
+The tree is early. Layers L0 through L8 are in, including L6: a headless CLI, note-list render to MIDI and WAV, a piano roll, the GeneralUser GS soundbank, an EBU R128 loudness meter, scale, chord, and progression commands, rhythm, an offline adaptive director, the fantasy preset with a loudness contour, motifs that a lead can remember and bring back, and beat-level combat switches that pull queued notes back. A small libGDX window plays the ambush and shows the scheduler. L8 adds a low-health overlay and a wind-down when combat ends. The layer plan is [docs/research/05-project-plan.md](docs/research/05-project-plan.md). What is done is [docs/progress.md](docs/progress.md).
 
 ## Requirements
 

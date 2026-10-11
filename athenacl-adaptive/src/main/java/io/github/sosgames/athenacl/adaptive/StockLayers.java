@@ -47,9 +47,32 @@ public final class StockLayers {
     static void stinger(Theme theme, Theme.StateDef state, Director.BarInfo bar, Theme.StingerDef stinger,
                         long start, long seed, Director.Ids ids, List<Director.Played> notes) {
         long id = ids.take();
-        int midi = PitchName.midi(stinger.pitch());
+        int midi = stinger.followsKey()
+                ? scaleMidi(state.key(), Math.min(stinger.degree(), state.key().pitchClassNames().size() - 1), 5)
+                : PitchName.midi(stinger.pitch());
         notes.add(played(id, start, stinger.duration(), midi, PitchName.name(midi), velocity(bar.intensity()),
                 3, "stinger", bar, seed, state.id(), "stinger"));
+    }
+
+    /** A quiet pulse on top of the state. Short enough that it does not sit on the next hit. */
+    static void heartbeat(Theme.StateDef state, Director.BarInfo info, long start, long seed,
+                          Director.Ids ids, List<Director.Played> notes, double level) {
+        int velocity = Math.max(1, Math.min(28, 12 + (int) Math.round(level * 10)));
+        long id = ids.take();
+        notes.add(played(id, start, "1/16", 36, "C2", velocity, 8, "heartbeat", info, seed, state.id(), "heartbeat"));
+    }
+
+    /** Four falling steps on the bar combat is left. Each one is quieter than the last. */
+    static void windDown(Theme.StateDef state, Director.BarInfo info, long start, long seed,
+                         Director.Ids ids, List<Director.Played> notes) {
+        int[] degrees = {4, 2, 1, 0};
+        int[] velocity = {36, 30, 24, 18};
+        for (int i = 0; i < degrees.length; i++) {
+            long id = ids.take();
+            int midi = scaleMidi(state.key(), degrees[i], 4);
+            notes.add(played(id, start + i * TimeBase.PPQ, "1/4", midi, PitchName.name(midi),
+                    velocity[i], 11, "bridge", info, seed, state.id(), "wind-down"));
+        }
     }
 
     static int bar(Theme theme, Theme.StateDef state, Director.BarInfo info, long start, long seed,

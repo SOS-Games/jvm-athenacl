@@ -62,6 +62,9 @@ public final class TraceCommands {
                 fields.put("latency.ms", Long.toString(transition.latencyMs()));
                 fields.put("lookaheadMs", Integer.toString(
                         io.github.sosgames.athenacl.adaptive.Scheduler.LOOKAHEAD_MS));
+                if (transition.bridge() != null && !transition.bridge().isBlank()) {
+                    fields.put("bridge", transition.bridge());
+                }
                 if (!text.isEmpty()) {
                     text.append('\n');
                 }

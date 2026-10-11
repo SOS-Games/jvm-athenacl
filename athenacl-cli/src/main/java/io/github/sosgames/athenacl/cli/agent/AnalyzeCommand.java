@@ -116,13 +116,69 @@ public class AnalyzeCommand implements Callable<Integer> {
     private static String extras(Path input) {
         String swing = swingSuffix(input);
         String motif = motifSuffix(input);
-        if (swing == null) {
-            return motif;
+        String overlay = overlaySuffix(input);
+        String line = swing;
+        if (motif != null) {
+            line = line == null ? motif : line + " " + motif;
         }
-        if (motif == null) {
-            return swing;
+        if (overlay != null) {
+            line = line == null ? overlay : line + " " + overlay;
         }
-        return swing + " " + motif;
+        return line;
+    }
+
+    private static String overlaySuffix(Path input) {
+        Path dir = Files.isDirectory(input) ? input : input.getParent();
+        if (dir == null) {
+            return null;
+        }
+        Path control = dir.resolve("control.jsonl");
+        Path wav = dir.resolve("score.wav");
+        Path events = dir.resolve("events.jsonl");
+        if (!Files.isRegularFile(control) || !Files.isRegularFile(wav) || !Files.isRegularFile(events)) {
+            return null;
+        }
+        try {
+            ControlLog.Log log = ControlLog.read(control);
+            boolean any = false;
+            for (var controlPoint : log.controls()) {
+                if (controlPoint.hasOverlay() && controlPoint.overlayLevel() > 0) {
+                    any = true;
+                    break;
+                }
+            }
+            if (!any) {
+                return null;
+            }
+            Score score = NoteFiles.events(events);
+            List<String> states = new ArrayList<>();
+            List<Boolean> overlay = new ArrayList<>();
+            for (int bar = 1; bar <= log.bars(); bar++) {
+                String state = "";
+                boolean on = false;
+                for (var controlPoint : log.controls()) {
+                    if (controlPoint.bar() > bar) {
+                        continue;
+                    }
+                    if (controlPoint.hasState() && controlPoint.bar() <= bar) {
+                        state = controlPoint.state();
+                    }
+                    if (controlPoint.hasOverlay() && controlPoint.bar() <= bar) {
+                        on = controlPoint.overlayLevel() > 0;
+                    }
+                }
+                states.add(state);
+                overlay.add(on);
+            }
+            Double delta = StateLoudness.overlayDelta(
+                    Files.readAllBytes(wav), score.bpm(), score.barTicks(), states, overlay);
+            if (delta == null || !Double.isFinite(delta)) {
+                return "loudness.overlayDelta=+0.0";
+            }
+            return "loudness.overlayDelta=" + LoudnessContour.tenths(delta);
+        } catch (ScoreException | IOException e) {
+            return null;
+        }
     }
 
     private static String motifSuffix(Path input) {

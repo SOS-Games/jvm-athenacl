@@ -88,10 +88,24 @@ public record Theme(
     public record StingerDef(String id, String pitch, String duration) {
     }
 
-    public record Rule(String from, List<String> to, Quantize quantize) {
+    public record Rule(String from, List<String> to, Quantize quantize, boolean retract) {
+        public Rule(String from, List<String> to, Quantize quantize) {
+            this(from, to, quantize, false);
+        }
+
         public Rule {
             to = List.copyOf(to);
         }
+    }
+
+    /** The rule that names this destination, or null when the theme default applies. */
+    public Rule ruleFor(String to) {
+        for (Rule rule : rules) {
+            if (rule.to().contains(to)) {
+                return rule;
+            }
+        }
+        return null;
     }
 
     /** A request to be in {@code state} at this bar and beat, with an optional intensity. */

@@ -154,6 +154,18 @@ public final class Themes {
                 rules.add(rule(ruleNode.get(i), i, states, errors));
             }
         }
+        if (rules.isEmpty()) {
+            List<String> urgent = new ArrayList<>();
+            if (states.containsKey("combat")) {
+                urgent.add("combat");
+            }
+            if (states.containsKey("danger")) {
+                urgent.add("danger");
+            }
+            if (!urgent.isEmpty()) {
+                rules.add(new Theme.Rule("*", urgent, Quantize.BEAT, true));
+            }
+        }
         List<Theme.Control> timeline = new ArrayList<>();
         JsonNode timelineNode = root.get("timeline");
         if (timelineNode != null && timelineNode.isArray()) {
@@ -338,7 +350,7 @@ public final class Themes {
                         "Use bar, beat, or immediate."));
             }
         }
-        return new Theme.Rule(from, to, quantize);
+        return new Theme.Rule(from, to, quantize, body.path("retract").asBoolean(false));
     }
 
     static Theme.Control control(JsonNode body, String path, Map<String, Theme.StateDef> states, List<ThemeIssue> issues) {

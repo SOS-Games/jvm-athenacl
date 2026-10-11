@@ -64,7 +64,7 @@ public final class CommandCatalog {
                     "athenacl.result.describe-music/1"),
             new CommandInfo(
                     "debug",
-                    "debug determinism hashes a note list twice. debug inspect filters notes with --where pitch=E4. debug check --stuck-notes counts notes that never turn off. debug bar explains one bar. debug trace --transitions lists state changes. debug replay hashes a control log.",
+                    "debug determinism hashes a note list twice. debug inspect filters notes with --where pitch=E4. debug check --stuck-notes counts notes that never turn off. debug bar explains one bar. debug trace --transitions lists state changes. debug replay hashes a control log. debug fuzz-transitions tries seeded state changes.",
                     List.of(
                             gradle("debug determinism samples/notes/c-major-scale.yaml --runs 2"),
                             gradle("debug inspect build/l0/events.jsonl --where pitch=E4"),
@@ -130,7 +130,13 @@ public final class CommandCatalog {
                             gradle("motif generate --key D-dorian --seed 3"),
                             gradle("motif transform m1 --invert --invert")),
                     true,
-                    "athenacl.result.motif/1"));
+                    "athenacl.result.motif/1"),
+            new CommandInfo(
+                    "adapt",
+                    "adapt prints the scheduler snapshot: state, intensity, bar, lookahead, and build time.",
+                    List.of(gradle("adapt themes/fantasy-dungeon.yaml --seed 1")),
+                    true,
+                    "athenacl.result.adapt/1"));
 
     private CommandCatalog() {
     }

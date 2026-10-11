@@ -1,0 +1,23 @@
+plugins {
+  id 'application'
+}
+
+eclipse.project.name = appName + '-gdx'
+
+dependencies {
+  implementation project(':athenacl-adaptive')
+  implementation project(':athenacl-render')
+  implementation "com.badlogicgames.gdx:gdx:$gdxVersion"
+  implementation "com.badlogicgames.gdx:gdx-backend-lwjgl3:$gdxVersion"
+  implementation "com.badlogicgames.gdx:gdx-platform:$gdxVersion:natives-desktop"
+}
+
+application {
+  mainClass = 'io.github.sosgames.athenacl.gdx.DesktopLauncher'
+  applicationName = appName + '-gdx'
+  applicationDefaultJvmArgs = ['--add-exports=java.desktop/com.sun.media.sound=ALL-UNNAMED']
+}
+
+tasks.named('run') {
+  workingDir = rootProject.projectDir
+}

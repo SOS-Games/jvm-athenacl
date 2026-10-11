@@ -1,0 +1,4 @@
+[
+  {"bar": 1, "state": "sneaking", "intensity": 0.35},
+  {"bar": 4, "beat": 3, "state": "combat", "intensity": 0.8}
+]

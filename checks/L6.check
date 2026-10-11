@@ -1,0 +1,51 @@
+# L6 beat switches and retraction. Directive list: AGENTS.md, section "Layer checks".
+
+name: render the ambush
+args: render themes/fantasy-dungeon.yaml --timeline samples/timelines/ambush.json --seed 1 --out build/l6
+exit: 0
+delete-before: build/l6
+stdout-contains: transitions=1
+capture: hash hash=([0-9a-f]+)
+file-exists: build/l6/events.jsonl
+file-exists: build/l6/control.jsonl
+
+---
+name: combat lands on the beat
+args: debug trace build/l6 --transitions
+exit: 0
+stdout-contains: quantize=beat
+stdout-contains: to=combat
+stdout-contains: appliedTick=13440
+stdout-regex: retracted=[1-9]
+stdout-contains: latency.ms=
+stdout-contains: lookaheadMs=150
+
+---
+name: ambush has no stuck notes
+args: debug check build/l6 --stuck-notes
+exit: 0
+stdout-contains: stuck=0
+
+---
+name: fuzz stays on time
+args: debug fuzz-transitions themes/fantasy-dungeon.yaml --runs 1000 --seed 1
+exit: 0
+stdout-contains: runs=1000
+stdout-contains: stuck=0
+stdout-contains: lateTransitions=0
+
+---
+name: replay matches the ambush hash
+args: debug replay build/l6/control.jsonl
+exit: 0
+stdout-contains-capture: hash
+
+---
+name: adapt prints the scheduler snapshot
+args: adapt themes/fantasy-dungeon.yaml --seed 1
+exit: 0
+stdout-contains: state=
+stdout-contains: intensity=
+stdout-contains: bar=
+stdout-contains: sched.lookaheadMs=150
+stdout-contains: cpu.msPerBar=

@@ -4,7 +4,7 @@ Instructions for AI coding agents working in **jvm-athenacl**.
 
 ## Project
 
-GPL-3.0-or-later Java 21 rewrite of athenaCL as an adaptive game-music engine for libGDX desktop. Package `io.github.sosgames.athenacl`. Layer plan: [docs/research/05-project-plan.md](docs/research/05-project-plan.md). L7 (motifs) is in the tree. L6 was skipped. Do not start L6 or L8 until the user asks.
+GPL-3.0-or-later Java 21 rewrite of athenaCL as an adaptive game-music engine for libGDX desktop. Package `io.github.sosgames.athenacl`. Layer plan: [docs/research/05-project-plan.md](docs/research/05-project-plan.md). L6 (beat switches and retraction) and L7 (motifs) are in the tree. Do not start L8 until the user asks.
 
 - Java 21 (`options.release = 21`). Versions live in `gradle.properties`.
 - Groovy Gradle, same shape as SOS-Games/jvm-mw. Root `gradlew layerCheck`. CLI: `gradlew :athenacl-cli:agentCli --args="help"`.
@@ -67,7 +67,7 @@ gradlew.bat :athenacl-cli:agentCli --args="motif import samples/motifs/theme.mid
 | render | You have a note-list YAML file and want `score.mid`, `score.wav`, `events.jsonl`, and `score.txt` under `--out`. |
 | play | You want to hear a note list, an event log, or a WAV on the speakers. `--dry-run` does not open the device. |
 | describe-music | You want one `bar=` line per bar from an event log, a piano roll (`--roll`), or the chord and key estimate. |
-| debug | You want `debug determinism` (same event-log hash twice), `debug inspect` (filter notes with `--where`), `debug check --loudness`, `debug check --stuck-notes`, `debug bar`, `debug trace --transitions`, or `debug replay`. |
+| debug | You want `debug determinism` (same event-log hash twice), `debug inspect` (filter notes with `--where`), `debug check --loudness`, `debug check --stuck-notes`, `debug bar`, `debug trace --transitions`, `debug replay`, or `debug fuzz-transitions`. |
 | soundbank | You want to install, list, or show the GeneralUser GS soundbank. |
 | describe | You want `describe scale`, `describe chord`, or `describe instruments` (287 presets and 13 drum kits in GeneralUser GS). |
 | analyze | You want EBU R128 integrated loudness and true peak for a WAV or a render directory. A swung render also prints `swing.measured=`. `analyze <dir> --by state` prints each state's offset from the contour. A motif render also prints `motif.reuse.per8bars=`. |
@@ -76,6 +76,7 @@ gradlew.bat :athenacl-cli:agentCli --args="motif import samples/motifs/theme.mid
 | theme | You want `theme validate` to check a theme file, or `theme explain` to print its states. |
 | preset | You want `preset show fantasy` for the dungeon preset's instruments and GM limits. |
 | motif | You want `motif generate` to grow a short idea, `motif transform` to turn it over, or `motif import` to read a MIDI melody. |
+| adapt | You want the scheduler snapshot: `state=`, `intensity=`, `bar=`, `sched.lookaheadMs=`, and `cpu.msPerBar=`. |
 
 Shared flags, in front of the command or after it: `--json`, `--dry-run`, `--strict`, `-v`, `-vv`, `--log-level <error|warn|info|debug|trace>`, `-h`.
 
@@ -108,6 +109,8 @@ Published schema ids:
 - `athenacl.result.replay/1`
 - `athenacl.result.preset/1`
 - `athenacl.result.motif/1`
+- `athenacl.result.fuzz/1`
+- `athenacl.result.adapt/1`
 
 When you add a command, add it to `CommandCatalog`, add a row to the table above, and add a block to the layer's `checks/L*.check`. `LayerCheckTest` fails if the table is missing a catalog command.
 
@@ -261,6 +264,12 @@ The lead of a theme plays that idea every `motif.every` bars. `1` is every bar. 
 
 `motif import samples/motifs/theme.mid --out build/l7/m.yaml` reads the composed melody and prints `motifs=1` and `notes=`.
 
-## Not in L7
+## Beat switches
 
-In-game playback, beat retraction, overlays, and the scifi preset. Do not add them in a drive-by change.
+Entering combat or danger waits for the next beat and drops notes already queued after that beat. Other states still wait for the bar. `render themes/fantasy-dungeon.yaml --timeline samples/timelines/ambush.json --seed 1 --out build/l6` lands on beat 3 of bar 4. `debug trace build/l6 --transitions` prints `quantize=beat`, `retracted=`, and `latency.ms=`. `debug check build/l6 --stuck-notes` prints `stuck=0`. `debug fuzz-transitions themes/fantasy-dungeon.yaml --runs 1000 --seed 1` prints `lateTransitions=0`.
+
+`adapt themes/fantasy-dungeon.yaml --seed 1` prints `state=`, `intensity=`, `bar=`, `sched.lookaheadMs=150`, and `cpu.msPerBar=`. `gradlew :athenacl-gdx:run` opens a small window that plays the ambush and shows the same line. F3 writes `build/athenacl-snapshot.txt`. F4 hides it.
+
+## Not in L6
+
+Overlays, bridges, and the sci-fi preset. Do not add them in a drive-by change.

@@ -41,7 +41,9 @@ public final class SchemaRegistry {
             "athenacl.result.bar/1",
             "athenacl.result.replay/1",
             "athenacl.result.preset/1",
-            "athenacl.result.motif/1");
+            "athenacl.result.motif/1",
+            "athenacl.result.fuzz/1",
+            "athenacl.result.adapt/1");
 
     private SchemaRegistry() {
     }

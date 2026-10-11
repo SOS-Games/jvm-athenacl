@@ -58,6 +58,10 @@ public final class TraceCommands {
                 fields.put("quantize", transition.quantize());
                 fields.put("requestTick", Long.toString(transition.requestTick()));
                 fields.put("appliedTick", Long.toString(transition.appliedTick()));
+                fields.put("retracted", Integer.toString(transition.retracted()));
+                fields.put("latency.ms", Long.toString(transition.latencyMs()));
+                fields.put("lookaheadMs", Integer.toString(
+                        io.github.sosgames.athenacl.adaptive.Scheduler.LOOKAHEAD_MS));
                 if (!text.isEmpty()) {
                     text.append('\n');
                 }

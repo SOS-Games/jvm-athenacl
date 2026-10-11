@@ -17,4 +17,5 @@ Thumbs.db
 !samples/motifs/*.mid
 *.sf2
 *.sf3
+!samples/kits/*.sf3
 *.dls

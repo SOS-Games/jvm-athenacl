@@ -4,11 +4,11 @@ Instructions for AI coding agents working in **jvm-athenacl**.
 
 ## Project
 
-GPL-3.0-or-later Java 21 rewrite of athenaCL as an adaptive game-music engine for libGDX desktop. Package `io.github.sosgames.athenacl`. Layer plan: [docs/research/05-project-plan.md](docs/research/05-project-plan.md). L0a–L7 and L1b (instrument kits) are in the tree. Do not start L6b or L8 until the user asks.
+GPL-3.0-or-later Java 21 rewrite of athenaCL as an adaptive game-music engine for libGDX desktop. Package `io.github.sosgames.athenacl`. Layer plan: [docs/research/05-project-plan.md](docs/research/05-project-plan.md). L0a–L7, L1b (instrument kits), and L7b (hook generator and melody critic) are in the tree. Do not start L6b or L8 until the user asks.
 
 - Java 21 (`options.release = 21`). Versions live in `gradle.properties`.
 - Groovy Gradle, same shape as SOS-Games/jvm-mw. Root `gradlew layerCheck`. CLI: `gradlew :athenacl-cli:agentCli --args="help"`.
-- Do not commit `build/`, `local.properties`, soundbanks (`.sf2`), or rendered audio (`.wav`, `.mid`). `samples/motifs/*.mid` is a composed fixture, not a render.
+- Do not commit `build/`, `local.properties`, soundbanks (`.sf2`), or rendered audio (`.wav`, `.mid`). `samples/motifs/*.mid` and `samples/melodies/*.mid` are composed fixtures, not renders.
 - Do not add a server, a socket, or an MCP mode. Agents use one-shot commands.
 - Do not port Csound, SuperCollider, or athenaCL's GUI. Those are later optional layers.
 - Generation must not read the wall clock, iterate an unordered map, or draw randomness except through the future `RandomSource`. `meta.durationMs` is wall-clock and is not part of a musical hash.
@@ -57,6 +57,7 @@ gradlew.bat :athenacl-cli:agentCli --args="analyze build/l5 --by state"
 gradlew.bat :athenacl-cli:agentCli --args="motif generate --key D-dorian --seed 3"
 gradlew.bat :athenacl-cli:agentCli --args="motif transform m1 --invert --invert"
 gradlew.bat :athenacl-cli:agentCli --args="motif import samples/motifs/theme.mid --out build/l7/m.yaml"
+gradlew.bat :athenacl-cli:agentCli --args="melody generate --key E-minor --candidates 64 --seed 3 --explain"
 ```
 
 | Command | Use when |
@@ -76,6 +77,7 @@ gradlew.bat :athenacl-cli:agentCli --args="motif import samples/motifs/theme.mid
 | theme | You want `theme validate` to check a theme file, or `theme explain` to print its states. |
 | preset | You want `preset show fantasy` for the dungeon preset's instruments and GM limits. |
 | motif | You want `motif generate` to grow a short idea, `motif transform` to turn it over, or `motif import` to read a MIDI melody. |
+| melody | You want `melody generate` to rank hook candidates, `melody score` to rate a MIDI line, `melody rate` to write an A/B row, or `melody fit` to turn ratings into weights. |
 | adapt | You want the scheduler snapshot: `state=`, `intensity=`, `bar=`, `sched.lookaheadMs=`, and `cpu.msPerBar=`. |
 | instruments | You want `instruments list`, `show`, `audition`, or `compare` for a named instrument in a kit. |
 | kit | You want `kit validate` to check sources, licenses, and slots. |
@@ -112,6 +114,7 @@ Published schema ids:
 - `athenacl.result.replay/1`
 - `athenacl.result.preset/1`
 - `athenacl.result.motif/1`
+- `athenacl.result.melody/1`
 - `athenacl.result.fuzz/1`
 - `athenacl.result.adapt/1`
 - `athenacl.result.instrument/1`
@@ -269,6 +272,14 @@ The download URL is a pinned commit until this project hosts its own copy. Do no
 The lead of a theme plays that idea every `motif.every` bars. `1` is every bar. `themes/fantasy-dungeon.yaml` sets it to 4, so a render with no timeline states the motif, then the lead keeps a plain scale line for three bars. `themes/fantasy-combat.yaml` holds the fight the whole time: tempo 144, intensity 1, and the motif on every bar. A sentence is the idea, the idea again, a fragment moved up a step, then the idea backwards. Coming back to a state starts the phrase over. Combat uses the same motif turned upside down and shortened. `debug explain` on a lead note prints `motif=m1:`. `analyze` of that render prints `motif.reuse.per8bars=`.
 
 `motif import samples/motifs/theme.mid --out build/l7/m.yaml` reads the composed melody and prints `motifs=1` and `notes=`.
+
+## Hooks
+
+`melody generate --key "E minor" --chords "i VI VII i" --candidates 64 --seed 3 --explain` prints one `cand=` line per candidate and then `chosen=`, `hook=h1`, `contour=` (arch, fall, rise-and-resolve, or call-response), and `form=` (`sentence` or `period`). The same seed prints the same text. `melody score` rates a MIDI file. `melody rate --choose a` writes one ratings line without asking. `melody fit` turns those rows into weights; the header date is `1970-01-01` and the hash covers the weight lines only.
+
+A theme `hooks:` block replaces the L7 generator for that file. The picked hook is still motif `m1`, so `PhrasePlan` keeps building the sentence, and `debug explain` adds `hook.cand=` and `score=` on those lead notes. The choice is made once per state before the bar loop. A theme with no `hooks:` block is unchanged. `themes/fantasy-dungeon.yaml` sets the block. `themes/fantasy-combat.yaml` does not.
+
+`samples/melodies/` holds short public-domain lines transcribed for the critic: Amazing Grace, Twinkle, and a random walk. They are fixtures, not renders.
 
 ## Instrument kits
 

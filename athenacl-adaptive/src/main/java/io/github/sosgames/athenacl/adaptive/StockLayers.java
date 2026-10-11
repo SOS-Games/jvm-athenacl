@@ -10,6 +10,8 @@ import io.github.sosgames.athenacl.motif.Motif;
 import io.github.sosgames.athenacl.motif.MotifGenerator;
 import io.github.sosgames.athenacl.motif.MotifNote;
 import io.github.sosgames.athenacl.motif.PhrasePlan;
+import io.github.sosgames.athenacl.motif.hook.HookCache;
+import io.github.sosgames.athenacl.motif.hook.HookSettings;
 import io.github.sosgames.athenacl.theory.Key;
 
 import java.util.List;
@@ -23,9 +25,23 @@ import java.util.List;
  * Combat uses the same motif turned upside down and shortened, with a trumpet, taiko on
  * every beat, horn stabs, and a kick-snare drum pattern.
  * A dorian pad also sounds the sixth, so the key guess can tell dorian from aeolian.
+ * When the theme has {@code hooks:}, the lead's idea is the critic's pick. That pick is
+ * made once per state, before the bar loop. A theme without the block still calls
+ * {@code MotifGenerator}, so L7's notes stay the same.
  */
 public final class StockLayers {
     private StockLayers() {
+    }
+
+    /** Warms the hook cache before any bar is built. No-op when the theme has no hooks. */
+    static void prepareHooks(Theme theme, long seed) {
+        HookSettings hooks = theme.hooks();
+        if (hooks == null) {
+            return;
+        }
+        for (Theme.StateDef state : theme.states().values()) {
+            HookCache.select(state.key(), seed, state.id(), hooks.forState(state.id()));
+        }
     }
 
     static void stinger(Theme theme, Theme.StateDef state, Director.BarInfo bar, Theme.StingerDef stinger,
@@ -51,7 +67,7 @@ public final class StockLayers {
                     yield degree;
                 }
                 case "lead" -> playMotif
-                        ? lead(state, info, start, seed, ids, notes, degree, phraseBar)
+                        ? lead(theme, state, info, start, seed, ids, notes, degree, phraseBar)
                         : scaleLead(state, info, start, seed, ids, notes, degree);
                 case "drums" -> {
                     if (drumsOn) {
@@ -103,17 +119,25 @@ public final class StockLayers {
         }
     }
 
-    private static int lead(Theme.StateDef state, Director.BarInfo info, long start, long seed,
+    private static int lead(Theme theme, Theme.StateDef state, Director.BarInfo info, long start, long seed,
                             Director.Ids ids, List<Director.Played> notes, int previous, int phraseBar) {
-        Motif motif = MotifGenerator.generate(state.key().pitchClassNames().size(), seed);
+        Motif motif;
+        HookCache.HookChoice choice = null;
+        if (theme.hooks() != null) {
+            choice = HookCache.select(state.key(), seed, state.id(), theme.hooks().forState(state.id()));
+            motif = choice.motif();
+        } else {
+            motif = MotifGenerator.generate(state.key().pitchClassNames().size(), seed);
+        }
         String chain = PhrasePlan.chain(state.id(), phraseBar);
         Motif developed = PhrasePlan.develop(motif, chain);
+        String label = choice == null ? chain : choice.label(chain);
         long cursor = start;
         for (MotifNote tone : developed.notes()) {
             long id = ids.take();
             int midi = scaleMidi(state.key(), Math.floorMod(tone.degree(), motif.steps()), 5);
             notes.add(played(id, cursor, tone.duration(), midi, PitchName.name(midi), velocity(info.intensity()),
-                    2, "lead", info, seed, state.id(), "scale-step", chain));
+                    2, "lead", info, seed, state.id(), "scale-step", label));
             cursor += TimeBase.durationTicks(tone.duration());
         }
         return previous < 0 ? 0 : previous;

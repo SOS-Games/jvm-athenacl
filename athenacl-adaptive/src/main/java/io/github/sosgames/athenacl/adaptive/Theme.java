@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 package io.github.sosgames.athenacl.adaptive;
 
+import io.github.sosgames.athenacl.motif.hook.HookSettings;
 import io.github.sosgames.athenacl.theory.Key;
 
 import java.util.Collections;
@@ -14,6 +15,8 @@ import java.util.Map;
  * An empty script stays on {@code hold}, or on the first state when hold is absent.
  * {@code motif.every} is how many bars pass before the lead states the motif again.
  * {@code 1} plays it every bar.
+ * {@code hooks} is empty when the theme has no hook block, and the lead then grows
+ * {@code m1} the way L7 always has.
  */
 public record Theme(
         String id,
@@ -31,7 +34,8 @@ public record Theme(
         List<ThemeIssue> warnings,
         int motifEvery,
         Hold hold,
-        List<String> kits) {
+        List<String> kits,
+        HookSettings hooks) {
 
     public Theme {
         states = Collections.unmodifiableMap(new LinkedHashMap<>(states));
@@ -44,7 +48,7 @@ public record Theme(
 
     public Theme withBars(int bars) {
         return new Theme(id, bars, bpm, numerator, denominator, states, stingers, defaultQuantize, rules,
-                timeline, preset, loudness, warnings, motifEvery, hold, kits);
+                timeline, preset, loudness, warnings, motifEvery, hold, kits, hooks);
     }
 
     /** Instrument names for one state, in layer order. Empty when that state is missing. */

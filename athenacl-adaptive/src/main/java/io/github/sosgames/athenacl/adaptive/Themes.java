@@ -4,6 +4,8 @@ package io.github.sosgames.athenacl.adaptive;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
+import io.github.sosgames.athenacl.motif.critic.MelodyCritic;
+import io.github.sosgames.athenacl.motif.hook.HookSettings;
 import io.github.sosgames.athenacl.theory.Key;
 
 import java.io.IOException;
@@ -12,6 +14,7 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
@@ -194,7 +197,7 @@ public final class Themes {
             throw new ThemeException(errors);
         }
         return new Theme(id, bars, bpm, numerator, denominator, states, stingers, quantize, rules, timeline,
-                presetId.isBlank() ? null : presetId, loudness, warnings, motifEvery, hold, kits);
+                presetId.isBlank() ? null : presetId, loudness, warnings, motifEvery, hold, kits, hooks(root));
     }
 
     /** {@code instruments.kits} is the lookup order. The first kit that names an instrument wins. */
@@ -419,5 +422,89 @@ public final class Themes {
 
     static String layerList(List<String> layers) {
         return String.join(",", layers).toLowerCase(Locale.ROOT);
+    }
+
+    /** {@code hooks:} is optional. Absent means the lead keeps the L7 motif generator. */
+    private static HookSettings hooks(JsonNode root) {
+        JsonNode node = root.get("hooks");
+        if (node == null || !node.isObject()) {
+            return null;
+        }
+        double[] weights = criticWeights(root.get("critic"));
+        double[] band = noveltyBand(root.get("critic"));
+        Map<String, HookSettings> states = new LinkedHashMap<>();
+        JsonNode stateNode = node.get("states");
+        if (stateNode != null && stateNode.isObject()) {
+            Iterator<Map.Entry<String, JsonNode>> fields = stateNode.fields();
+            while (fields.hasNext()) {
+                Map.Entry<String, JsonNode> entry = fields.next();
+                states.put(entry.getKey(), hookSettings(entry.getValue(), weights, band, Map.of()));
+            }
+        }
+        return hookSettings(node, weights, band, states);
+    }
+
+    private static HookSettings hookSettings(JsonNode node, double[] weights, double[] band,
+                                             Map<String, HookSettings> states) {
+        int min = 4;
+        int max = 4;
+        JsonNode length = node.get("length");
+        if (length != null && length.isArray() && length.size() >= 2) {
+            min = length.get(0).asInt(min);
+            max = length.get(1).asInt(max);
+        }
+        int candidates = node.path("candidates").asInt(8);
+        List<String> cells = new ArrayList<>();
+        JsonNode rhythm = node.get("rhythmCells");
+        if (rhythm != null && rhythm.isArray()) {
+            for (JsonNode item : rhythm) {
+                String name = item.asText("").trim();
+                if (!name.isEmpty()) {
+                    cells.add(name);
+                }
+            }
+        }
+        Map<String, Double> contours = null;
+        JsonNode contourNode = node.get("contours");
+        if (contourNode != null && contourNode.isObject()) {
+            contours = new LinkedHashMap<>();
+            Iterator<Map.Entry<String, JsonNode>> fields = contourNode.fields();
+            while (fields.hasNext()) {
+                Map.Entry<String, JsonNode> entry = fields.next();
+                contours.put(entry.getKey(), entry.getValue().asDouble());
+            }
+        }
+        return new HookSettings(min, max, candidates, cells, contours, weights, band[0], band[1], 12, 3, states);
+    }
+
+    private static double[] criticWeights(JsonNode critic) {
+        double[] weights = MelodyCritic.defaultWeights();
+        if (critic == null || !critic.isObject()) {
+            return weights;
+        }
+        JsonNode node = critic.get("weights");
+        if (node == null || !node.isObject()) {
+            return weights;
+        }
+        for (int i = 0; i < MelodyCritic.FEATURES.length; i++) {
+            JsonNode value = node.get(MelodyCritic.FEATURES[i]);
+            if (value != null && value.isNumber()) {
+                weights[i] = value.asDouble();
+            }
+        }
+        return weights;
+    }
+
+    private static double[] noveltyBand(JsonNode critic) {
+        double[] band = {0.35, 0.60};
+        if (critic == null || !critic.isObject()) {
+            return band;
+        }
+        JsonNode node = critic.get("noveltyTarget");
+        if (node != null && node.isArray() && node.size() >= 2) {
+            band[0] = node.get(0).asDouble(band[0]);
+            band[1] = node.get(1).asDouble(band[1]);
+        }
+        return band;
     }
 }

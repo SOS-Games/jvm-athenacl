@@ -42,6 +42,7 @@ public final class SchemaRegistry {
             "athenacl.result.replay/1",
             "athenacl.result.preset/1",
             "athenacl.result.motif/1",
+            "athenacl.result.melody/1",
             "athenacl.result.fuzz/1",
             "athenacl.result.adapt/1",
             "athenacl.result.instrument/1",

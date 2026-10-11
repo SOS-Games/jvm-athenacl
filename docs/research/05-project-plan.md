@@ -6,7 +6,7 @@
 applying the decisions the user settled on Oct 9, 2026 (updated 1:07 PM with genre presets and the
 agent-authoring non-goal, at 1:10 PM with the agentic CLI and debug tools, and at 1:25 PM: no server/MCP modes, conventions aligned
 with the user's [jvm-mw](https://github.com/SOS-Games/jvm-mw) repo, see [06](06-jvm-mw-cli-patterns.md); and at 1:35 PM: loudness contour,
-fantasy/sci-fi genre priority, transition defaults; and at 4:55 PM: layered plan with tools first, §7; Oct 10, 9:58 AM: audio effects stage and sampled layers, §6.11; 10:17 AM: multi-soundfont instrument kits and SFZ loader, §6.12, from survey [07](07-soundfont-upgrade.md)). File and line references point to the `pregui`
+fantasy/sci-fi genre priority, transition defaults; and at 4:55 PM: layered plan with tools first, §7; Oct 10, 9:58 AM: audio effects stage and sampled layers, §6.11; 10:17 AM: multi-soundfont instrument kits and SFZ loader, §6.12, from survey [07](07-soundfont-upgrade.md); 9:40 PM: hook generator + melody critic, §6.13, layer L7b after the already-built L7). File and line references point to the `pregui`
 tag (`35b9869`) checked out at `/workspace/pregui/athenaCL/` unless marked HEAD. Effort figures are
 **estimates**. "athenaCL-J" is a working name.*
 
@@ -160,6 +160,8 @@ athenacl-j/
 │                        (libTM), Clones, PolyPath, AthenaObject/session, EventList, orchestras (GM, GM percussion),
 │                        project XML I/O, command layer (headless)
 ├─ athenacl-motif/       [L7] Motif model, transformations, development planner, phrase forms, composer-material import
+│                        [L7b] `…motif.hook` (hook generator) and `…motif.critic` (features, hard rules, selection,
+│                        Bradley–Terry weight fit); extends L7 without changing its public API
 ├─ athenacl-presets/     [L5,L9,L21] Genre preset library: data files (YAML, on the classpath under presets/) for drum patterns,
 │                        grooves, chord vocabularies/progressions, song forms, tempo/meter/mode ranges, GM/GS
 │                        instrumentation; preset model, loader, inheritance (`extends`) and override merge,
@@ -349,6 +351,16 @@ public record InstrumentDef(String name, String source, OptionalInt bank, Option
 public record InstrumentRef(String kit, String name) {}                       // "gm-lite:harp" or "gm:46"
 public record SynthSlot(int bank, int program, boolean percussion) {}         // allocated, never the source's own patch
 public interface KitResolver { ResolvedInstruments resolve(Theme t, List<InstrumentKit> kits, LicensePolicy p); } // + fallbacks taken
+// ---- hooks + critic (motif, L7b; §6.13) ----
+public record HookSpec(IntRange length, List<RhythmCell> cells, LeapSpec leap, Map<Contour, Double> contours,
+                       StrongBeatRule strongBeats, Map<PhraseForm, Double> forms, CadenceSpec cadence, RepetitionSpec repetition) {}
+public record CriticSpec(int candidates, Map<String, Double> weights, DoubleRange noveltyTarget, List<HardRule> hardRules,
+                         Optional<Path> weightsFile, List<Path> references) {}
+public record FeatureScores(Map<String, Double> values, double total, Optional<String> rejectedBy) {}
+public record Candidate(int index, String seedPath, Motif motif, FeatureScores scores) {}
+public interface MelodyFeature { String id(); double score(Motif m, HarmonyContext h, StyleModel s); }   // 0..1, pure
+public interface MelodyCritic { CriticResult choose(List<Candidate> cs); }   // deterministic: max total, ties → lowest index
+public interface HookGenerator extends MotifSource { List<Motif> candidates(HookSpec spec, HarmonyContext h, RandomSource rnd, int n); }
 public interface MixEngine { void renderBlock(float[][] out, int frames); FxMeters meters(); }  // Gervill buses → fx → master
 
 // ---- presets ----
@@ -1203,6 +1215,108 @@ athenacl kit validate instruments/gm-full.yaml      → checksums, licenses, SF3
 athenacl credits themes/fantasy-dungeon.yaml --out build/credits   → "sources=2 licenses=MIT,LicenseRef-GeneralUser-GS-2.0"
 ```
 
+### 6.13 Hook generator + melody critic (decided Oct 10; layer L7b)
+
+**Context:** the user's agent **has already built L7** (motif engine) from the earlier plan. L7b **extends it without
+rewriting it**. The hook generator is one more motif *source* behind L7's existing generator entry point (if L7 has no
+such interface, L7b adds a thin adapter and leaves L7's model, transforms and development planner unchanged). A hook is
+an ordinary `Motif` tagged `role: hook`, so L7's transforms (repeat, transpose, invert, augment, fragment) and
+`debug explain` work on it unchanged.
+
+#### 6.13.1 Hook generator
+- **Shape:** 3–6 notes (configurable), 1–2 bars, with a **clear rhythmic identity**: one rhythm cell drawn from a
+  per-genre cell library (e.g. long-short-short, syncopated anticipation) and kept fixed when the hook repeats.
+- **Motion:** mostly stepwise, with **one signature leap** (size range per style, default a 4th–6th), normally
+  recovered by step in the opposite direction (gap-fill).
+- **Contour archetypes:** `arch`, `rise-and-resolve`, `fall`, `call/response` (2 sub-phrases, the answer inverts or
+  completes the call). Weighted per style.
+- **Harmony:** chord tones on strong beats (against the current chord from the progression); passing/neighbour tones on
+  weak beats.
+- **Phrase forms:** the hook is placed into `AABA`, `ABAB`, `sentence` (a a' b) or `period` (antecedent → half cadence,
+  consequent → full cadence). This uses L7's development planner with the hook as the `a` material.
+- **Cadences:** phrase ends land on stable degrees (1, 3, 5; 1 for final cadences), on a strong beat, lengthened.
+- **Controlled repetition:** share of exact vs varied restatements per phrase (`repetition.exact`, `.varied`), with a cap
+  on unvaried repeats in a row. This keeps it catchy but not grating (Margulis 2014).
+- **Per-genre / per-state YAML** (presets set defaults, themes and states override):
+```yaml
+hooks:
+  length: [3, 6]
+  rhythmCells: [long-short-short, short-short-long, anticipation]
+  leap: {count: 1, size: [5, 9], recover: step-opposite}
+  contours: {arch: 0.5, rise-and-resolve: 0.3, call-response: 0.2}
+  strongBeats: chord-tone
+  forms: {sentence: 0.5, AABA: 0.3, period: 0.2}
+  cadence: {degrees: [1, 3, 5], final: [1], lengthen: true}
+  repetition: {exact: 0.5, varied: 0.4, maxExactInRow: 2}
+critic:
+  candidates: 64
+  weights: {chordTone: 1.0, tonalStability: 0.6, implication: 0.6, leapRecovery: 0.8, range: 0.5,
+            novelty: 0.7, rhythm: 0.6, contour: 0.6, closure: 0.9, distinctiveness: 0.2}
+  noveltyTarget: [0.35, 0.60]          # normalized information-content band (inverted U), not "max" or "min"
+  hardRules: [inRange, cadenceStable, maxLeap: 12, maxSamePitchRun: 3, noUnresolvedTritoneLeap, copyGuard]
+  weightsFile: weights/fantasy-dungeon.yaml   # optional, from the rating loop (§6.13.3)
+states:
+  combat:   {hooks: {length: [3, 4], rhythmCells: [driving-8ths]}, critic: {weights: {rhythm: 0.9}}}
+  peaceful: {hooks: {contours: {arch: 0.7}}, critic: {noveltyTarget: [0.25, 0.5]}}
+```
+
+#### 6.13.2 Melody critic
+**Generate-and-test:** draw N seeded candidates (seed path `…/hook/<motifId>/cand/<k>`). Reject any that break a
+**hard rule**. Score the rest with a **weighted sum of normalized features (0–1)**, then pick the highest. Ties go to the
+lowest `k`, so the result is fully deterministic.
+
+| Feature | Measures | Grounding (sources from the literature; not re-checked online for this edit) |
+|---|---|---|
+| `chordTone` | share of strong-beat notes that are chord tones; weak-beat dissonances resolved by step | Temperley, *The Cognition of Basic Musical Structures* (MIT 2001) and *Music and Probability* (MIT 2007) |
+| `tonalStability` | mean key-profile weight of the pitches, stronger on metric accents | Krumhansl & Kessler (1982) / Krumhansl, *Cognitive Foundations of Musical Pitch* (OUP 1990) |
+| `implication` | fit to implication-realization expectations (pitch proximity, reversal after large intervals) | Narmour, *The Analysis and Cognition of Basic Melodic Structures* (Chicago 1990); Schellenberg's simplified two-factor model (1997) |
+| `leapRecovery` | leaps followed by a change of direction / gap-fill; stepwise share | von Hippel & Huron, "Why do skips precede reversals?" (*Music Perception* 2000); Huron, *Sweet Anticipation* (MIT 2006) |
+| `range` | ambitus within the style's band (hooks: about ≤ a 10th) and the instrument's range | Huron 2006 (tessitura/proximity); FANTASTIC `p.range` (Müllensiefen 2009) |
+| `novelty` | information content under a simple variable-order model trained on the style corpus, plus an LZ compression ratio as a cheap proxy; scored as distance to the target **band** | Huron 2006 (predictability and reward); Pearce, IDyOM (2005/2018); Margulis, *On Repeat* (OUP 2014) |
+| `rhythm` | metric alignment, syncopation index within the style band, durational consistency | Longuet-Higgins & Lee (1984) syncopation; Temperley meter model |
+| `contour` | match to the requested archetype, few direction changes, clear peak | Huron, "The melodic arch in Western folksongs" (*Computing in Musicology* 1996); FANTASTIC contour features |
+| `closure` | final note on a stable degree, on a strong beat, lengthened; antecedent/consequent cadence types | Huron 2006 (closure, "tonic" ending); Meyer, *Emotion and Meaning in Music* (1956) |
+| `distinctiveness` | **small weight:** common global contour combined with less common interval patterns relative to the corpus | Jakubowski, Finkel, Stewart & Müllensiefen, "Dissecting an earworm" (*Psychology of Aesthetics, Creativity, and the Arts* 2017); FANTASTIC (Müllensiefen 2009 technical report) |
+
+**Hard rules:** outside the instrument/tessitura range, an unstable cadence note, a leap over an octave (unless the style
+allows it), more than N repeated same pitches, an unresolved tritone leap, and **`copyGuard`**. `copyGuard` rejects a
+candidate whose interval+rhythm n-grams overlap too much with a theme's declared `references:` (e.g. a melody the agent
+was told *not* to copy). That backs up 05's copyright guidance.
+
+**Honesty:** the critic **flags bad melodies and ranks the rest by learned or hand-set proxies**. It does not measure
+beauty or guarantee a "good" hook. Some features are correlational findings from specific corpora (Jakubowski et al.
+studied a pop earworm corpus, at song level), so they get low default weights. Listening, or the rating loop, is still
+the final judge.
+
+#### 6.13.3 Rating loop (optional)
+- `athenacl melody rate` renders pairs of candidates (A/B WAVs + ASCII piano rolls) and records choices to
+  `ratings/<name>.jsonl` (`{"a":…, "b":…, "winner":"a", "features":{…}}`). It's interactive for humans, and
+  `--choose a|b` makes it scriptable for agents.
+- `athenacl melody fit ratings/x.jsonl --out weights/<theme>.yaml` fits a **Bradley–Terry model with a linear feature
+  predictor**, i.e. logistic regression on feature differences (Bradley & Terry 1952). It uses L2 regularization toward
+  the default weights, a fixed iteration count and a fixed order, so there's no randomness. Absolute ratings (1–5) can
+  instead be fit with ordinal/simple logistic regression.
+- The weights file is a versioned input with a hash, n, and the fit date in its header. Same weights + same seed → same
+  music. The hash is in the event log header.
+
+#### 6.13.4 Performance
+Hooks are chosen at **motif-creation time** (theme load, state entry, or the phrase planner's look-ahead one phrase
+early), on the director thread, **not inside the per-bar generation budget**. Target: 64 candidates × up to 2 bars
+generated and scored in **< 10 ms** on desktop (features are O(notes); the n-gram model is a small precomputed table).
+If over budget, the director uses the cached best hook from the previous seed path and logs `critic.deferred`.
+Results are cached by (seed path, settings hash, weights hash).
+
+#### 6.13.5 CLI and debug
+```
+athenacl melody generate --theme themes/fantasy-dungeon.yaml --state peaceful --candidates 64 --seed 3 --explain
+   → one line per candidate: "cand=17 score=0.812 chordTone=0.92 closure=1.00 novelty=0.48 … rejected=-"
+     and "cand=4 rejected=maxLeap" ; final "chosen=17 hook=h1 notes=5 contour=arch form=sentence"
+athenacl melody score lead.mid --track 2 --key "E minor" [--chords prog.yaml]  → same feature breakdown for any MIDI
+athenacl melody rate build/pairs --out ratings/user.jsonl [--choose a]
+athenacl melody fit ratings/user.jsonl --out weights/fantasy-dungeon.yaml       → "n=<n> accuracy.cv=<x> weightsHash=<h>"
+athenacl debug explain build/l7b/events.jsonl --note <id>   → "... motif=h1:transpose(+2) hook.cand=17/64 score=0.812 top=closure,chordTone"
+```
+
 ---
 
 ## 7. Layered plan: tools first, then bottom-up layers [estimates: full-time-equivalent weeks, one experienced developer + coding agent]
@@ -1223,7 +1337,7 @@ athenacl credits themes/fantasy-dungeon.yaml --out build/credits   → "sources=
 4. **Small, 1–3 weeks each.** The phase-spec format follows jvm-mw: `docs/phaseNN-*.md` with Goal / Why / In scope /
    Out of scope / Exit check (doc 06).
 5. **Order:** tools (L0–L1) → instrument kits (L1b) → music foundations (L2–L4) → **fantasy-dungeon playable in-game (L6)** →
-   SFZ loader + fantasy-orchestra kit (L6b) → fantasy depth (L7–L8) → **sci-fi space (L9)** → **effects stage + sampled layers (L9b–L9d)** → harmony/debug depth (L10–L11) → athenaCL port track (L12–L20, which can run
+   SFZ loader + fantasy-orchestra kit (L6b) → fantasy depth (L7, **L7b hooks + critic**, L8) → **sci-fi space (L9)** → **effects stage + sampled layers (L9b–L9d)** → harmony/debug depth (L10–L11) → athenaCL port track (L12–L20, which can run
    in parallel after L1) → remaining genres and release (L21–L23) → optional outputs (L24–L26).
 
 Commands are written as `athenacl …` (the `installDist` launcher). The same commands work through the jvm-mw-style
@@ -1382,6 +1496,23 @@ athenacl analyze build/l7 → "motif.reuse.per8bars>=<N>"; debug explain on a le
 athenacl motif import samples/motifs/theme.mid --out build/l7/m.yaml → "motifs=1 notes=<n>"
 ```
 
+**L7b: Hook generator + melody critic (2–3 wk).** *Extends the already-built L7; no rewrite.* Hook source behind the
+motif generator entry point, rhythm-cell and contour libraries, chord-tone/cadence placement, phrase forms via L7's
+planner, critic features + hard rules + deterministic selection, `copyGuard`, per-genre/state YAML, the rating loop
+(`melody rate|fit`), critic provenance in `debug explain`, a small license-clean evaluation corpus. *(new, §6.13)*
+```
+athenacl melody generate --key "E minor" --chords "i VI VII i" --candidates 64 --seed 3 --explain
+   → 64 "cand=" lines; "chosen=<k>"; rerun → identical output (hash equal)
+athenacl melody generate … --candidates 64 --seed 3 --json | jq '.chosen.features.closure' → >= 0.8
+athenacl melody score samples/melodies/random-walk.mid --key "C major" → "score=<low> rejected=<rule or ->"
+athenacl melody score samples/melodies/folk-pd-01.mid --key "G major" → "score=<higher than random-walk>"
+athenacl render themes/fantasy-dungeon.yaml --seed 1 --bars 1-16 --out build/l7b
+athenacl debug explain build/l7b/events.jsonl --where "layer=lead" --first → contains "hook.cand=" and "score="
+athenacl debug perf build/l7b → "critic.ms.p99<10 critic.deferred=0"; per-bar budget unchanged vs L7
+athenacl melody fit samples/ratings/synthetic.jsonl --out build/w.yaml → recovers the planted weight ordering; twice → same hash
+athenacl melody generate … --references samples/melodies/protected.mid → candidates near it "rejected=copyGuard"
+```
+
 **L8: Adaptive complete → fantasy v3 (2–3 wk).** Overlays (e.g. `lowHealth`), bridges/wind-downs, crossfades, stinger
 polish, theme switching with preloaded soundbanks, frame-quantized mode, per-theme transition overrides. *(old M6 remainder)*
 ```
@@ -1485,11 +1616,11 @@ checks run with `--fx off` and `--fx on`.
 SuperCollider output (old M11, 1–2 wk), each with golden text-output checks.
 
 ### 7.3 Totals and timeline [estimates]
-- **Sum of core layers L0a–L23 incl. L1b, L6b and L9b–L9d:** about **53–83 FTE-weeks**. The instrument kits add 3–5 (L1b 1–2,
-  L6b 2–3), and the effects stage adds 5–8 (L9b 2–3, L9c 1–2, L9d 2–3). With a **~10% integration buffer** (layers built
-  bottom-up get revisited when a higher layer needs a change), that's **about 58–91**. With optional L24–L26: **58–92** raw,
-  **about 64–101** with the buffer. For comparison, before the kits it was 50–78 (55–86 buffered), and before the effects
-  stage 45–70 (50–77).
+- **Sum of core layers L0a–L23 incl. L1b, L6b, L7b and L9b–L9d:** about **55–86 FTE-weeks**. L7b (hooks + critic) adds
+  2–3, the instrument kits add 3–5 (L1b 1–2, L6b 2–3), and the effects stage adds 5–8 (L9b 2–3, L9c 1–2, L9d 2–3). With a
+  **~10% integration buffer** that's **about 61–95**. With optional L24–L26: **60–95** raw, **about 66–105** with the
+  buffer. Earlier figures: 53–83 (58–91) before L7b, 50–78 (55–86) before the kits, 45–70 (50–77) before the effects stage.
+  L7 is already built by the user's agent, so its 2–3 weeks are spent; the remaining effort is about 2–3 weeks lower.
 - Compared with the previous 56–80, the main saving is that the CLI/debug tooling (old M6c/M6d, 7–9 wk) is now built
   once in L0 and extended inside each layer, instead of being a separate pass. The per-layer CLI/test work is included in
   each layer's estimate.
@@ -1498,11 +1629,12 @@ SuperCollider output (old M11, 1–2 wk), each with golden text-output checks.
   - **Fantasy playable in the dungeon crawler:** end of L6, about **14–23 weeks**.
   - **Fantasy with the SFZ orchestra kit:** end of L6b, about **16–26 weeks**. L6b can also be deferred until after L9
     if sci-fi matters more; nothing else depends on it.
-  - **Fantasy complete (motifs, overlays):** end of L8, about **20–32 weeks**.
-  - **Sci-fi space:** end of L9, about **21–34 weeks**.
-  - **Effects + 808 slides (sci-fi enriched):** end of L9c, about **24–39 weeks**; **sampled layers** end of L9d, about **26–42**.
+  - **Fantasy hooks + critic:** end of L7b, 2–3 weeks after the (already finished) L7.
+  - **Fantasy complete (motifs, hooks, overlays):** end of L8, about **22–35 weeks** (from project start).
+  - **Sci-fi space:** end of L9, about **23–37 weeks**.
+  - **Effects + 808 slides (sci-fi enriched):** end of L9c, about **26–42 weeks**; **sampled layers** end of L9d, about **28–45**.
   - Running the port track (L12–L20, 18–27 wk) in parallel with L2–L11 shortens the calendar but not the effort.
-- **Cheapest cuts:** L6b (SFZ loader, 2–3 wk; fantasy keeps `gm-lite`), L9d (sampled layers, 2–3 wk), L21 (other genres, 2–3 wk), batch mode, bisect delta-debugging, multi-JVM determinism (about 1.5–2.5 wk
+- **Cheapest cuts:** the L7b rating loop (`melody rate|fit`, ~0.5 wk; hand-set weights still work), L6b (SFZ loader, 2–3 wk; fantasy keeps `gm-lite`), L9d (sampled layers, 2–3 wk), L21 (other genres, 2–3 wk), batch mode, bisect delta-debugging, multi-JVM determinism (about 1.5–2.5 wk
   together). L0's contract, event log, provenance hooks and determinism check shouldn't be cut.
 
 ### 7.4 Where the old milestones went
@@ -1526,6 +1658,7 @@ SuperCollider output (old M11, 1–2 wk), each with golden text-output checks.
 | M11 Csound/SC | L25, L26 |
 | *(new, Oct 10)* Effects stage | L9b, L9c, L9d |
 | *(new, Oct 10)* Instrument kits + SFZ | L1b, L6b |
+| *(new, Oct 10)* Hook generator + melody critic | L7b |
 
 ---
 
@@ -1671,6 +1804,24 @@ suites prove it in depth. A layer is done only when both are green and its AGENT
   round-robin alternation that is deterministic and seeded, `bank convert` round-trip (SFZ → SF2 → load → same regions),
   render sanity (non-silent, pitch matches `pitch_keycenter`), unknown-opcode warnings.
 
+### 8.10 Hook generator + melody critic (L7b)
+- **Separation:** on a license-clean corpus of public-domain folk/hymn phrases (transcribed in-house, or a dataset whose
+  license is checked first; Q33), the critic ranks corpus phrases above **random walks** (AUC ≥ 0.85) and above
+  **pitch-shuffled** versions with the same rhythm (AUC ≥ 0.70). The thresholds are starting estimates.
+- **Feature unit tests:** hand-made melodies with known values (all chord tones on strong beats → `chordTone`=1; final
+  note on degree 2 → closure low; one unrecovered 9th → `leapRecovery` low; an exact 8× repeat → novelty below band).
+- **Hard rules:** each rule has a minimal failing fixture. `copyGuard` rejects transposed or rhythm-preserved copies of a
+  reference and accepts unrelated melodies.
+- **Generator properties:** over 1,000 seeds, hooks have 3–6 notes, ≤ 1 leap > a 4th (unless configured), strong-beat
+  chord-tone share ≥ the configured minimum, and cadences on allowed degrees.
+- **Determinism:** same seed + settings + weights → identical candidate list, scores (bit-equal doubles; fixed summation
+  order) and choice. Hashes checked across two JVM runs.
+- **Rating fit:** synthetic ratings generated from known weights → the fit recovers the weight ordering; identical input →
+  identical weights file.
+- **Non-regression with L7:** existing L7 tests and goldens pass unchanged when `hooks:` is absent.
+- **Performance:** a JMH-style micro-benchmark asserts the 64-candidate budget (§6.13.4); the render perf trace shows no
+  per-bar regression.
+
 ## 9. Risks
 
 | Risk | Impact | Mitigation |
@@ -1707,6 +1858,12 @@ suites prove it in depth. A layer is done only when both are green and its AGENT
 | SFZ coverage gaps (opcodes, round-robin, FLAC) | Libraries sound wrong or fail to load | Opcode subset with warnings; RR via slots; WAV first; fallbacks to `gm-lite`; `bank convert` for inspection in Polyphone |
 | Licenses of mixed sources (CC Sampling+ 1.0 untested with GPL; BY-SA share-alike; GeneralUser provenance caveat; MSG "v0.2 work in progress") | Legal risk for commercial games | License policy with allow/warn/deny, credits generation, banks kept as separate data (aggregation); user/legal check before release (Q28) |
 | Per-bank loudness differences (~7 LU, ~10 dB on one piano) | Unbalanced mixes when kits change | Per-instrument normalization + per-kit state calibration |
+| Critic rewards "textbook" melodies; output becomes bland or samey | Hooks lack character | Novelty is a target **band**, distinctiveness feature, style-specific corpora, per-theme weights, the rating loop, listening reviews |
+| Features are proxies; research findings are correlational and corpus-specific (Western tonal, folk/pop) | False confidence in "quality" | Documented as flags + ranking, not beauty; low weights for earworm features; modal/world styles get their own key profiles or turn features off |
+| L7 already exists, and its internals may not match this design | Rework or regressions | Integrate via the generator entry point/adapter only; L7 goldens must pass unchanged; read L7's code before L7b's spec |
+| Rating data is small and noisy (one user) | Overfitted weights | L2 prior toward defaults, cross-validated accuracy reported, minimum n before `fit` writes weights, weights are versioned and revertible |
+| Critic CPU at state changes | Late hook at a transition | Choose ahead at phrase look-ahead, cached; deferral fallback with a logged counter; benchmark in CI |
+| `copyGuard` false negatives (melodies altered beyond the n-gram matching) | Copyright exposure remains | Guard is a safety net, not clearance; keep the style-only authoring rule (05) and human review |
 | Stateless stepping gets slow for long timelines (always regenerating from bar 1) | Slow bar-by-bar debugging | Per-bar generation budget (< 5 ms); optional file-based `--checkpoint` later |
 
 ---
@@ -1767,6 +1924,16 @@ suites prove it in depth. A layer is done only when both are green and its AGENT
 30. **SFZ sample formats:** WAV only, or also FLAC/OGG (needs decoders; FLAC library and license TBD)?
 31. **Canonical instrument names:** OK to standardize on GM-derived names (`docs/instrument-names.md`) that presets and kits
     share, with kit-specific extras namespaced (`fantasy-orchestra:violins.spiccato`)?
+32. **L7 integration point:** what generator/extension interface did the user's agent build in L7? L7b's spec should be
+    written after reading that code (names in §6.13 are placeholders).
+33. **Evaluation corpus:** which license-clean melody corpus for critic tests and novelty models (in-house transcriptions
+    of public-domain tunes, or a dataset such as the Essen collection or the Nottingham folk set after a license check)?
+    Per genre (fantasy folk first, then sci-fi/synth)?
+34. **Default candidate count and weights** per starter theme (64? 128?), and should states differ (combat: rhythm-heavy;
+    peaceful: closure/contour-heavy)?
+35. **Rating loop UX:** will the user rate pairs by ear (`melody rate` with WAV playback), and how many pairs per theme
+    are realistic (≥ 50 suggested before `fit`)?
+36. **Should the critic also run on composer-supplied or imported motifs**, as a report only (never altering them)?
 (Former Q17 on MCP priority and Q18 on attaching to a running game were removed on Oct 9, 1:25 PM: no server or MCP modes.)
 
 ---

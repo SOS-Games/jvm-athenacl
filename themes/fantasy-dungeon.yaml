@@ -7,3 +7,29 @@ bpm: 100
 meter: "4/4"
 motif:
   every: 4
+hooks:
+  length: [4, 4]
+  rhythmCells: [hook]
+  candidates: 8
+  contours:
+    arch: 0.45
+    rise-and-resolve: 0.25
+    fall: 0.15
+    call-response: 0.15
+  states:
+    combat:
+      length: [3, 4]
+      rhythmCells: [hook]
+critic:
+  noveltyTarget: [0.35, 0.60]
+  weights:
+    chordTone: 0.18
+    tonalStability: 0.14
+    implication: 0.12
+    leapRecovery: 0.10
+    range: 0.10
+    novelty: 0.12
+    rhythm: 0.10
+    contour: 0.08
+    closure: 0.12
+    distinctiveness: 0.04

@@ -15,6 +15,7 @@ Thumbs.db
 *.wav
 *.mid
 !samples/motifs/*.mid
+!samples/melodies/*.mid
 *.sf2
 *.sf3
 !samples/kits/*.sf3

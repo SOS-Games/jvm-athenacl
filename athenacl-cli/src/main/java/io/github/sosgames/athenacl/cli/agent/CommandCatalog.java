@@ -132,6 +132,14 @@ public final class CommandCatalog {
                     true,
                     "athenacl.result.motif/1"),
             new CommandInfo(
+                    "melody",
+                    "melody generate ranks hook candidates. melody score rates a MIDI line. melody rate writes an A/B row. melody fit turns ratings into weights.",
+                    List.of(
+                            gradle("melody generate --key E-minor --candidates 64 --seed 3 --explain"),
+                            gradle("melody score samples/melodies/folk-pd-01.mid --key G-major")),
+                    true,
+                    "athenacl.result.melody/1"),
+            new CommandInfo(
                     "adapt",
                     "adapt prints the scheduler snapshot: state, intensity, bar, lookahead, and build time.",
                     List.of(gradle("adapt themes/fantasy-dungeon.yaml --seed 1")),

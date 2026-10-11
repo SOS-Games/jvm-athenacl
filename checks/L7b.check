@@ -1,0 +1,76 @@
+# L7b hook generator and melody critic. Directive list: AGENTS.md, section "Layer checks".
+
+name: explain ranks 64 candidates
+args: melody generate --key "E minor" --chords "i VI VII i" --candidates 64 --seed 3 --explain
+exit: 0
+stderr-empty
+stdout-count: 64 cand=
+stdout-contains: chosen=
+stdout-contains: hook=h1
+stdout-contains: form=
+stdout-same-as: melody generate --key "E minor" --chords "i VI VII i" --candidates 64 --seed 3 --explain
+
+---
+name: the chosen hook closes
+args: melody generate --key "E minor" --chords "i VI VII i" --candidates 64 --seed 3 --json
+exit: 0
+stderr-empty
+json-document
+json-regex: data.chosen.features.closure 1\.0|0\.[89]
+
+---
+name: a folk line scores
+args: melody score samples/melodies/folk-pd-01.mid --key "G major"
+exit: 0
+stderr-empty
+stdout-contains: rejected=-
+stdout-regex: score=0\.[5-9]|score=1\.000
+
+---
+name: a random walk is rejected
+args: melody score samples/melodies/random-walk.mid --key "C major"
+exit: 0
+stderr-empty
+stdout-contains: rejected=maxLeap
+
+---
+name: a declared reference is copy-guarded
+args: melody generate --key "C major" --candidates 64 --seed 3 --explain --references samples/melodies/protected.mid
+exit: 0
+stderr-empty
+stdout-contains: rejected=copyGuard
+
+---
+name: render the dungeon hooks
+args: render themes/fantasy-dungeon.yaml --seed 1 --bars 1-16 --out build/l7b --formats events
+exit: 0
+stderr-empty
+delete-before: build/l7b
+file-exists: build/l7b/events.jsonl
+
+---
+name: explain shows the chosen candidate
+args: debug explain build/l7b/events.jsonl --where layer=lead --first
+exit: 0
+stderr-empty
+stdout-contains: hook.cand=
+stdout-contains: score=
+stdout-contains: motif=m1:
+
+---
+name: rate writes a choice
+args: melody rate --key "C major" --seed 1 --choose a --out build/l7b/ratings.jsonl
+exit: 0
+stderr-empty
+stdout-contains: winner=a
+file-exists: build/l7b/ratings.jsonl
+
+---
+name: fit recovers the planted weight
+args: melody fit samples/ratings/synthetic.jsonl --out build/l7b/weights.yaml
+exit: 0
+stderr-empty
+stdout-contains: order=closure
+stdout-contains: weightsHash=
+stdout-same-as: melody fit samples/ratings/synthetic.jsonl --out build/l7b/weights.yaml
+file-exists: build/l7b/weights.yaml

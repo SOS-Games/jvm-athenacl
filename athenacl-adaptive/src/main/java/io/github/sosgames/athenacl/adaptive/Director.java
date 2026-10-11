@@ -45,6 +45,7 @@ public final class Director {
     }
 
     public static Performance perform(Theme theme, List<Theme.Control> controls, long seed) {
+        StockLayers.prepareHooks(theme, seed);
         long barTicks = theme.barTicks();
         List<Scheduled> scheduled = new ArrayList<>();
         for (Theme.Control control : controls) {

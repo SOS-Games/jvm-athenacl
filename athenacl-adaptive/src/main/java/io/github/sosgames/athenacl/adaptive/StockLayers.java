@@ -12,6 +12,7 @@ import io.github.sosgames.athenacl.motif.MotifNote;
 import io.github.sosgames.athenacl.motif.PhrasePlan;
 import io.github.sosgames.athenacl.motif.hook.HookCache;
 import io.github.sosgames.athenacl.motif.hook.HookSettings;
+import io.github.sosgames.athenacl.theory.HarmonicRhythm;
 import io.github.sosgames.athenacl.theory.Key;
 
 import java.util.List;
@@ -123,6 +124,10 @@ public final class StockLayers {
                     bell(state, info, start, seed, ids, notes);
                     yield degree;
                 }
+                case "chords" -> {
+                    chords(theme, state, info, start, seed, ids, notes);
+                    yield degree;
+                }
                 default -> degree;
             };
         }
@@ -209,6 +214,7 @@ public final class StockLayers {
             case "drums" -> 9;
             case "arp" -> 10;
             case "bell" -> 6;
+            case "chords" -> 12;
             default -> 0;
         };
     }
@@ -224,6 +230,7 @@ public final class StockLayers {
             case "brass" -> 60;
             case "arp" -> 80;
             case "bell" -> 8;
+            case "chords" -> 48;
             default -> layer.equals("pad") ? 48 : 0;
         };
         return state.program(layer, fallback);
@@ -323,6 +330,18 @@ public final class StockLayers {
             int midi = scaleMidi(state.key(), degrees[i % degrees.length], 5);
             notes.add(played(id, start + i * cell, duration, midi, PitchName.name(midi),
                     velocity(info.intensity()), 10, "arp", info, seed, state.id(), "arp"));
+        }
+    }
+
+    /** The phrase chord for this bar, held. A tonic adds the mode's color tone. */
+    private static void chords(Theme theme, Theme.StateDef state, Director.BarInfo info, long start, long seed,
+                               Director.Ids ids, List<Director.Played> notes) {
+        HarmonicRhythm.Slot slot = HarmonicRhythm.at(state.key(), info.bar(), theme.phraseBars());
+        for (int degree : slot.degrees()) {
+            long id = ids.take();
+            int midi = scaleMidi(state.key(), degree, 4);
+            notes.add(played(id, start, "1/1", midi, PitchName.name(midi), velocity(info.intensity()),
+                    12, "chords", info, seed, state.id(), slot.cadence() ? "cadence" : "chord"));
         }
     }
 

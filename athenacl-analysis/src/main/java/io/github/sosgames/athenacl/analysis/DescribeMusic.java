@@ -5,6 +5,7 @@ import io.github.sosgames.athenacl.events.ControlEvent;
 import io.github.sosgames.athenacl.events.NoteEvent;
 import io.github.sosgames.athenacl.events.Score;
 import io.github.sosgames.athenacl.events.TimeBase;
+import io.github.sosgames.athenacl.rhythm.Meter;
 import io.github.sosgames.athenacl.theory.HarmonyEstimate;
 
 import java.util.ArrayList;
@@ -99,7 +100,45 @@ public final class DescribeMusic {
         if (!programs.isEmpty()) {
             line.append(" programs=").append(programs);
         }
+        String meter = meter(score, bar);
+        if (meter != null) {
+            line.append(" meter=").append(meter);
+            line.append(" grouping=").append(Meter.parse(meter).grouping());
+        }
         return line.toString();
+    }
+
+    /**
+     * The meter sounding on this bar. Earlier bars keep their own lengths, so a 7/8 bar
+     * is not measured with the opening 4/4 grid.
+     */
+    private static String meter(Score score, int bar) {
+        List<ControlEvent.Meter> meters = new ArrayList<>();
+        for (ControlEvent event : score.controls()) {
+            if (event instanceof ControlEvent.Meter change) {
+                meters.add(change);
+            }
+        }
+        if (meters.isEmpty()) {
+            return null;
+        }
+        meters.sort(java.util.Comparator.comparingLong(ControlEvent::startTick));
+        int numerator = meters.get(0).numerator();
+        int denominator = meters.get(0).denominator();
+        long cursor = 0;
+        int index = 0;
+        for (int number = 1; number <= bar; number++) {
+            while (index < meters.size() && meters.get(index).startTick() <= cursor) {
+                numerator = meters.get(index).numerator();
+                denominator = meters.get(index).denominator();
+                index++;
+            }
+            if (number == bar) {
+                return numerator + "/" + denominator;
+            }
+            cursor += TimeBase.barTicks(numerator, denominator);
+        }
+        return numerator + "/" + denominator;
     }
 
     /** Eighths when every arp attack sits on an eighth. Sixteenths otherwise. */

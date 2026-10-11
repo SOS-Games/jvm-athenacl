@@ -1,0 +1,13 @@
+# The market, held. Harp, choir, and flute, with no drums.
+id: fantasy-trading
+preset: fantasy
+instruments:
+  kits: [gm-lite]
+bars: 14
+bpm: 100
+meter: "4/4"
+hold:
+  state: trading
+  intensity: 0.4
+motif:
+  every: 4

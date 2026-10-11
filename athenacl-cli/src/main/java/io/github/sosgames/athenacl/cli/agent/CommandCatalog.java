@@ -96,9 +96,10 @@ public final class CommandCatalog {
                     "athenacl.result.analyze/1"),
             new CommandInfo(
                     "theory",
-                    "theory progression voice-leads roman numerals into events.jsonl. The hash is that event log.",
-                    List.of(gradle(
-                            "theory progression i bVII bVI bVII --key D-aeolian --voice-lead --out build/l2")),
+                    "theory progression voice-leads roman numerals into events.jsonl. theory modulate plans a key change.",
+                    List.of(
+                            gradle("theory progression i bVII bVI bVII --key D-aeolian --voice-lead --out build/l2"),
+                            gradle("theory modulate D-dorian F-lydian --method pivot")),
                     true,
                     "athenacl.result.progression/1"),
             new CommandInfo(

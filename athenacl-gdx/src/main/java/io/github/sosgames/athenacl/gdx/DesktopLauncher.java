@@ -12,7 +12,7 @@ public final class DesktopLauncher {
     public static void main(String[] args) {
         Lwjgl3ApplicationConfiguration config = new Lwjgl3ApplicationConfiguration();
         config.setTitle("athenaCL");
-        config.setWindowedMode(1100, 240);
+        config.setWindowedMode(1100, 300);
         config.setForegroundFPS(30);
         new Lwjgl3Application(new MusicDemo(), config);
     }

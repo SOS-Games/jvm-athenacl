@@ -1,0 +1,30 @@
+# Home is D dorian. Bar 9 arrives in F lydian. Bar 12 switches to 7/8.
+id: modulation
+bars: 12
+bpm: 100
+meter: "4/4"
+harmony:
+  phraseBars: 4
+states:
+  home:
+    key: "D dorian"
+    tempo: 100
+    layers: [chords, bass]
+  arrival:
+    key: "F lydian"
+    tempo: 100
+    layers: [chords, bass]
+  seven:
+    key: "F lydian"
+    meter: "7/8"
+    tempo: 100
+    layers: [chords, bass]
+transitions:
+  defaults: {quantize: bar}
+  rules:
+    - {from: home, to: arrival, keyPolicy: themeKey}
+    - {from: arrival, to: seven, keyPolicy: keep}
+timeline:
+  - {bar: 1, state: home, intensity: 0.4}
+  - {bar: 9, state: arrival, intensity: 0.5}
+  - {bar: 12, state: seven, intensity: 0.5}

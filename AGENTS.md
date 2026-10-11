@@ -4,7 +4,7 @@ Instructions for AI coding agents working in **jvm-athenacl**.
 
 ## Project
 
-GPL-3.0-or-later Java 21 rewrite of athenaCL as an adaptive game-music engine for libGDX desktop. Package `io.github.sosgames.athenacl`. Layer plan: [docs/research/05-project-plan.md](docs/research/05-project-plan.md). L0a–L9, L1b (instrument kits), and L7b (hook generator and melody critic) are in the tree. Do not start L6b or L9b until the user asks.
+GPL-3.0-or-later Java 21 rewrite of athenaCL as an adaptive game-music engine for libGDX desktop. Package `io.github.sosgames.athenacl`. Layer plan: [docs/research/05-project-plan.md](docs/research/05-project-plan.md). L0a–L10, L1b (instrument kits), and L7b (hook generator and melody critic) are in the tree. Do not start L6b or L9b until the user asks.
 
 - Java 21 (`options.release = 21`). Versions live in `gradle.properties`.
 - Groovy Gradle, same shape as SOS-Games/jvm-mw. Root `gradlew layerCheck`. CLI: `gradlew :athenacl-cli:agentCli --args="help"`.
@@ -46,6 +46,7 @@ gradlew.bat :athenacl-cli:agentCli --args="describe instruments --soundbank gene
 gradlew.bat :athenacl-cli:agentCli --args="analyze build/l0"
 gradlew.bat :athenacl-cli:agentCli --args="describe scale D-dorian"
 gradlew.bat :athenacl-cli:agentCli --args="theory progression i bVII bVI bVII --key D-aeolian --voice-lead --out build/l2"
+gradlew.bat :athenacl-cli:agentCli --args="theory modulate D-dorian F-lydian --method pivot"
 gradlew.bat :athenacl-cli:agentCli --args="rhythm pattern x..x..x. --meter 6/8 --bars 2 --drum-grid"
 gradlew.bat :athenacl-cli:agentCli --args="rhythm poly 3:2 --bars 2 --out build/l3p"
 gradlew.bat :athenacl-cli:agentCli --args="theme validate samples/themes/poc.yaml"
@@ -73,7 +74,7 @@ gradlew.bat :athenacl-cli:agentCli --args="melody generate --key E-minor --candi
 | soundbank | You want to install, list, or show GeneralUser GS or MuseScore_General. An `.sf3` file is rejected. |
 | describe | You want `describe scale`, `describe chord`, or `describe instruments` (287 presets and 13 drum kits in GeneralUser GS). |
 | analyze | You want EBU R128 integrated loudness and true peak for a WAV or a render directory. A swung render also prints `swing.measured=`. `analyze <dir> --by state` prints each state's offset from the contour. A motif render also prints `motif.reuse.per8bars=`. |
-| theory | You want `theory progression` to voice-lead roman numerals into `events.jsonl`. |
+| theory | You want `theory progression` to voice-lead roman numerals, or `theory modulate` to plan a key change. |
 | rhythm | You want `rhythm pattern` to print a drum grid, or `rhythm poly` to write 3-against-2 into `events.jsonl`. |
 | theme | You want `theme validate` to check a theme file, or `theme explain` to print its states. |
 | preset | You want `preset show fantasy` or `preset show scifi-space` for a preset's instruments and GM limits. |
@@ -106,6 +107,7 @@ Published schema ids:
 - `athenacl.result.scale/1`
 - `athenacl.result.chord/1`
 - `athenacl.result.progression/1`
+- `athenacl.result.modulate/1`
 - `athenacl.result.rhythm/1`
 - `athenacl.result.poly/1`
 - `athenacl.result.validate/1`
@@ -238,7 +240,9 @@ The download URL is a pinned commit until this project hosts its own copy. Do no
 
 `theory progression "i bVII bVI bVII" --key "D aeolian" --voice-lead --out build/l2` writes `events.jsonl`, one whole-note chord per bar in 4/4 at 120 bpm. The summary is `chords= maxMotion= parallels= hash=`. `--voice-lead` keeps each leap within a few semitones and avoids parallel fifths and octaves. A second run of the same progression is `changed=false` with the same hash. `--dry-run` prints the plan and does not create `--out`.
 
-`describe-music` on that log prints `chord=Dm` and `key=D-aeolian` on bar 1, with `conf=` at least 0.70.
+`describe-music` on that log prints `chord=Dm` and `key=D-aeolian` on bar 1, with `conf=` at least 0.70. When the log has a meter event, the bar line also ends with `meter=` and `grouping=`.
+
+`theory modulate "D dorian" "F lydian" --method pivot` prints `pivot=F` and `bars=2`. `direct` lands on the next bar. `mixture` borrows one chord from the parallel key. A transition `keyPolicy` is `themeKey`, `keep`, `relative`, or `parallel`. `relative` on a major key is its relative minor. On another mode it is the major key with the same notes. A state `meter` replaces the theme meter from the bar that state starts, and `harmony.phraseBars` is how often the chord phrase cadences. `samples/themes/modulation.yaml` is D dorian until bar 9 (F lydian) and 7/8 from bar 12.
 
 ## Rhythm
 
@@ -306,8 +310,8 @@ A named `from` beats a wildcard, so entering combat or danger still waits for th
 
 `preset show scifi-space` prints `preset=scifi-space` and the synth set (pad, square, saw, bass, celesta, 808). `themes/scifi-space.yaml` is that preset at 100 bpm in Lydian. There is no whole-tone scale, so the raised fourth stands in for it. Combat stays at 100; the drive is a sixteenth-note arp, not a tempo jump. Other states arpeggiate in eighths. `describe-music` prints `arp.grid=` and `programs=` for the bars you asked about.
 
-`render themes/fantasy-dungeon.yaml --at "8 theme themes/scifi-space.yaml" --bars 1-16` prints `themeSwitch.bar=9`. A theme change asked for on a bar line still waits until the next bar. The window still preloads the combat kit and swaps that at a bar. A Space button plays this theme instead, and the window shows how far through the current track you are.
+`render themes/fantasy-dungeon.yaml --at "8 theme themes/scifi-space.yaml" --bars 1-16` prints `themeSwitch.bar=9`. A theme change asked for on a bar line still waits until the next bar. The window still preloads the combat kit and swaps that at a bar until a track button is pressed. Ambush, Dungeon, Combat, Party, Trading, Space, and Space combat each start that piece from the beginning, and the window shows how far through the current track you are.
 
-## Not in L9
+## Not in L10
 
 The effects stage and SFZ kits. Do not add them in a drive-by change.

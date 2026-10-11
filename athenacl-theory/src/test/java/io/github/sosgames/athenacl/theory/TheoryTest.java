@@ -44,4 +44,27 @@ class TheoryTest {
         assertTrue(Double.parseDouble(reading.confidence()) >= 0.7, reading.confidence());
         assertEquals("Dm", reading.chord(1));
     }
+
+    @Test
+    void pivotFromDorianToLydianIsF() {
+        Modulation.Plan plan = Modulation.plan(Key.parse("D dorian"), Key.parse("F lydian"), "pivot");
+        assertEquals("F", plan.pivot());
+        assertEquals(2, plan.bars());
+        assertEquals("C-ionian", Modulation.relative(Key.parse("D dorian")).name());
+        assertEquals("D-ionian", Modulation.parallel(Key.parse("D dorian")).name());
+        assertEquals("A-aeolian", Modulation.relative(Key.parse("C major")).name());
+    }
+
+    @Test
+    void lydianCadenceIncludesTheRaisedFourth() {
+        HarmonicRhythm.Slot slot = HarmonicRhythm.at(Key.parse("F lydian"), 9, 4);
+        assertEquals(0, slot.degrees()[0]);
+        boolean raised = false;
+        for (int degree : slot.degrees()) {
+            if (degree == 3) {
+                raised = true;
+            }
+        }
+        assertTrue(raised);
+    }
 }

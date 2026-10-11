@@ -34,38 +34,57 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * Plays the ambush through the theme's kit, then can swap to the combat theme at a bar line.
- * The next kit is rendered on a background thread and becomes audible on the next bar after bar 8.
- * Space renders the space theme and takes over as soon as that audio is ready.
+ * The next kit is rendered on a background thread and becomes audible on the next bar after bar 8,
+ * until a track button is pressed. Each button starts that piece from the beginning.
  * The line under the scheduler is how far through the current track you are.
  * F3 writes {@code build/athenacl-snapshot.txt}. F4 hides the scheduler line.
  */
 public class MusicDemo extends ApplicationAdapter {
     private static final int SWAP_BAR = 8;
-    private static final String SPACE = "scifi-space";
+
+    private record Track(String name, String theme, String timeline) {
+    }
+
+    private static final Track[] TRACKS = {
+            new Track("Ambush", "themes/fantasy-dungeon.yaml", "samples/timelines/ambush.json"),
+            new Track("Dungeon", "themes/fantasy-dungeon.yaml", "samples/timelines/dungeon-tour.json"),
+            new Track("Combat", "themes/fantasy-combat.yaml", null),
+            new Track("Party", "themes/fantasy-party.yaml", null),
+            new Track("Trading", "themes/fantasy-trading.yaml", null),
+            new Track("Space", "themes/scifi-space.yaml", "samples/timelines/dungeon-tour.json"),
+            new Track("Space combat", "themes/scifi-combat.yaml", null)
+    };
 
     private SpriteBatch batch;
     private ShapeRenderer shapes;
     private BitmapFont font;
     private Skin skin;
     private Stage stage;
-    private TextButton spaceButton;
+    private final Map<String, TextButton> buttons = new java.util.LinkedHashMap<>();
+    private final Map<String, byte[]> cache = new ConcurrentHashMap<>();
+    private final Map<String, LiveClock> clocks = new ConcurrentHashMap<>();
     private AudioDevice device;
     private volatile LiveClock clock;
     private Thread playback;
     private Thread preload;
-    private Thread spaceRender;
+    private Thread worker;
     private volatile boolean stop;
     private volatile boolean started;
+    private volatile boolean picked;
     private volatile String error;
     private volatile byte[] standbyWav;
     private volatile boolean playStandby;
-    private volatile boolean spaceBusy;
+    private volatile Track wanted;
     private volatile byte[] queuedWav;
     private volatile LiveClock queuedClock;
-    private volatile String nowPlaying = "fantasy-dungeon";
+    private volatile String queuedName;
+    private volatile int queuedId;
+    private volatile String nowPlaying = "Ambush";
     private volatile double heardSeconds;
     private volatile double trackSeconds;
     private boolean overlay = true;
@@ -78,20 +97,27 @@ public class MusicDemo extends ApplicationAdapter {
         font = new BitmapFont();
         skin = buttonSkin(font);
         stage = new Stage(new ScreenViewport());
-        spaceButton = new TextButton("Space", skin);
-        spaceButton.setPosition(16, 16);
-        spaceButton.setSize(180, 40);
-        spaceButton.addListener(new ChangeListener() {
-            @Override
-            public void changed(ChangeEvent event, com.badlogic.gdx.scenes.scene2d.Actor actor) {
-                requestSpace();
-            }
-        });
-        stage.addActor(spaceButton);
+        for (int i = 0; i < TRACKS.length; i++) {
+            Track track = TRACKS[i];
+            TextButton button = new TextButton(track.name, skin);
+            int column = i % 4;
+            int row = i / 4;
+            button.setPosition(16 + column * 270f, 16 + row * 44f);
+            button.setSize(258, 36);
+            button.addListener(new ChangeListener() {
+                @Override
+                public void changed(ChangeEvent event, com.badlogic.gdx.scenes.scene2d.Actor actor) {
+                    request(track);
+                }
+            });
+            buttons.put(track.name, button);
+            stage.addActor(button);
+        }
         Gdx.input.setInputProcessor(stage);
         try {
-            Theme theme = Themes.load(Path.of("themes/fantasy-dungeon.yaml"));
-            clock = LiveClock.start(theme, ControlLog.readTimeline(Path.of("samples/timelines/ambush.json")), 1);
+            Theme theme = Themes.load(Path.of(TRACKS[0].theme));
+            clock = LiveClock.start(theme, ControlLog.readTimeline(Path.of(TRACKS[0].timeline)), 1);
+            clocks.put(TRACKS[0].name, clock);
             device = Gdx.audio.newAudioDevice(44100, false);
             swap.arm("fantasy-combat");
             playback = new Thread(this::playScore, "athenacl-speakers");
@@ -117,9 +143,9 @@ public class MusicDemo extends ApplicationAdapter {
         if (Gdx.input.isKeyJustPressed(Input.Keys.F4)) {
             overlay = !overlay;
         }
-        if (clock != null && started && !SPACE.equals(nowPlaying)) {
+        if (clock != null && started && !picked) {
             clock.poll(Gdx.graphics.getDeltaTime());
-            if (!spaceBusy && !playStandby && standbyWav != null && "fantasy-combat".equals(swap.poll(clock.bar()))) {
+            if (!playStandby && standbyWav != null && "fantasy-combat".equals(swap.poll(clock.bar()))) {
                 try {
                     Theme combat = Themes.load(Path.of("themes/fantasy-combat.yaml"));
                     clock = LiveClock.start(combat, combat.timeline(), 1);
@@ -130,6 +156,15 @@ public class MusicDemo extends ApplicationAdapter {
             }
         } else if (clock != null && started) {
             clock.poll(Gdx.graphics.getDeltaTime());
+        }
+        TextButton.TextButtonStyle plain = skin.get(TextButton.TextButtonStyle.class);
+        TextButton.TextButtonStyle hot = skin.get("playing", TextButton.TextButtonStyle.class);
+        for (Track track : TRACKS) {
+            TextButton button = buttons.get(track.name);
+            if ("Rendering...".contentEquals(button.getText())) {
+                continue;
+            }
+            button.setStyle(track.name.equals(nowPlaying) ? hot : plain);
         }
         ScreenUtils.clear(0.08f, 0.08f, 0.1f, 1f);
         float width = Gdx.graphics.getWidth();
@@ -148,14 +183,14 @@ public class MusicDemo extends ApplicationAdapter {
         float fraction = trackSeconds <= 0 ? 0f : (float) Math.min(1.0, heardSeconds / trackSeconds);
         batch.begin();
         font.setColor(Color.WHITE);
-        font.draw(batch, nowPlaying + "  " + timestamp(heardSeconds) + " / " + timestamp(trackSeconds), 16, 112);
+        font.draw(batch, nowPlaying + "  " + timestamp(heardSeconds) + " / " + timestamp(trackSeconds), 16, 168);
         batch.end();
         shapes.setProjectionMatrix(batch.getProjectionMatrix());
         shapes.begin(ShapeRenderer.ShapeType.Filled);
         shapes.setColor(0.18f, 0.2f, 0.24f, 1f);
-        shapes.rect(16, 72, barWidth, 12);
+        shapes.rect(16, 128, barWidth, 12);
         shapes.setColor(0.45f, 0.78f, 0.86f, 1f);
-        shapes.rect(16, 72, barWidth * fraction, 12);
+        shapes.rect(16, 128, barWidth * fraction, 12);
         shapes.end();
     }
 
@@ -169,37 +204,87 @@ public class MusicDemo extends ApplicationAdapter {
         return clock.snapshot();
     }
 
-    private void requestSpace() {
-        if (spaceBusy || SPACE.equals(nowPlaying) || device == null) {
+    private void request(Track track) {
+        if (device == null) {
             return;
         }
-        spaceBusy = true;
-        spaceButton.setText("Rendering...");
-        spaceButton.setDisabled(true);
-        spaceRender = new Thread(this::renderSpace, "athenacl-space");
-        spaceRender.setDaemon(true);
-        spaceRender.start();
+        picked = true;
+        playStandby = false;
+        byte[] ready = cache.get(track.name);
+        if (ready != null) {
+            wanted = null;
+            handoff(track.name, ready, clocks.get(track.name));
+            showLabels();
+            return;
+        }
+        wanted = track;
+        showRendering(track.name);
+        if ("Combat".equals(track.name) && preload != null && preload.isAlive()) {
+            return;
+        }
+        Thread running = worker;
+        if (running != null && running.isAlive()) {
+            return;
+        }
+        worker = new Thread(this::renderWanted, "athenacl-track");
+        worker.setDaemon(true);
+        worker.start();
     }
 
-    private void renderSpace() {
+    private void renderWanted() {
         try {
-            Theme theme = Themes.load(Path.of("themes/scifi-space.yaml"));
-            LiveClock next = LiveClock.start(theme,
-                    ControlLog.readTimeline(Path.of("samples/timelines/dungeon-tour.json")), 1);
-            byte[] wav = ThemeMix.wav(theme, next.performance().score(), states(next));
-            queuedClock = next;
-            queuedWav = wav;
-            Gdx.app.postRunnable(() -> {
-                spaceButton.setText("Space");
-                spaceButton.setDisabled(false);
-            });
+            while (!stop) {
+                Track track = wanted;
+                if (track == null) {
+                    return;
+                }
+                byte[] wav = cache.get(track.name);
+                LiveClock next = clocks.get(track.name);
+                if (wav == null) {
+                    Gdx.app.postRunnable(() -> showRendering(track.name));
+                    next = open(track);
+                    wav = ThemeMix.wav(Themes.load(Path.of(track.theme)), next.performance().score(), states(next));
+                    cache.put(track.name, wav);
+                    clocks.put(track.name, next);
+                    Gdx.app.postRunnable(this::showLabels);
+                }
+                if (wanted == track) {
+                    handoff(track.name, wav, next);
+                    wanted = null;
+                    return;
+                }
+            }
         } catch (Exception e) {
-            spaceBusy = false;
+            wanted = null;
             error = e.getMessage() == null ? e.getClass().getSimpleName() : e.getMessage();
-            Gdx.app.postRunnable(() -> {
-                spaceButton.setText("Space");
-                spaceButton.setDisabled(false);
-            });
+            Gdx.app.postRunnable(this::showLabels);
+        }
+    }
+
+    private static LiveClock open(Track track) throws Exception {
+        Theme theme = Themes.load(Path.of(track.theme));
+        List<Theme.Control> controls = track.timeline == null
+                ? theme.timeline()
+                : ControlLog.readTimeline(Path.of(track.timeline));
+        return LiveClock.start(theme, controls, 1);
+    }
+
+    private void handoff(String name, byte[] wav, LiveClock next) {
+        queuedName = name;
+        queuedClock = next;
+        queuedWav = wav;
+        queuedId++;
+    }
+
+    private void showRendering(String name) {
+        for (Track track : TRACKS) {
+            buttons.get(track.name).setText(track.name.equals(name) ? "Rendering..." : track.name);
+        }
+    }
+
+    private void showLabels() {
+        for (Track track : TRACKS) {
+            buttons.get(track.name).setText(track.name);
         }
     }
 
@@ -207,8 +292,17 @@ public class MusicDemo extends ApplicationAdapter {
         try {
             Theme combat = Themes.load(Path.of("themes/fantasy-combat.yaml"));
             LiveClock next = LiveClock.start(combat, combat.timeline(), 1);
-            standbyWav = ThemeMix.wav(combat, next.performance().score(), states(next));
+            byte[] wav = ThemeMix.wav(combat, next.performance().score(), states(next));
+            standbyWav = wav;
+            cache.put("Combat", wav);
+            clocks.put("Combat", next);
             swap.preloaded();
+            Track asked = wanted;
+            if (asked != null && "Combat".equals(asked.name)) {
+                handoff("Combat", wav, next);
+                wanted = null;
+                Gdx.app.postRunnable(this::showLabels);
+            }
         } catch (Exception e) {
             error = e.getMessage() == null ? e.getClass().getSimpleName() : e.getMessage();
         }
@@ -216,43 +310,52 @@ public class MusicDemo extends ApplicationAdapter {
 
     private void playScore() {
         try {
-            Theme theme = Themes.load(Path.of("themes/fantasy-dungeon.yaml"));
+            Theme theme = Themes.load(Path.of(TRACKS[0].theme));
             byte[] wav = ThemeMix.wav(theme, clock.performance().score(), states(clock));
-            String name = "fantasy-dungeon";
+            cache.put("Ambush", wav);
             preload = new Thread(this::preloadCombat, "athenacl-kit");
             preload.setDaemon(true);
             preload.start();
+            String name = "Ambush";
+            int id = queuedId;
+            boolean fresh = true;
             while (!stop) {
                 if (queuedWav != null) {
                     wav = queuedWav;
-                    name = SPACE;
+                    name = queuedName;
                     LiveClock next = queuedClock;
+                    id = queuedId;
                     queuedWav = null;
                     if (next != null) {
                         clock = next;
                     }
                     playStandby = false;
+                    fresh = true;
                 }
-                play(wav, name);
-                if (stop) {
+                if (fresh && wav != null) {
+                    fresh = false;
+                    play(wav, name, id);
+                    continue;
+                }
+                if (!picked && playStandby && standbyWav != null && wav != standbyWav) {
+                    wav = standbyWav;
+                    name = "Combat";
+                    fresh = true;
+                    continue;
+                }
+                try {
+                    Thread.sleep(30);
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
                     return;
                 }
-                if (queuedWav != null) {
-                    continue;
-                }
-                if (playStandby && standbyWav != null && wav != standbyWav) {
-                    wav = standbyWav;
-                    name = "fantasy-combat";
-                    continue;
-                }
-                break;
             }
         } catch (Exception e) {
             error = e.getMessage() == null ? e.getClass().getSimpleName() : e.getMessage();
         }
     }
 
-    private void play(byte[] wav, String name) throws Exception {
+    private void play(byte[] wav, String name, int id) throws Exception {
         try (AudioInputStream audio = AudioSystem.getAudioInputStream(new ByteArrayInputStream(wav))) {
             AudioFormat format = audio.getFormat();
             int channels = Math.max(1, format.getChannels());
@@ -264,11 +367,11 @@ public class MusicDemo extends ApplicationAdapter {
             long heardFrames = 0;
             byte[] buffer = new byte[4096];
             int read;
-            while (!stop && (read = audio.read(buffer)) > 0) {
+            while (!stop && queuedId == id && (read = audio.read(buffer)) > 0) {
                 if (queuedWav != null && wav != queuedWav) {
                     return;
                 }
-                if (wav != standbyWav && playStandby && standbyWav != null && queuedWav == null) {
+                if (!picked && wav != standbyWav && playStandby && standbyWav != null && queuedWav == null) {
                     return;
                 }
                 int samples = read / 2;
@@ -333,6 +436,9 @@ public class MusicDemo extends ApplicationAdapter {
         style.fontColor = Color.WHITE;
         style.disabledFontColor = new Color(0.7f, 0.75f, 0.78f, 1f);
         skin.add("default", style);
+        TextButton.TextButtonStyle playing = new TextButton.TextButtonStyle(style);
+        playing.up = skin.newDrawable("white", new Color(0.12f, 0.45f, 0.55f, 1f));
+        skin.add("playing", playing);
         return skin;
     }
 
@@ -353,9 +459,9 @@ public class MusicDemo extends ApplicationAdapter {
                 Thread.currentThread().interrupt();
             }
         }
-        if (spaceRender != null) {
+        if (worker != null) {
             try {
-                spaceRender.join(2000);
+                worker.join(2000);
             } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
             }

@@ -19,6 +19,7 @@ import java.util.Map;
  * {@code m1} the way L7 always has.
  * {@code overlays} add a layer on top of the current state, such as {@code lowHealth}.
  * {@code frameMs} is 0 unless the theme snaps requests to a fixed frame before the musical grid.
+ * {@code phraseBars} is how often a chord phrase cadences. It is 4 unless the theme says otherwise.
  */
 public record Theme(
         String id,
@@ -39,7 +40,8 @@ public record Theme(
         List<String> kits,
         HookSettings hooks,
         Map<String, OverlayDef> overlays,
-        int frameMs) {
+        int frameMs,
+        int phraseBars) {
 
     public Theme {
         states = Collections.unmodifiableMap(new LinkedHashMap<>(states));
@@ -55,7 +57,7 @@ public record Theme(
 
     public Theme withBars(int bars) {
         return new Theme(id, bars, bpm, numerator, denominator, states, stingers, defaultQuantize, rules,
-                timeline, preset, loudness, warnings, motifEvery, hold, kits, hooks, overlays, frameMs);
+                timeline, preset, loudness, warnings, motifEvery, hold, kits, hooks, overlays, frameMs, phraseBars);
     }
 
     /** Instrument names for one state, in layer order. Empty when that state is missing. */
@@ -116,14 +118,24 @@ public record Theme(
     }
 
     public record StateDef(String id, Key key, int tempo, List<String> layers, String stinger,
-                           Map<String, Integer> programs, Map<String, String> instruments) {
+                           Map<String, Integer> programs, Map<String, String> instruments, String meter) {
         public StateDef(String id, Key key, int tempo, List<String> layers, String stinger) {
-            this(id, key, tempo, layers, stinger, Map.of(), Map.of());
+            this(id, key, tempo, layers, stinger, Map.of(), Map.of(), null);
         }
 
         public StateDef(String id, Key key, int tempo, List<String> layers, String stinger,
                         Map<String, Integer> programs) {
-            this(id, key, tempo, layers, stinger, programs, Map.of());
+            this(id, key, tempo, layers, stinger, programs, Map.of(), null);
+        }
+
+        public StateDef(String id, Key key, int tempo, List<String> layers, String stinger,
+                        Map<String, Integer> programs, Map<String, String> instruments) {
+            this(id, key, tempo, layers, stinger, programs, instruments, null);
+        }
+
+        /** Same state, heard in this key. The declared meter stays. */
+        public StateDef withKey(Key key) {
+            return new StateDef(id, key, tempo, layers, stinger, programs, instruments, meter);
         }
 
         public StateDef {
@@ -134,6 +146,7 @@ public record Theme(
             instruments = instruments == null || instruments.isEmpty()
                     ? Map.of()
                     : Collections.unmodifiableMap(new LinkedHashMap<>(instruments));
+            meter = meter == null || meter.isBlank() ? null : meter;
         }
 
         public int program(String layer, int fallback) {
@@ -166,18 +179,24 @@ public record Theme(
      * {@code bridge} is empty when the change is only a grid and a retract flag.
      */
     public record Rule(String from, List<String> to, Quantize quantize, boolean retract,
-                       String bridge, int crossfadeBars) {
+                       String bridge, int crossfadeBars, String keyPolicy) {
         public Rule(String from, List<String> to, Quantize quantize, boolean retract) {
-            this(from, to, quantize, retract, "", 0);
+            this(from, to, quantize, retract, "", 0, "themeKey");
         }
 
         public Rule(String from, List<String> to, Quantize quantize) {
-            this(from, to, quantize, false, "", 0);
+            this(from, to, quantize, false, "", 0, "themeKey");
+        }
+
+        public Rule(String from, List<String> to, Quantize quantize, boolean retract,
+                    String bridge, int crossfadeBars) {
+            this(from, to, quantize, retract, bridge, crossfadeBars, "themeKey");
         }
 
         public Rule {
             to = List.copyOf(to);
             bridge = bridge == null ? "" : bridge;
+            keyPolicy = keyPolicy == null || keyPolicy.isBlank() ? "themeKey" : keyPolicy;
         }
 
         boolean matches(String fromState, String toState) {

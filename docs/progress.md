@@ -70,6 +70,12 @@ A note list such as `samples/notes/c-major-scale.yaml` renders to `score.mid`, `
 
 ## L9 — Sci-fi space
 
-`gradlew layerCheck -Player=L9` passes (6 checks). The full `gradlew layerCheck` passes (95 checks).
+`gradlew layerCheck -Player=L9` passes (6 checks).
 
-`themes/scifi-space.yaml` is the space preset: Lydian pads, a synth bass, and an arp on the eighth-note grid. Combat stays at 100 bpm and doubles that arp into sixteenths, with an 808 kit. Trading uses celesta. There is no whole-tone scale, so the raised fourth stands in for it. `describe-music` prints `arp.grid=` and `programs=`. `render themes/fantasy-dungeon.yaml --at "8 theme themes/scifi-space.yaml"` prints `themeSwitch.bar=9`. The window still swaps the combat kit on its own. A Space button plays this theme instead, with the track length and how far through it you are.
+`themes/scifi-space.yaml` is the space preset: Lydian pads, a synth bass, and an arp on the eighth-note grid. Combat stays at 100 bpm and doubles that arp into sixteenths, with an 808 kit. Trading uses celesta. There is no whole-tone scale, so the raised fourth stands in for it. `describe-music` prints `arp.grid=` and `programs=`. `render themes/fantasy-dungeon.yaml --at "8 theme themes/scifi-space.yaml"` prints `themeSwitch.bar=9`. The window still swaps the combat kit on its own. Ambush, Dungeon, Combat, Party, Trading, Space, and Space combat buttons each start that piece from the beginning, with the track length and how far through it you are. `themes/fantasy-party.yaml` holds the tavern, `themes/fantasy-trading.yaml` holds the market, and `themes/scifi-combat.yaml` holds the space fight.
+
+## L10 — Harmony and meter
+
+`gradlew layerCheck -Player=L10` passes (4 checks). The full `gradlew layerCheck` passes (99 checks).
+
+`theory modulate` plans a pivot, a direct jump, or a chord borrowed from the parallel key. A transition can keep the current key, move to the relative key, or use the state's own key. `samples/themes/modulation.yaml` stays in D dorian until bar 9, which is F lydian, and bar 12 is in 7/8. Chord phrases cadence on the tonic, and a Lydian tonic includes the raised fourth. The check render writes MIDI and the event log, not a WAV.

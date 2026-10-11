@@ -9,8 +9,8 @@ import java.util.concurrent.Callable;
 /**
  * Scale and harmony commands. {@code theory progression} writes a voice-led event log.
  */
-@CommandLine.Command(name = "theory", description = "Scales, chords, and progressions.",
-        subcommands = {ProgressionCommand.class})
+@CommandLine.Command(name = "theory", description = "Scales, chords, progressions, and modulation.",
+        subcommands = {ProgressionCommand.class, ModulateCommand.class})
 public class TheoryCommand implements Callable<Integer> {
     @CommandLine.ParentCommand AgentCli parent;
 

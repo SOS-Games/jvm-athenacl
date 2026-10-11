@@ -16,6 +16,7 @@ import java.util.List;
 /**
  * Canonical JSONL for a score. Key order is fixed, lines end with {@code \n}, and the hash is
  * SHA-256 of those bytes. Wall-clock fields are not written, so two runs of the same notes match.
+ * The score's meter is the first meter event. A later meter event changes one bar, not the whole piece.
  */
 public final class EventLog {
     private static final ObjectMapper JSON = new ObjectMapper();
@@ -83,9 +84,13 @@ public final class EventLog {
                     controls.add(new ControlEvent.Tempo(node.path("startTick").asLong(), bpm));
                 }
                 case "meter" -> {
-                    numerator = node.path("numerator").asInt(4);
-                    denominator = node.path("denominator").asInt(4);
-                    controls.add(new ControlEvent.Meter(node.path("startTick").asLong(), numerator, denominator));
+                    int nextNumerator = node.path("numerator").asInt(4);
+                    int nextDenominator = node.path("denominator").asInt(4);
+                    if (controls.stream().noneMatch(event -> event instanceof ControlEvent.Meter)) {
+                        numerator = nextNumerator;
+                        denominator = nextDenominator;
+                    }
+                    controls.add(new ControlEvent.Meter(node.path("startTick").asLong(), nextNumerator, nextDenominator));
                 }
                 case "program" -> controls.add(new ControlEvent.ProgramChange(
                         node.path("startTick").asLong(), node.path("channel").asInt(), node.path("program").asInt()));

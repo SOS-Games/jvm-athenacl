@@ -33,6 +33,7 @@ public final class SchemaRegistry {
             "athenacl.result.scale/1",
             "athenacl.result.chord/1",
             "athenacl.result.progression/1",
+            "athenacl.result.modulate/1",
             "athenacl.result.rhythm/1",
             "athenacl.result.poly/1",
             "athenacl.result.validate/1",

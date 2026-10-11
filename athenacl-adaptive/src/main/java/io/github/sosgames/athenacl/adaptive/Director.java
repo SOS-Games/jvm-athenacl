@@ -5,6 +5,9 @@ import io.github.sosgames.athenacl.events.ControlEvent;
 import io.github.sosgames.athenacl.events.NoteEvent;
 import io.github.sosgames.athenacl.events.Score;
 import io.github.sosgames.athenacl.events.TimeBase;
+import io.github.sosgames.athenacl.rhythm.Meter;
+import io.github.sosgames.athenacl.theory.Key;
+import io.github.sosgames.athenacl.theory.Modulation;
 
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -18,7 +21,8 @@ import java.util.Map;
  * the next beat and drop notes already queued after that beat. An overlay adds a layer
  * on top of the state. Leaving combat can play a wind-down, and a loudness jump past
  * the contour step writes a CC11 ramp. A theme change asked for on bar 8 is heard on
- * bar 9. The same seed and the same controls always
+ * bar 9. A state can bring its own meter, and a transition can keep, flip, or
+ * replace the key. The same seed and the same controls always
  * build the same score. Nothing here reads the wall clock.
  */
 public final class Director {
@@ -111,6 +115,7 @@ public final class Director {
         int leadDegree = -1;
         int held = 0;
         int cursor = 0;
+        Carry carry = new Carry(theme.numerator(), theme.denominator());
         for (int bar = 1; bar <= theme.bars(); bar++) {
             long barStart = (bar - 1L) * barTicks;
             int mark = cursor;
@@ -176,7 +181,7 @@ public final class Director {
                 }
                 leadDegree = playBar(current, stateId, target, changed, bar, barStart, seed, ids, notes, events,
                         bars, intensity, leadDegree, held, lastTempo, true, barStart, bridge,
-                        activeOverlays, stingerBar);
+                        activeOverlays, stingerBar, carry);
                 lastTempo = bars.get(bars.size() - 1).bpm();
             } else {
                 cursor = stop;
@@ -212,7 +217,7 @@ public final class Director {
                 }
                 leadDegree = playBar(current, stateId, target, changed, bar, barStart, seed, ids, notes, events,
                         bars, intensity, leadDegree, held, lastTempo, true, barStart, bridge,
-                        activeOverlays, stingerBar);
+                        activeOverlays, stingerBar, carry);
                 lastTempo = bars.get(bars.size() - 1).bpm();
                 while (mark < stop) {
                     Scheduled next = scheduled.get(mark++);
@@ -235,7 +240,7 @@ public final class Director {
                     List<Played> fresh = new ArrayList<>();
                     leadDegree = playBar(current, stateId, target, true, bar, barStart, seed, ids, fresh, events,
                             bars, intensity, leadDegree, held, lastTempo, false, next.applied, arrival,
-                            activeOverlays, stingerBar);
+                            activeOverlays, stingerBar, carry);
                     adopt(notes, fresh, next.applied, barTicks);
                     lastTempo = bars.get(bars.size() - 1).bpm();
                 }
@@ -336,15 +341,17 @@ public final class Director {
                                long seed, Ids ids, List<Played> notes, List<ControlEvent> events, List<BarInfo> bars,
                                IntensityTrack intensity, int leadDegree, int held, int lastTempo,
                                boolean resetIds, long eventTick, String bridge, Map<String, Double> overlays,
-                               int[] stingerBar) {
+                               int[] stingerBar, Carry carry) {
         int every = theme.motifEvery();
         int phraseBar = held / every;
         boolean playMotif = held % every == 0;
-        Theme.StateDef state = theme.state(stateId);
+        Theme.StateDef raw = theme.state(stateId);
+        Theme.StateDef state = hear(theme, raw, stateId, changed, carry);
         double smoothed = intensity.apply(target, changed);
         if (state.tempo() != lastTempo) {
             events.add(new ControlEvent.Tempo(eventTick, state.tempo()));
         }
+        meter(theme, raw, eventTick, events, carry);
         BarInfo info = new BarInfo(bar, stateId, smoothed, state.key().name(), state.tempo());
         bars.add(info);
         if (resetIds) {
@@ -377,6 +384,51 @@ public final class Director {
             }
         }
         return degree;
+    }
+
+    /** The key this bar sounds. A change reads the transition's policy. Later bars keep it. */
+    private static Theme.StateDef hear(Theme theme, Theme.StateDef raw, String stateId, boolean changed, Carry carry) {
+        String policy = "themeKey";
+        if (!changed && carry.key != null) {
+            policy = "keep";
+        } else if (carry.from != null && stateId != null && !stateId.equals(carry.from)) {
+            Theme.Rule rule = theme.ruleFor(carry.from, stateId);
+            policy = rule == null ? "themeKey" : rule.keyPolicy();
+        }
+        Key resolved = Modulation.apply(policy, carry.key, raw.key());
+        carry.key = resolved;
+        carry.from = stateId;
+        return raw.withKey(resolved);
+    }
+
+    /** A state meter replaces the theme meter from this bar line on. */
+    private static void meter(Theme theme, Theme.StateDef raw, long tick, List<ControlEvent> events, Carry carry) {
+        int numerator = theme.numerator();
+        int denominator = theme.denominator();
+        if (raw.meter() != null) {
+            Meter parsed = Meter.parse(raw.meter());
+            numerator = parsed.numerator();
+            denominator = parsed.denominator();
+        }
+        if (numerator == carry.numerator && denominator == carry.denominator) {
+            return;
+        }
+        events.add(new ControlEvent.Meter(tick, numerator, denominator));
+        carry.numerator = numerator;
+        carry.denominator = denominator;
+    }
+
+    /** Key and meter carried from the previous bar. Not part of the event-log hash by itself. */
+    private static final class Carry {
+        private Key key;
+        private String from;
+        private int numerator;
+        private int denominator;
+
+        private Carry(int numerator, int denominator) {
+            this.numerator = numerator;
+            this.denominator = denominator;
+        }
     }
 
     /** Drops notes queued at or after the switch, and ends a sounding note on that tick. */

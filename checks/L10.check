@@ -1,0 +1,33 @@
+# L10 harmony and meter. Directive list: AGENTS.md, section "Layer checks".
+
+name: pivot from dorian to lydian
+args: theory modulate "D dorian" "F lydian" --method pivot
+exit: 0
+stdout-contains: method=pivot
+stdout-contains: from=D-dorian
+stdout-contains: to=F-lydian
+stdout-contains: pivot=F
+stdout-contains: bars=2
+
+---
+name: render the modulation
+args: render samples/themes/modulation.yaml --seed 2 --out build/l10 --formats mid,events,txt
+exit: 0
+delete-before: build/l10
+stdout-contains: bars=12
+file-exists: build/l10/events.jsonl
+
+---
+name: bar 9 is F lydian
+args: describe-music build/l10/events.jsonl --bars 9-9
+exit: 0
+stdout-contains: bar=9
+stdout-contains: key=F-lydian
+
+---
+name: bar 12 is 7/8
+args: describe-music build/l10/events.jsonl --bars 12-12
+exit: 0
+stdout-contains: bar=12
+stdout-contains: meter=7/8
+stdout-contains: grouping=2+2+3

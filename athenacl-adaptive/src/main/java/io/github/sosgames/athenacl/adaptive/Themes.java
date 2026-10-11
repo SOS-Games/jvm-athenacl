@@ -6,6 +6,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
 import io.github.sosgames.athenacl.motif.critic.MelodyCritic;
 import io.github.sosgames.athenacl.motif.hook.HookSettings;
+import io.github.sosgames.athenacl.rhythm.Meter;
 import io.github.sosgames.athenacl.theory.Key;
 
 import java.io.IOException;
@@ -28,7 +29,7 @@ import java.util.Set;
 public final class Themes {
     private static final ObjectMapper YAML = new ObjectMapper(new YAMLFactory());
     private static final Set<String> LAYERS = Set.of(
-            "pad", "bass", "lead", "drums", "drone", "harp", "taiko", "brass", "heartbeat", "arp", "bell");
+            "pad", "bass", "lead", "drums", "drone", "harp", "taiko", "brass", "heartbeat", "arp", "bell", "chords");
 
     private Themes() {
     }
@@ -196,6 +197,7 @@ public final class Themes {
             kits = List.of("gm-lite");
         }
         Map<String, Theme.OverlayDef> overlays = overlays(root, errors, warnings);
+        int phraseBars = phraseBars(root, errors);
         int frameMs = root.path("clock").path("frameMs").asInt(0);
         if (frameMs < 0) {
             errors.add(issue("THEME_CLOCK", "/clock/frameMs", "frameMs " + frameMs,
@@ -207,7 +209,7 @@ public final class Themes {
         }
         return new Theme(id, bars, bpm, numerator, denominator, states, stingers, quantize, rules, timeline,
                 presetId.isBlank() ? null : presetId, loudness, warnings, motifEvery, hold, kits, hooks(root),
-                overlays, frameMs);
+                overlays, frameMs, phraseBars);
     }
 
     /** {@code overlays:} add a layer on top of the state. Extra loudness is capped at 1 LU. */
@@ -342,7 +344,7 @@ public final class Themes {
         int tempo = body.path("tempo").asInt(bpm);
         List<String> layers = layers(id, body, issues);
         String stinger = body.hasNonNull("stinger") ? body.get("stinger").asText() : null;
-        return new Theme.StateDef(id, key, tempo, layers, stinger);
+        return new Theme.StateDef(id, key, tempo, layers, stinger, Map.of(), Map.of(), meter(id, body, issues));
     }
 
     /** A preset state keeps its instruments when the theme only overrides a field such as tempo. */
@@ -366,8 +368,9 @@ public final class Themes {
         String stinger = body.has("stinger")
                 ? (body.hasNonNull("stinger") ? body.get("stinger").asText() : null)
                 : existing.stinger();
+        String meter = body.has("meter") ? meter(existing.id(), body, issues) : existing.meter();
         return new Theme.StateDef(existing.id(), key, tempo, layers, stinger, existing.programs(),
-                existing.instruments());
+                existing.instruments(), meter);
     }
 
     private static List<String> layers(String id, JsonNode body, List<ThemeIssue> issues) {
@@ -379,7 +382,7 @@ public final class Themes {
                 if (!LAYERS.contains(layer)) {
                     issues.add(issue("THEME_UNKNOWN_LAYER", "/states/" + id + "/layers/" + i,
                             "unknown layer " + layer,
-                            "Use pad, bass, lead, or drums."));
+                            "Use pad, bass, lead, drums, or chords."));
                 }
                 layers.add(layer);
             }
@@ -430,7 +433,15 @@ public final class Themes {
         }
         String bridge = body.path("bridge").asText("");
         int crossfade = body.path("crossfadeBars").asInt(0);
-        return new Theme.Rule(from, to, quantize, body.path("retract").asBoolean(false), bridge, crossfade);
+        String keyPolicy = body.path("keyPolicy").asText("themeKey");
+        if (!keyPolicy.equals("themeKey") && !keyPolicy.equals("keep")
+                && !keyPolicy.equals("relative") && !keyPolicy.equals("parallel")) {
+            issues.add(issue("THEME_KEY_POLICY", path + "/keyPolicy", "key policy " + keyPolicy,
+                    "Use themeKey, keep, relative, or parallel."));
+            keyPolicy = "themeKey";
+        }
+        return new Theme.Rule(from, to, quantize, body.path("retract").asBoolean(false), bridge, crossfade,
+                keyPolicy);
     }
 
     static Theme.Control control(JsonNode body, String path, Map<String, Theme.StateDef> states, List<ThemeIssue> issues) {
@@ -455,6 +466,37 @@ public final class Themes {
             issues.add(issue("THEME_TIME", path, "bar and beat start at 1", "Use bar 1 beat 1 for the downbeat."));
         }
         return new Theme.Control(bar, beat, state, intensity);
+    }
+
+    /** How many bars a chord phrase lasts. The last bar of the phrase is a cadence. */
+    private static int phraseBars(JsonNode root, List<ThemeIssue> errors) {
+        JsonNode harmony = root.get("harmony");
+        if (harmony == null || !harmony.has("phraseBars")) {
+            return 4;
+        }
+        int value = harmony.get("phraseBars").asInt(0);
+        if (!harmony.get("phraseBars").isIntegralNumber() || value < 1) {
+            errors.add(issue("THEME_HARMONY", "/harmony/phraseBars", "phraseBars " + harmony.get("phraseBars").asText(),
+                    "Use 1 or more. 4 cadences every four bars."));
+            return 4;
+        }
+        return value;
+    }
+
+    /** A state's own meter. Empty means the theme meter. */
+    private static String meter(String id, JsonNode body, List<ThemeIssue> issues) {
+        if (!body.hasNonNull("meter")) {
+            return null;
+        }
+        String text = body.get("meter").asText("");
+        try {
+            Meter.parse(text);
+        } catch (IllegalArgumentException e) {
+            issues.add(issue("THEME_METER", "/states/" + id + "/meter", e.getMessage(),
+                    "Use a meter like 4/4 or 7/8."));
+            return null;
+        }
+        return text;
     }
 
     private static ThemeIssue issue(String code, String path, String message, String fix) {

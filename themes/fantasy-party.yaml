@@ -1,0 +1,16 @@
+# The tavern, held. Harp, fiddle, and a light kit at a dance tempo.
+id: fantasy-party
+preset: fantasy
+instruments:
+  kits: [gm-lite]
+bars: 14
+bpm: 120
+meter: "4/4"
+hold:
+  state: partying
+  intensity: 0.85
+motif:
+  every: 1
+states:
+  partying:
+    tempo: 120

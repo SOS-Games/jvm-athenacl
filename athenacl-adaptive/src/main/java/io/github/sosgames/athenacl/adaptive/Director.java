@@ -343,8 +343,6 @@ public final class Director {
                                boolean resetIds, long eventTick, String bridge, Map<String, Double> overlays,
                                int[] stingerBar, Carry carry) {
         int every = theme.motifEvery();
-        int phraseBar = held / every;
-        boolean playMotif = held % every == 0;
         Theme.StateDef raw = theme.state(stateId);
         Theme.StateDef state = hear(theme, raw, stateId, changed, carry);
         double smoothed = intensity.apply(target, changed);
@@ -372,7 +370,7 @@ public final class Director {
         }
         boolean drums = intensity.drums(smoothed);
         int degree = StockLayers.bar(theme, state, info, barStart, seed, ids, notes, leadDegree, drums,
-                phraseBar, playMotif);
+                held, every);
         if (resetIds && "windDown".equals(bridge)) {
             events.add(new ControlEvent.ProgramChange(eventTick, 11, 73));
             StockLayers.windDown(state, info, barStart, seed, ids, notes);

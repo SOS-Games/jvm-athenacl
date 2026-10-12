@@ -52,3 +52,5 @@ stdout-contains: scale.leadingTone=true
 stdout-contains: voicing.style=close
 stdout-contains: voicing.voiceLead=true
 stdout-contains: voicing.maxLeap=4
+stdout-contains: lead.phrase=period
+stdout-contains: lead.rhythmCells=lsS,sslL,dotted

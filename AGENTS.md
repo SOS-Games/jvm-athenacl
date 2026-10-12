@@ -323,7 +323,7 @@ The download URL is a pinned commit until this project hosts its own copy. Do no
 
 `motif generate --key "D dorian" --seed 3` prints `motif=m1`, `notes=` between 2 and 8, and `contour=`. The same seed grows the same idea. `motif transform m1 --invert --invert` prints `identical=true`.
 
-The lead of a theme plays that idea every `motif.every` bars. `1` is every bar. `themes/fantasy-dungeon.yaml` sets it to 4, so a render with no timeline states the motif, then the lead keeps a plain scale line for three bars. `themes/fantasy-combat.yaml` holds the fight the whole time: tempo 144, intensity 1, and the motif on every bar. A sentence is the idea, the idea again, a fragment moved up a step, then the idea backwards. Coming back to a state starts the phrase over. Combat uses the same motif turned upside down and shortened. `debug explain` on a lead note prints `motif=m1:`. `analyze` of that render prints `motif.reuse.per8bars=`.
+The lead is a four-bar phrase. The motif is that phrase's opening idea, fitted to the chord of the bar. `motif.every` is how many phrases pass between statements of the unturned idea. `1` states it every phrase. `themes/fantasy-dungeon.yaml` sets it to 4. A period's answer starts with the same idea as its question. Coming back to a state starts the phrase over. `debug explain` on a lead note prints `motif=m1:`. `analyze` of that render prints `motif.reuse.per8bars=`.
 
 `motif import samples/motifs/theme.mid --out build/l7/m.yaml` reads the composed melody and prints `motifs=1` and `notes=`.
 

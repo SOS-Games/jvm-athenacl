@@ -1,0 +1,29 @@
+default: [lsS, sslL, dotted]
+leap: [3, 6]
+cadence:
+  half: [2, 5, 7]
+  authentic: [1, 3]
+cells:
+  lsS: ["1/2", "1/4", "1/8", "1/8"]
+  sslL: ["1/8", "1/8", "1/4", "1/2"]
+  dotted: ["3/8", "1/8", "1/2"]
+  long-rest: ["1/2", "r1/4", "1/4", "1/4"]
+  pizz-pair: ["1/8", "1/8", "r1/4", "1/4", "1/4"]
+  quarter: ["1/4", "1/4", "1/4", "1/4"]
+  mixed: ["1/8", "1/4", "1/8", "1/2"]
+forms:
+  period:
+    bars: 8
+    phrase: 4
+    plan: [idea, repeat, sequence, half, idea, invert, sequence, authentic]
+    develop: [sequence, invert, retrograde]
+  sentence:
+    bars: 4
+    phrase: 4
+    plan: [idea, repeat, fragment+sequence, retrograde]
+    develop: [sequence, invert, retrograde]
+  aaba:
+    bars: 16
+    phrase: 4
+    plan: [idea, repeat, sequence, half, idea, repeat, sequence, authentic, invert, fragment, sequence, half, idea, repeat, sequence, authentic]
+    develop: [sequence, invert, retrograde]

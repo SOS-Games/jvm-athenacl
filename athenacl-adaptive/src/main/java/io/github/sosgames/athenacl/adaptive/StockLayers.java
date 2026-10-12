@@ -1,15 +1,11 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 package io.github.sosgames.athenacl.adaptive;
 
-import io.github.sosgames.athenacl.events.DefaultRandom;
 import io.github.sosgames.athenacl.events.NoteEvent;
 import io.github.sosgames.athenacl.events.PitchName;
-import io.github.sosgames.athenacl.events.RandomSource;
 import io.github.sosgames.athenacl.events.TimeBase;
 import io.github.sosgames.athenacl.motif.Motif;
 import io.github.sosgames.athenacl.motif.MotifGenerator;
-import io.github.sosgames.athenacl.motif.MotifNote;
-import io.github.sosgames.athenacl.motif.PhrasePlan;
 import io.github.sosgames.athenacl.motif.hook.HookCache;
 import io.github.sosgames.athenacl.motif.hook.HookSettings;
 import io.github.sosgames.athenacl.theory.ClosedVoiceLeader;
@@ -22,12 +18,10 @@ import java.util.Map;
 
 /**
  * Layers a theme can name, plus a stinger on the bar a state is entered.
- * The lead plays motif {@code m1} every {@code motif.every} bars. Between those statements it
- * keeps a short scale line, so the melody does not drop out. A sentence is idea, repeat,
- * a fragment moved up, then the idea backwards. Entering a state starts that count over,
- * so a later window matches the full render.
- * Combat uses the same motif turned upside down and shortened, with a trumpet, taiko on
- * every beat, horn stabs, and a kick-snare drum pattern.
+ * The lead is a four-bar phrase. {@code motif.every} is how many phrases pass between
+ * statements of the unturned idea. Entering a state starts that count over, so a later
+ * window matches the full render.
+ * Combat keeps a trumpet, taiko on every beat, horn stabs, and a kick-snare drum pattern.
  * A pad stacks the chord of this bar. The bass plays that chord's root, unless the state asked for a pedal.
  * When the theme has {@code hooks:}, the lead's idea is the critic's pick. That pick is
  * made once per state, before the bar loop. A theme without the block still calls
@@ -82,7 +76,7 @@ public final class StockLayers {
 
     static int bar(Theme theme, Theme.StateDef state, Director.BarInfo info, long start, long seed,
                    Director.Ids ids, List<Director.Played> notes, int leadDegree, boolean drumsOn,
-                   int phraseBar, boolean playMotif) {
+                   int held, int every) {
         int degree = leadDegree;
         for (String layer : state.layers()) {
             degree = switch (layer) {
@@ -94,9 +88,10 @@ public final class StockLayers {
                     bass(state, info, start, seed, ids, notes);
                     yield degree;
                 }
-                case "lead" -> playMotif
-                        ? lead(theme, state, info, start, seed, ids, notes, degree, phraseBar)
-                        : scaleLead(state, info, start, seed, ids, notes, degree);
+                case "lead" -> {
+                    lead(theme, state, info, start, seed, ids, notes, held, every);
+                    yield degree;
+                }
                 case "drums" -> {
                     if (drumsOn) {
                         drums(state, info, start, seed, ids, notes);
@@ -158,8 +153,8 @@ public final class StockLayers {
         }
     }
 
-    private static int lead(Theme theme, Theme.StateDef state, Director.BarInfo info, long start, long seed,
-                            Director.Ids ids, List<Director.Played> notes, int previous, int phraseBar) {
+    private static void lead(Theme theme, Theme.StateDef state, Director.BarInfo info, long start, long seed,
+                             Director.Ids ids, List<Director.Played> notes, int held, int every) {
         Motif motif;
         HookCache.HookChoice choice = null;
         if (theme.hooks() != null) {
@@ -168,40 +163,13 @@ public final class StockLayers {
         } else {
             motif = MotifGenerator.generate(state.key().pitchClassNames().size(), seed);
         }
-        String chain = PhrasePlan.chain(state.id(), phraseBar);
-        Motif developed = PhrasePlan.develop(motif, chain);
-        String label = choice == null ? chain : choice.label(chain);
-        long cursor = start;
-        for (MotifNote tone : developed.notes()) {
+        for (PhraseLead.Tone tone : PhraseLead.bar(state, harmony(state, info.bar()), held, every,
+                theme.barTicks(), seed, motif)) {
             long id = ids.take();
-            int midi = scaleMidi(state.key(), tone.degree(), 5);
-            notes.add(played(id, cursor, tone.duration(), midi, PitchName.name(midi), velocity(info.intensity()),
-                    2, "lead", info, seed, state.id(), "scale-step", label));
-            cursor += TimeBase.durationTicks(tone.duration());
+            String label = choice == null ? tone.motif() : choice.label(tone.motif());
+            notes.add(played(id, start + tone.offset(), tone.ticks(), tone.midi(), PitchName.name(tone.midi()),
+                    velocity(info.intensity()), 2, "lead", info, seed, state.id(), tone.why(), label));
         }
-        return previous < 0 ? 0 : previous;
-    }
-
-    /** Scale steps on the bars the motif sits out. The line remembers its last degree. */
-    private static int scaleLead(Theme.StateDef state, Director.BarInfo info, long start, long seed,
-                                 Director.Ids ids, List<Director.Played> notes, int previous) {
-        int steps = state.key().pitchClassNames().size();
-        int degree = previous;
-        int notesInBar = info.intensity() >= 0.5 ? 4 : 2;
-        for (int i = 0; i < notesInBar; i++) {
-            int beat = notesInBar == 4 ? i : i * 2;
-            RandomSource rng = DefaultRandom.of(seed).fork(state.id().hashCode(), "lead".hashCode(), info.bar(), i);
-            if (degree < 0) {
-                degree = rng.nextInt(steps);
-            } else {
-                degree = Math.floorMod(degree + rng.nextInt(3) - 1, steps);
-            }
-            long id = ids.take();
-            int midi = scaleMidi(state.key(), degree, 5);
-            notes.add(played(id, start + beat * TimeBase.PPQ, "1/4", midi, PitchName.name(midi),
-                    velocity(info.intensity()), 2, "lead", info, seed, state.id(), "scale-step"));
-        }
-        return degree;
     }
 
     public static int channel(String layer) {
@@ -458,6 +426,13 @@ public final class StockLayers {
                                           int channel, String layer, Director.BarInfo info, long seed,
                                           String state, String why) {
         return played(id, start, duration, midi, name, velocity, channel, layer, info, seed, state, why, null);
+    }
+
+    private static Director.Played played(long id, long start, long length, int midi, String name, int velocity,
+                                          int channel, String layer, Director.BarInfo info, long seed,
+                                          String state, String why, String motif) {
+        return played(id, start, length + "/" + (TimeBase.PPQ * 4), midi, name, velocity, channel, layer, info,
+                seed, state, why, motif);
     }
 
     private static Director.Played played(long id, long start, String duration, int midi, String name, int velocity,

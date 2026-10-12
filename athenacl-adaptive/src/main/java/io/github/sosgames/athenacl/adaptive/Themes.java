@@ -374,8 +374,12 @@ public final class Themes {
                 ? (body.hasNonNull("stinger") ? body.get("stinger").asText() : null)
                 : existing.stinger();
         String meter = body.has("meter") ? meter(existing.id(), body, issues) : existing.meter();
+        Composition composition = existing.composition();
+        if (composition != null && body.isObject()) {
+            composition = composition.merge(body, "theme");
+        }
         return new Theme.StateDef(existing.id(), key, tempo, layers, stinger, existing.programs(),
-                existing.instruments(), meter, existing.composition());
+                existing.instruments(), meter, composition);
     }
 
     private static List<String> layers(String id, JsonNode body, List<ThemeIssue> issues) {

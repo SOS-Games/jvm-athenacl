@@ -12,6 +12,7 @@ import io.github.sosgames.athenacl.motif.MotifNote;
 import io.github.sosgames.athenacl.motif.PhrasePlan;
 import io.github.sosgames.athenacl.motif.hook.HookCache;
 import io.github.sosgames.athenacl.motif.hook.HookSettings;
+import io.github.sosgames.athenacl.theory.ClosedVoiceLeader;
 import io.github.sosgames.athenacl.theory.Key;
 import io.github.sosgames.athenacl.theory.Progression;
 
@@ -138,11 +139,8 @@ public final class StockLayers {
 
     private static void pad(Theme.StateDef state, Director.BarInfo info, long start, long seed,
                             Director.Ids ids, List<Director.Played> notes) {
-        Progression.Chord chord = harmony(state, info.bar());
-        int[] degrees = degrees(state, "density.pad.degrees", 0, 2, 4);
-        for (int degree : degrees) {
+        for (int midi : voicing(state, info.bar())) {
             long id = ids.take();
-            int midi = chord.midi(degree, 4);
             notes.add(played(id, start, "1/1", midi, PitchName.name(midi), velocity(info.intensity()),
                     0, "pad", info, seed, state.id(), "chord-tone"));
         }
@@ -280,21 +278,17 @@ public final class StockLayers {
                               Director.Ids ids, List<Director.Played> notes) {
         if (on(state, "density.brass.stab")) {
             int vel = Math.max(velocity(info.intensity()), 110);
-            Progression.Chord chord = harmony(state, info.bar());
             for (int beat = 0; beat < 4; beat += 2) {
-                for (int degree : new int[] {0, 4}) {
+                for (int midi : voicing(state, info.bar())) {
                     long id = ids.take();
-                    int midi = chord.midi(degree, 4);
                     notes.add(played(id, start + beat * TimeBase.PPQ, "1/8", midi, PitchName.name(midi),
                             vel, 7, "brass", info, seed, state.id(), "brass"));
                 }
             }
             return;
         }
-        Progression.Chord chord = harmony(state, info.bar());
-        for (int degree : new int[] {0, 4}) {
+        for (int midi : voicing(state, info.bar())) {
             long id = ids.take();
-            int midi = chord.midi(degree, 4);
             notes.add(played(id, start, "1/1", midi, PitchName.name(midi), velocity(info.intensity()),
                     7, "brass", info, seed, state.id(), "brass"));
         }
@@ -348,22 +342,19 @@ public final class StockLayers {
     /** The phrase chord for this bar, held. */
     private static void chords(Theme theme, Theme.StateDef state, Director.BarInfo info, long start, long seed,
                                Director.Ids ids, List<Director.Played> notes) {
-        Progression.Chord chord = harmony(state, info.bar());
-        for (int interval : chord.intervals()) {
+        boolean cadence = harmony(state, info.bar()).cadence();
+        for (int midi : voicing(state, info.bar())) {
             long id = ids.take();
-            int midi = chord.rootMidi(4) + interval;
             notes.add(played(id, start, "1/1", midi, PitchName.name(midi), velocity(info.intensity()),
-                    12, "chords", info, seed, state.id(), chord.cadence() ? "cadence" : "chord"));
+                    12, "chords", info, seed, state.id(), cadence ? "cadence" : "chord"));
         }
     }
 
     /** Two held bell tones, the root and the fifth. */
     private static void bell(Theme.StateDef state, Director.BarInfo info, long start, long seed,
                              Director.Ids ids, List<Director.Played> notes) {
-        Progression.Chord chord = harmony(state, info.bar());
-        for (int degree : new int[] {0, 4}) {
+        for (int midi : voicing(state, info.bar())) {
             long id = ids.take();
-            int midi = chord.midi(degree, 5);
             notes.add(played(id, start, "1/1", midi, PitchName.name(midi), velocity(info.intensity()),
                     6, "bell", info, seed, state.id(), "bell"));
         }
@@ -390,6 +381,39 @@ public final class StockLayers {
 
     private static boolean on(Theme.StateDef state, String path) {
         return state.composition() != null && state.composition().flag(path, false);
+    }
+
+    /**
+     * Close voicing of this bar's chord, voice-led from bar 1 when the state asks for it.
+     * {@code voicing.style: open5} is the only path that keeps a bare fifth.
+     */
+    private static int[] voicing(Theme.StateDef state, int bar) {
+        if (state.composition() != null && "open5".equals(state.composition().text("voicing.style", ""))) {
+            int root = harmony(state, bar).rootMidi(4);
+            return new int[] {root, root + 7};
+        }
+        boolean lead = state.composition() == null || state.composition().flag("voicing.voiceLead", true);
+        int[] previous = null;
+        int[] current = new int[0];
+        for (int at = 1; at <= Math.max(1, bar); at++) {
+            int[] pcs = pitchClasses(harmony(state, at));
+            if (!lead || previous == null || previous.length != pcs.length) {
+                current = ClosedVoiceLeader.first(pcs);
+            } else {
+                current = ClosedVoiceLeader.next(pcs, previous);
+            }
+            previous = current;
+        }
+        return current;
+    }
+
+    private static int[] pitchClasses(Progression.Chord chord) {
+        int[] intervals = chord.intervals();
+        int[] pcs = new int[intervals.length];
+        for (int i = 0; i < intervals.length; i++) {
+            pcs[i] = Math.floorMod(chord.rootPc() + intervals[i], 12);
+        }
+        return pcs;
     }
 
     /** The chord this bar plays. A missing progression uses the eight-bar default. */

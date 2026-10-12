@@ -49,3 +49,6 @@ stdout-contains: harmony.progression=i,VI,iv,V,i,VI,V,i
 stdout-contains: harmony.cadences.4=half
 stdout-contains: harmony.cadences.8=authentic
 stdout-contains: scale.leadingTone=true
+stdout-contains: voicing.style=close
+stdout-contains: voicing.voiceLead=true
+stdout-contains: voicing.maxLeap=4

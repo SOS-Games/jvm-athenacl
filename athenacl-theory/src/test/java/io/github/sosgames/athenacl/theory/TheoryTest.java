@@ -11,6 +11,17 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class TheoryTest {
     @Test
+    void aeolianDegreesStayAboveTheTonic() {
+        Key key = Key.parse("A aeolian");
+        int[] midi = new int[8];
+        for (int degree = 0; degree < 8; degree++) {
+            midi[degree] = key.degreeMidi(degree, 4);
+        }
+        assertEquals(List.of(69, 71, 72, 74, 76, 77, 79, 81),
+                java.util.Arrays.stream(midi).boxed().toList());
+    }
+
+    @Test
     void dorianScale() {
         Key key = Key.parse("D dorian");
         assertEquals("D-dorian", key.name());

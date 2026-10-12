@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 package io.github.sosgames.athenacl.motif.hook;
 
-import io.github.sosgames.athenacl.events.PitchName;
 import io.github.sosgames.athenacl.events.RandomSource;
 import io.github.sosgames.athenacl.events.TimeBase;
 import io.github.sosgames.athenacl.motif.Motif;
@@ -205,9 +204,6 @@ public final class HookGenerator {
 
     /** MIDI pitch for a scale degree in octave 5, where C4 is 60. */
     public static int midi(Key key, int degree) {
-        int[] steps = key.mode().steps();
-        int wrapped = Math.floorMod(degree, steps.length);
-        int octave = 5 + Math.floorDiv(degree, steps.length);
-        return PitchName.midi(key.pitchClassNames().get(wrapped) + octave);
+        return key.degreeMidi(degree, 5);
     }
 }

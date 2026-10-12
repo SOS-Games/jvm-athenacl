@@ -6,7 +6,8 @@ import java.util.List;
 
 /**
  * The ten ways a motif can come back. Inversion is diatonic and turns around the first note,
- * so inverting twice is the motif you started with.
+ * so inverting twice is the motif you started with. A step past the mode stays past it;
+ * the pitch mapping places that degree in the next octave.
  */
 public final class MotifTransforms {
     private MotifTransforms() {
@@ -32,7 +33,7 @@ public final class MotifTransforms {
         int axis = motif.notes().get(0).degree();
         List<MotifNote> notes = new ArrayList<>();
         for (MotifNote note : motif.notes()) {
-            notes.add(new MotifNote(Math.floorMod(axis * 2 - note.degree(), motif.steps()), note.duration()));
+            notes.add(new MotifNote(axis * 2 - note.degree(), note.duration()));
         }
         return new Motif(motif.id(), motif.steps(), notes);
     }
@@ -48,7 +49,7 @@ public final class MotifTransforms {
     private static Motif transpose(Motif motif, int interval) {
         List<MotifNote> notes = new ArrayList<>();
         for (MotifNote note : motif.notes()) {
-            notes.add(new MotifNote(Math.floorMod(note.degree() + interval, motif.steps()), note.duration()));
+            notes.add(new MotifNote(note.degree() + interval, note.duration()));
         }
         return new Motif(motif.id(), motif.steps(), notes);
     }
@@ -69,7 +70,7 @@ public final class MotifTransforms {
     private static Motif sequence(Motif motif) {
         List<MotifNote> notes = new ArrayList<>(motif.notes());
         for (MotifNote note : motif.notes()) {
-            notes.add(new MotifNote(Math.floorMod(note.degree() + 1, motif.steps()), note.duration()));
+            notes.add(new MotifNote(note.degree() + 1, note.duration()));
         }
         return new Motif(motif.id(), motif.steps(), notes);
     }
@@ -78,7 +79,7 @@ public final class MotifTransforms {
         List<MotifNote> notes = new ArrayList<>();
         for (MotifNote note : motif.notes()) {
             String half = scale(note.duration(), 1, 2);
-            notes.add(new MotifNote(Math.floorMod(note.degree() + 1, motif.steps()), half));
+            notes.add(new MotifNote(note.degree() + 1, half));
             notes.add(new MotifNote(note.degree(), half));
         }
         return new Motif(motif.id(), motif.steps(), notes);

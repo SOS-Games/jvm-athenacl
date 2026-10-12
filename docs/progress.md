@@ -149,3 +149,5 @@ A note list such as `samples/notes/c-major-scale.yaml` renders to `score.mid`, `
 ## L7c — Melodic engine
 
 Step 0 moves the presets into `presets/genres` and `presets/states`. `theme resolve` merges genre defaults, the generic state, the genre-specific state, then the theme file. Lists replace and maps merge. Each value records which layer set it. StockLayers reads those density fields instead of testing the mode or the state name. Note hashes of existing themes can change where a state theme now supplies the pattern. `gradlew layerCheck -Player=L7c` is the resolve checks.
+
+Step 1 maps a scale degree with `12 * (octave + 1) + tonic + step`, so the note after B in A is the C above it. Motif transforms keep a degree that walks past the mode instead of folding it back. The check is `TheoryTest.aeolianDegreesStayAboveTheTonic` (69, 71, 72, 74, 76, 77, 79, 81). No golden file changed.

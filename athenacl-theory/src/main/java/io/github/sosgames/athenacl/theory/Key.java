@@ -115,6 +115,18 @@ public record Key(int letter, int accidental, int tonicPc, Mode mode) {
         return name + octave;
     }
 
+    /**
+     * MIDI number for a scale degree. Octave 4 holds middle C.
+     * The degree keeps climbing past the mode, so the note after B in A is C in the next octave
+     * rather than C an octave lower.
+     */
+    public int degreeMidi(int degree, int octave) {
+        int[] steps = mode.steps();
+        int size = steps.length;
+        int wrapped = Math.floorMod(degree, size);
+        return 12 * (octave + 1) + tonicPc + steps[wrapped] + 12 * Math.floorDiv(degree, size);
+    }
+
     /** Major-scale degree, then the accidental. {@code bVII} in D is C, not B. */
     public int degreePc(int degree, int shift) {
         if (degree < 1 || degree > 7) {

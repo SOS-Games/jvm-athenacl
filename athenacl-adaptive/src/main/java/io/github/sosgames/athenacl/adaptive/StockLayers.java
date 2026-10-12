@@ -172,7 +172,7 @@ public final class StockLayers {
         long cursor = start;
         for (MotifNote tone : developed.notes()) {
             long id = ids.take();
-            int midi = scaleMidi(state.key(), Math.floorMod(tone.degree(), motif.steps()), 5);
+            int midi = scaleMidi(state.key(), tone.degree(), 5);
             notes.add(played(id, cursor, tone.duration(), midi, PitchName.name(midi), velocity(info.intensity()),
                     2, "lead", info, seed, state.id(), "scale-step", label));
             cursor += TimeBase.durationTicks(tone.duration());
@@ -382,8 +382,7 @@ public final class StockLayers {
     }
 
     private static int scaleMidi(Key key, int degree, int octave) {
-        String name = key.pitchClassNames().get(degree) + octave;
-        return PitchName.midi(name);
+        return key.degreeMidi(degree, octave);
     }
 
     private static int velocity(double intensity) {

@@ -1,0 +1,26 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "athenacl.result.po/1",
+  "type": "object",
+  "required": ["schema", "ok", "command", "data", "warnings", "errors", "meta"],
+  "properties": {
+    "schema": { "const": "athenacl.result.po/1" },
+    "ok": { "type": "boolean" },
+    "command": { "const": "po sample" },
+    "data": {
+      "type": "object",
+      "required": ["generator", "n", "values"],
+      "properties": {
+        "generator": { "type": "string" },
+        "n": { "type": "integer" },
+        "values": { "type": "array" }
+      }
+    },
+    "warnings": { "type": "array" },
+    "errors": { "type": "array" },
+    "meta": {
+      "type": "object",
+      "required": ["version", "seed", "durationMs"]
+    }
+  }
+}

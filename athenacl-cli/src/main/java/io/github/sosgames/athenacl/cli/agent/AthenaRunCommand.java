@@ -7,6 +7,7 @@ import io.github.sosgames.athenacl.cli.model.KeyValue;
 import io.github.sosgames.athenacl.cli.model.TextPaths;
 import io.github.sosgames.athenacl.core.PathScript;
 import io.github.sosgames.athenacl.core.ScriptException;
+import io.github.sosgames.athenacl.core.ScriptRunner;
 import io.github.sosgames.athenacl.events.EventLog;
 import picocli.CommandLine;
 
@@ -21,10 +22,11 @@ import java.util.Map;
 import java.util.concurrent.Callable;
 
 /**
- * Runs a path-only script and writes {@code <stem>.mid}. The golden file sits beside the
- * script, same stem, {@code .mid}. {@code bytesEqualGolden} is true when those bytes match.
+ * Runs a path script or a LineGroove beat and writes {@code <stem>.mid}. The golden
+ * file sits beside the script, same stem, {@code .mid}. {@code bytesEqualGolden} is true
+ * when those bytes match.
  */
-@CommandLine.Command(name = "run", description = "Run a path-only script and compare its MIDI to the golden.")
+@CommandLine.Command(name = "run", description = "Run a script and compare its MIDI to the golden.")
 public class AthenaRunCommand implements Callable<Integer> {
     @CommandLine.ParentCommand AthenaCommand athena;
     @CommandLine.Parameters(index = "0", arity = "0..1", paramLabel = "<script.ath>")
@@ -50,7 +52,7 @@ public class AthenaRunCommand implements Callable<Integer> {
         Path golden = script.resolveSibling(stem + ".mid");
         try {
             String text = Files.readString(script, StandardCharsets.UTF_8);
-            PathScript.Result score = PathScript.run(text, stem);
+            PathScript.Result score = ScriptRunner.run(text, stem);
             if (!Files.isRegularFile(golden)) {
                 return parent.fail(ExitCode.NOT_FOUND, "NOT_FOUND", "golden", "golden MIDI not found",
                         "Expect " + TextPaths.portable(golden) + " beside the script.");

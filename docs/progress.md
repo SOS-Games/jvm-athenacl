@@ -94,6 +94,12 @@ A note list such as `samples/notes/c-major-scale.yaml` renders to `score.mid`, `
 
 ## L13 — Path slice
 
-`athena run conformance/paths/c-major.ath --out build/l13` writes MIDI for a path with no texture. Pitch names, pitch groups, and the event list are in. The file matches the golden MIDI beside the script (`bytesEqualGolden=true`). A script that uses a texture exits 3. Set-class names, textures, and the 31 demo scripts are later slices.
+`athena run conformance/paths/c-major.ath --out build/l13` writes MIDI for a path with no texture. Pitch names, pitch groups, and the event list are in. The file matches the golden MIDI beside the script (`bytesEqualGolden=true`). A script that sets an amplitude still exits 3. Set-class names are a later slice.
 
-`gradlew layerCheck -Player=L13` passes (3 checks). The full `gradlew layerCheck` passes (115 checks).
+`gradlew layerCheck -Player=L13` passes (3 checks).
+
+## L14 — Line groove
+
+`po sample basketGen "oc,(1,2,3)" --n 6` prints `values=1,2,3,1,2,3`. `athena run conformance/demos/script02a.ath --out build/l14` plays the basic beat and matches the golden MIDI. `conformance run --subset slice` checks that beat and the shuffled snare (`script02b`) and prints `pass=2 fail=0`. `tpsd` and `tmsd` are separate generators. Each instrument is scored twice while it is built, and those notes are thrown away. A rest does not draw an amplitude.
+
+`gradlew layerCheck -Player=L14` passes (3 checks). The full `gradlew layerCheck` passes (118 checks).

@@ -5,6 +5,7 @@ import org.junit.jupiter.api.Test;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -53,6 +54,23 @@ class CoreTest {
     void pathScriptsMatchGoldenMidi() throws Exception {
         assertGolden("c-major");
         assertGolden("triads");
+    }
+
+    @Test
+    void basketWalksInOrder() {
+        assertEquals(List.of("1", "2", "3", "1", "2", "3"),
+                ParameterObjects.sample("basketGen", "oc,(1,2,3)", 6, 0));
+    }
+
+    @Test
+    void lineGrooveMatchesGoldenMidi() throws Exception {
+        for (String stem : List.of("script02a", "script02b")) {
+            Path dir = Path.of("conformance/demos");
+            String text = Files.readString(dir.resolve(stem + ".ath"));
+            byte[] got = ScriptRunner.run(text, stem).midi();
+            byte[] expected = Files.readAllBytes(dir.resolve(stem + ".mid"));
+            assertArrayEquals(expected, got, stem);
+        }
     }
 
     @Test

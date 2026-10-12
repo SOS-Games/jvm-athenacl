@@ -184,13 +184,19 @@ public final class CommandCatalog {
                     "athenacl.result.compat/1"),
             new CommandInfo(
                     "conformance",
-                    "conformance list counts the 31 pregui MIDI demo scripts. conformance run checks that each script has commands.",
+                    "conformance list counts the 31 pregui MIDI demo scripts. conformance run checks that each script has commands. conformance run --subset slice compares the LineGroove beats to their golden MIDI.",
                     List.of(gradle("conformance list")),
                     false,
                     "athenacl.result.conformance/1"),
             new CommandInfo(
+                    "po",
+                    "po sample draws the next values from a parameter object. basketGen with oc walks the list and then starts over.",
+                    List.of(gradle("po sample basketGen \"oc,(1,2,3)\" --n 6")),
+                    false,
+                    "athenacl.result.po/1"),
+            new CommandInfo(
                     "athena",
-                    "athena run plays a path-only script and checks the MIDI against the golden file beside it.",
+                    "athena run plays a path or a LineGroove beat and checks the MIDI against the golden file beside it.",
                     List.of(gradle("athena run conformance/paths/c-major.ath --out build/l13")),
                     true,
                     "athenacl.result.athena/1"));

@@ -19,8 +19,8 @@ stdout-contains: tracks=2
 file-exists: build/l13b/triads.mid
 
 ---
-name: a texture script is not this slice
-args: athena run conformance/demos/script02a.ath --out build/l13c
+name: an amplitude script is not this slice
+args: athena run conformance/demos/script01a.ath --out build/l13c
 exit: 3
 stdout-contains: error code=ATHENA_TEXTURE
 file-absent: build/l13c

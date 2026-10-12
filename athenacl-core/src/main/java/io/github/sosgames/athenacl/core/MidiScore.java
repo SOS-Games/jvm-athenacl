@@ -12,8 +12,10 @@ import java.util.TreeMap;
  * Writes a Standard MIDI file the way athenaCL's score writer does: 960 ticks per quarter,
  * format 1, a meta track, then one track per part. Channel 10 is left for drums.
  * A note-off is a note-on with velocity 0. Times are seconds, turned into ticks with
- * half-to-even rounding. Parts that share a channel are not shifted: the original
- * scores the notes before it sets that flag, so the file never shows the shift.
+ * half-to-even rounding. The first part on a channel writes the track name and the
+ * volume. A later part on that same channel only adds its program change, then its
+ * notes. Parts that share a channel are not shifted: the original scores the notes
+ * before it sets that flag, so the file never shows the shift.
  */
 public final class MidiScore {
     public static final int PPQ = 960;
@@ -39,9 +41,12 @@ public final class MidiScore {
             if (next >= open.length) {
                 next = 0;
             }
+            boolean fresh = !parts.containsKey(channel);
             Part part = parts.computeIfAbsent(channel, key -> new Part());
-            part.add(0, meta(0x03, track.name));
-            part.add(0, control(channel, 0x07, 127));
+            if (fresh) {
+                part.add(0, meta(0x03, track.name));
+                part.add(0, control(channel, 0x07, 127));
+            }
             part.add(0, program(channel, track.program));
             for (Note note : track.notes) {
                 if (note.velocity == 0) {

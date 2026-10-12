@@ -1,0 +1,21 @@
+# L14 LineGroove. Directive list: AGENTS.md, section "Layer checks".
+
+name: basket walks in order
+args: po sample basketGen "oc,(1,2,3)" --n 6
+exit: 0
+stdout-contains: values=1,2,3,1,2,3
+
+---
+name: basic beat matches the golden
+args: athena run conformance/demos/script02a.ath --out build/l14
+exit: 0
+stdout-contains: bytesEqualGolden=true
+file-exists: build/l14/script02a.mid
+delete-before: build/l14
+
+---
+name: slice beats match
+args: conformance run --subset slice
+exit: 0
+stdout-contains: pass=2
+stdout-contains: fail=0

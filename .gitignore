@@ -17,6 +17,7 @@ Thumbs.db
 !samples/motifs/*.mid
 !samples/melodies/*.mid
 !conformance/paths/*.mid
+!conformance/demos/*.mid
 *.sf2
 *.sf3
 !samples/kits/*.sf3

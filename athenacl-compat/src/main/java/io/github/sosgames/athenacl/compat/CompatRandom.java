@@ -6,8 +6,8 @@ import io.github.sosgames.athenacl.events.RandomSource;
 /**
  * CPython's MT19937, including {@code random.seed(int)}. {@code random()} is the
  * 53-bit mix of two draws. {@code nextInt} is {@code _randbelow}, the same call
- * {@code randint}, {@code choice}, and {@code shuffle} use. {@code fork} does not
- * advance this generator.
+ * {@code randint}, {@code choice}, and {@code shuffle} use. Choosing from one item
+ * still draws bits until the result is zero. {@code fork} does not advance this generator.
  */
 public final class CompatRandom implements RandomSource {
     private static final int N = 624;
@@ -130,9 +130,6 @@ public final class CompatRandom implements RandomSource {
     }
 
     private int randbelow(int bound) {
-        if (bound <= 1) {
-            return 0;
-        }
         int bits = 32 - Integer.numberOfLeadingZeros(bound);
         while (true) {
             int draw = getrandbits(bits);

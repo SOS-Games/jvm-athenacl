@@ -4,11 +4,16 @@ package io.github.sosgames.athenacl.cli.agent;
 import io.github.sosgames.athenacl.cli.model.ExitCode;
 import io.github.sosgames.athenacl.cli.model.KeyValue;
 import io.github.sosgames.athenacl.compat.DemoCorpus;
+import io.github.sosgames.athenacl.core.PathScript;
+import io.github.sosgames.athenacl.core.ScriptException;
+import io.github.sosgames.athenacl.core.ScriptRunner;
 import picocli.CommandLine;
 
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.Arrays;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -17,8 +22,8 @@ import java.util.concurrent.Callable;
 
 /**
  * The pregui MIDI demo scripts. {@code list} counts them. {@code run} checks that
- * each file has commands. Byte-for-byte MIDI comparison starts when the engine can
- * play a script.
+ * each file has commands. {@code run --subset slice} plays the LineGroove beats and
+ * compares each MIDI file to the golden beside the script.
  */
 public final class ConformanceCommand {
     static final Path DEMOS = Path.of("conformance/demos");
@@ -80,14 +85,21 @@ public final class ConformanceCommand {
         }
     }
 
-    @CommandLine.Command(name = "run", description = "Check that every demo script has commands.")
+    @CommandLine.Command(name = "run", description = "Check the demo scripts.")
     public static class RunScripts implements Callable<Integer> {
+        static final List<String> SLICE = List.of("script02a.ath", "script02b.ath");
+
         @CommandLine.ParentCommand Root conformance;
+        @CommandLine.Option(names = "--subset", paramLabel = "<name>")
+        String subset;
 
         @Override
         public Integer call() {
             AgentCli parent = conformance.cli();
             parent.commandName = "conformance run";
+            if (subset != null) {
+                return slice(parent);
+            }
             List<Path> scripts;
             try {
                 scripts = DemoCorpus.scripts(DEMOS);
@@ -120,6 +132,56 @@ public final class ConformanceCommand {
             data.put("missing", missing);
             data.put("fail", missing);
             ExitCode code = missing == 0 ? ExitCode.OK : ExitCode.CHECK_FAILED;
+            return parent.finish(code, KeyValue.line(fields), "athenacl.result.conformance-run/1",
+                    data, List.of(), List.of());
+        }
+
+        private Integer slice(AgentCli parent) {
+            if (!"slice".equals(subset)) {
+                return parent.fail(ExitCode.USAGE, "USAGE", "--subset",
+                        "unknown subset: " + subset,
+                        "Try conformance run --subset slice.");
+            }
+            int pass = 0;
+            int fail = 0;
+            try {
+                for (String name : SLICE) {
+                    Path script = DEMOS.resolve(name);
+                    if (!Files.isRegularFile(script)) {
+                        return parent.fail(ExitCode.NOT_FOUND, "NOT_FOUND", name, "script not found",
+                                "Run from the repo root, where conformance/demos lives.");
+                    }
+                    String stem = name.substring(0, name.length() - 4);
+                    Path golden = script.resolveSibling(stem + ".mid");
+                    if (!Files.isRegularFile(golden)) {
+                        return parent.fail(ExitCode.NOT_FOUND, "NOT_FOUND", stem + ".mid",
+                                "golden MIDI not found",
+                                "Expect the golden beside the script.");
+                    }
+                    String text = Files.readString(script, StandardCharsets.UTF_8);
+                    PathScript.Result score = ScriptRunner.run(text, stem);
+                    byte[] expected = Files.readAllBytes(golden);
+                    if (Arrays.equals(score.midi(), expected)) {
+                        pass++;
+                    } else {
+                        fail++;
+                    }
+                }
+            } catch (ScriptException e) {
+                return parent.fail(ExitCode.INVALID_INPUT, e.code(), e.path(), e.getMessage(), e.fix());
+            } catch (IOException e) {
+                return parent.fail(ExitCode.RUNTIME, "IO_ERROR", "conformance/demos", e.getMessage(),
+                        "Check that the slice scripts and goldens are readable.");
+            }
+            Map<String, String> fields = new LinkedHashMap<>();
+            fields.put("subset", "slice");
+            fields.put("pass", Integer.toString(pass));
+            fields.put("fail", Integer.toString(fail));
+            Map<String, Object> data = new LinkedHashMap<>();
+            data.put("subset", "slice");
+            data.put("pass", pass);
+            data.put("fail", fail);
+            ExitCode code = fail == 0 ? ExitCode.OK : ExitCode.CHECK_FAILED;
             return parent.finish(code, KeyValue.line(fields), "athenacl.result.conformance-run/1",
                     data, List.of(), List.of());
         }

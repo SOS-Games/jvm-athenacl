@@ -45,7 +45,10 @@ gradlew.bat :athenacl-cli:agentCli --args="debug bisect --good build/l11/a --bad
 gradlew.bat :athenacl-cli:agentCli --args="diff themes/fantasy-dungeon.yaml themes/scifi-space.yaml"
 gradlew.bat :athenacl-cli:agentCli --args="compat random --seed 7 --n 5"
 gradlew.bat :athenacl-cli:agentCli --args="conformance list"
+gradlew.bat :athenacl-cli:agentCli --args="conformance run --subset slice"
+gradlew.bat :athenacl-cli:agentCli --args="po sample basketGen \"oc,(1,2,3)\" --n 6"
 gradlew.bat :athenacl-cli:agentCli --args="athena run conformance/paths/c-major.ath --out build/l13"
+gradlew.bat :athenacl-cli:agentCli --args="athena run conformance/demos/script02a.ath --out build/l14"
 gradlew.bat :athenacl-cli:agentCli --args="debug inspect build/l0/events.jsonl --where pitch=E4"
 gradlew.bat :athenacl-cli:agentCli --args="soundbank install generaluser --dry-run"
 gradlew.bat :athenacl-cli:agentCli --args="describe instruments --soundbank generaluser"
@@ -79,8 +82,9 @@ gradlew.bat :athenacl-cli:agentCli --args="melody generate --key E-minor --candi
 | debug | You want `debug determinism` (same event-log hash twice, optionally `--fork-jvm`), `debug bisect` (first bar where two renders split), `debug inspect` (filter notes with `--where`), `debug check --loudness`, `debug check --stuck-notes`, `debug bar`, `debug trace --transitions`, `debug replay`, `debug fuzz-transitions`, or `debug overhead`. |
 | diff | You want a semantic diff of two themes, or the first bar where two render directories split. `--fail-on-diff` exits 6 when they differ. |
 | compat | You want CPython `random()` draws. `compat random --seed 7 --n 5` prints the five values the port must match. |
-| conformance | You want `conformance list` to count the 31 pregui MIDI demo scripts, or `conformance run` to check that each script has commands. |
-| athena | You want `athena run` to play a path-only script and check its MIDI against the golden file beside it. |
+| conformance | You want `conformance list` to count the 31 pregui MIDI demo scripts, `conformance run` to check that each script has commands, or `conformance run --subset slice` to compare the LineGroove beats to their golden MIDI. |
+| po | You want `po sample basketGen "oc,(1,2,3)" --n 6` to walk a basket and print `values=1,2,3,1,2,3`. |
+| athena | You want `athena run` to play a path or a LineGroove beat and check its MIDI against the golden file beside it. |
 | soundbank | You want to install, list, or show GeneralUser GS or MuseScore_General. An `.sf3` file is rejected. |
 | describe | You want `describe scale`, `describe chord`, or `describe instruments` (287 presets and 13 drum kits in GeneralUser GS). |
 | analyze | You want EBU R128 integrated loudness and true peak for a WAV or a render directory. A swung render also prints `swing.measured=`. `analyze <dir> --by state` prints each state's offset from the contour. A motif render also prints `motif.reuse.per8bars=`. |
@@ -139,6 +143,7 @@ Published schema ids:
 - `athenacl.result.compat/1`
 - `athenacl.result.conformance/1`
 - `athenacl.result.conformance-run/1`
+- `athenacl.result.po/1`
 - `athenacl.result.athena/1`
 
 When you add a command, add it to `CommandCatalog`, add a row to the table above, and add a block to the layer's `checks/L*.check`. `LayerCheckTest` fails if the table is missing a catalog command.
@@ -335,12 +340,16 @@ A named `from` beats a wildcard, so entering combat or danger still waits for th
 
 ## Port foundation
 
-`compat random --seed 7 --n 5` prints `values=` as five CPython `random()` draws. The same seed also matches `randint`, `choice`, and `shuffle`. `gauss`, `expovariate`, and `betavariate` stay within 1e-15 of CPython. `Py.round` is half-to-even. `//` and `%` round toward negative infinity. Argument strings such as `pt,(c,2)` are quoted and then read as a Python row. `conformance/demos` holds the 31 MIDI demos, each seeded with `tpsd 7` and `tmsd 7` and closed with `eln`. `conformance list` prints `scripts=31`. `conformance run` prints `missing=0` when every file has commands. MIDI byte comparison for those texture scripts waits until a script can be played.
+`compat random --seed 7 --n 5` prints `values=` as five CPython `random()` draws. The same seed also matches `randint`, `choice`, and `shuffle`. `gauss`, `expovariate`, and `betavariate` stay within 1e-15 of CPython. `Py.round` is half-to-even. `//` and `%` round toward negative infinity. Argument strings such as `pt,(c,2)` are quoted and then read as a Python row. `conformance/demos` holds the 31 MIDI demos, each seeded with `tpsd 7` and `tmsd 7` and closed with `eln`. `conformance list` prints `scripts=31`. `conformance run` prints `missing=0` when every file has commands. `conformance run --subset slice` plays the LineGroove beats and prints `pass=` and `fail=0` when each MIDI file matches the golden beside the script.
 
 ## Path slice
 
-`athena run conformance/paths/c-major.ath --out build/l13` plays a path with no texture. `pin` names the path and lists pitch groups (`c4`, `d$4` for D flat, `f#4`, `g~4` for a quarter tone). Each group is a chord. `total` is the length in seconds; without it, each group lasts one second. `pidf` sets the weights. `eln` writes `<stem>.mid`. The summary includes `bytesEqualGolden=true` when that file matches the golden MIDI beside the script. A texture command such as `tin` exits 3 with `error code=ATHENA_TEXTURE`. Set-class names are not in this slice.
+`athena run conformance/paths/c-major.ath --out build/l13` plays a path with no texture. `pin` names the path and lists pitch groups (`c4`, `d$4` for D flat, `f#4`, `g~4` for a quarter tone). Each group is a chord. `total` is the length in seconds; without it, each group lasts one second. `pidf` sets the weights. `eln` writes `<stem>.mid`. The summary includes `bytesEqualGolden=true` when that file matches the golden MIDI beside the script. A script that sets an amplitude, such as `conformance/demos/script01a.ath`, still exits 3 with `error code=ATHENA_TEXTURE`. Set-class names are not in this slice.
 
-## Not in L13
+## Line groove
 
-The effects stage, SFZ kits, textures, parameter objects, and the rest of the athenaCL commands. Do not add them in a drive-by change.
+`po sample basketGen "oc,(1,2,3)" --n 6` prints `values=1,2,3,1,2,3`. `oc` walks the list and then starts again. `athena run conformance/demos/script02a.ath --out build/l14` plays the basic beat: three drums on MIDI channel 10, twenty seconds, tempo 120. `tpsd` seeds the shuffle basket. `tmsd` seeds the sustain draw and the amplitude. Choosing from a one-item list still draws bits. Creating each instrument scores it twice and throws those notes away, first with the default pulse and then with the rhythm from `tie r`. `eln` scores it a third time, and that pass is the file. The generators are not reseeded between those passes. A pulse with accent 0 is a rest and does not draw an amplitude. The note in the file lasts the sustain. `conformance run --subset slice` checks `script02a` and `script02b` and prints `pass=2 fail=0`. `script02b` shuffles the snare multipliers with `rp`.
+
+## Not in L14
+
+The effects stage, SFZ kits, the other textures, and the rest of the athenaCL commands. Do not add them in a drive-by change.

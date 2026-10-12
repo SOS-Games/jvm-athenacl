@@ -8,7 +8,12 @@ loudness:
   maxSpread: 6
   offsets: {sneaking: -1.5, peaceful: -1.0, trading: -1.0, partying: 1.5, danger: 2.0, combat: 4.0}
 scale: {tonic: A, mode: aeolian, leadingTone: true}
-harmony: {style: functional, progression: [i, VI, iv, V, i, VI, V, i], harmonicRhythm: 1, sevenths: dominant}
+harmony:
+  style: functional
+  progression: [i, VI, iv, V, i, VI, V, i]
+  harmonicRhythm: 1
+  sevenths: dominant
+  cadences: {4: half, 8: authentic}
 cadence: {strength: authentic, every: 8}
 drone: {enabled: false}
 voicing: {style: close, voiceLead: true, maxLeap: 4}

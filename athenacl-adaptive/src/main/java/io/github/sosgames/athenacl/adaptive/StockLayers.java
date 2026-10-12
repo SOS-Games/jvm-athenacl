@@ -12,10 +12,12 @@ import io.github.sosgames.athenacl.motif.MotifNote;
 import io.github.sosgames.athenacl.motif.PhrasePlan;
 import io.github.sosgames.athenacl.motif.hook.HookCache;
 import io.github.sosgames.athenacl.motif.hook.HookSettings;
-import io.github.sosgames.athenacl.theory.HarmonicRhythm;
 import io.github.sosgames.athenacl.theory.Key;
+import io.github.sosgames.athenacl.theory.Progression;
 
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 
 /**
  * Layers a theme can name, plus a stinger on the bar a state is entered.
@@ -25,7 +27,7 @@ import java.util.List;
  * so a later window matches the full render.
  * Combat uses the same motif turned upside down and shortened, with a trumpet, taiko on
  * every beat, horn stabs, and a kick-snare drum pattern.
- * A pad's degrees come from the resolved state, so a sixth is data rather than a mode test.
+ * A pad stacks the chord of this bar. The bass plays that chord's root, unless the state asked for a pedal.
  * When the theme has {@code hooks:}, the lead's idea is the critic's pick. That pick is
  * made once per state, before the bar loop. A theme without the block still calls
  * {@code MotifGenerator}, so L7's notes stay the same.
@@ -50,7 +52,7 @@ public final class StockLayers {
                         long start, long seed, Director.Ids ids, List<Director.Played> notes) {
         long id = ids.take();
         int midi = stinger.followsKey()
-                ? scaleMidi(state.key(), Math.min(stinger.degree(), state.key().pitchClassNames().size() - 1), 5)
+                ? harmony(state, bar.bar()).midi(stinger.degree(), 5)
                 : PitchName.midi(stinger.pitch());
         notes.add(played(id, start, stinger.duration(), midi, PitchName.name(midi), velocity(bar.intensity()),
                 3, "stinger", bar, seed, state.id(), "stinger"));
@@ -71,7 +73,7 @@ public final class StockLayers {
         int[] velocity = {36, 30, 24, 18};
         for (int i = 0; i < degrees.length; i++) {
             long id = ids.take();
-            int midi = scaleMidi(state.key(), degrees[i], 4);
+            int midi = harmony(state, info.bar()).midi(degrees[i], 4);
             notes.add(played(id, start + i * TimeBase.PPQ, "1/4", midi, PitchName.name(midi),
                     velocity[i], 11, "bridge", info, seed, state.id(), "wind-down"));
         }
@@ -136,10 +138,11 @@ public final class StockLayers {
 
     private static void pad(Theme.StateDef state, Director.BarInfo info, long start, long seed,
                             Director.Ids ids, List<Director.Played> notes) {
+        Progression.Chord chord = harmony(state, info.bar());
         int[] degrees = degrees(state, "density.pad.degrees", 0, 2, 4);
         for (int degree : degrees) {
             long id = ids.take();
-            int midi = scaleMidi(state.key(), degree, 4);
+            int midi = chord.midi(degree, 4);
             notes.add(played(id, start, "1/1", midi, PitchName.name(midi), velocity(info.intensity()),
                     0, "pad", info, seed, state.id(), "chord-tone"));
         }
@@ -147,7 +150,8 @@ public final class StockLayers {
 
     private static void bass(Theme.StateDef state, Director.BarInfo info, long start, long seed,
                              Director.Ids ids, List<Director.Played> notes) {
-        int midi = scaleMidi(state.key(), 0, 2);
+        Progression.Chord chord = harmony(state, info.bar());
+        int midi = chord.pedal() ? 12 * 3 + state.key().tonicPc() : chord.rootMidi(2);
         int step = count(state, "density.bass.step", 2);
         for (int beat = 0; beat < 4; beat += step) {
             long id = ids.take();
@@ -239,17 +243,21 @@ public final class StockLayers {
     private static void drone(Theme.StateDef state, Director.BarInfo info, long start, long seed,
                               Director.Ids ids, List<Director.Played> notes) {
         long id = ids.take();
-        int midi = scaleMidi(state.key(), 0, 2);
+        int octave = count(state, "drone.octave", 2);
+        int midi = state.composition() != null && state.composition().has("drone.degree")
+                ? scaleMidi(state.key(), state.composition().number("drone.degree", 0), octave)
+                : harmony(state, info.bar()).rootMidi(octave);
         notes.add(played(id, start, "1/1", midi, PitchName.name(midi), velocity(info.intensity()),
                 4, "drone", info, seed, state.id(), "drone"));
     }
 
     private static void harp(Theme.StateDef state, Director.BarInfo info, long start, long seed,
                              Director.Ids ids, List<Director.Played> notes) {
+        Progression.Chord chord = harmony(state, info.bar());
         int[] degrees = {0, 2, 4, 2};
         for (int beat = 0; beat < degrees.length; beat++) {
             long id = ids.take();
-            int midi = scaleMidi(state.key(), degrees[beat], 4);
+            int midi = chord.midi(degrees[beat], 4);
             notes.add(played(id, start + beat * TimeBase.PPQ, "1/4", midi, PitchName.name(midi),
                     velocity(info.intensity()), 6, "harp", info, seed, state.id(), "harp"));
         }
@@ -272,19 +280,21 @@ public final class StockLayers {
                               Director.Ids ids, List<Director.Played> notes) {
         if (on(state, "density.brass.stab")) {
             int vel = Math.max(velocity(info.intensity()), 110);
+            Progression.Chord chord = harmony(state, info.bar());
             for (int beat = 0; beat < 4; beat += 2) {
                 for (int degree : new int[] {0, 4}) {
                     long id = ids.take();
-                    int midi = scaleMidi(state.key(), degree, 4);
+                    int midi = chord.midi(degree, 4);
                     notes.add(played(id, start + beat * TimeBase.PPQ, "1/8", midi, PitchName.name(midi),
                             vel, 7, "brass", info, seed, state.id(), "brass"));
                 }
             }
             return;
         }
+        Progression.Chord chord = harmony(state, info.bar());
         for (int degree : new int[] {0, 4}) {
             long id = ids.take();
-            int midi = scaleMidi(state.key(), degree, 4);
+            int midi = chord.midi(degree, 4);
             notes.add(played(id, start, "1/1", midi, PitchName.name(midi), velocity(info.intensity()),
                     7, "brass", info, seed, state.id(), "brass"));
         }
@@ -329,30 +339,31 @@ public final class StockLayers {
         long cell = TimeBase.PPQ / (sixteenths ? 4 : 2);
         for (int i = 0; i < steps; i++) {
             long id = ids.take();
-            int midi = scaleMidi(state.key(), degrees[i % degrees.length], 5);
+            int midi = harmony(state, info.bar()).midi(degrees[i % degrees.length], 5);
             notes.add(played(id, start + i * cell, duration, midi, PitchName.name(midi),
                     velocity(info.intensity()), 10, "arp", info, seed, state.id(), "arp"));
         }
     }
 
-    /** The phrase chord for this bar, held. A tonic adds the mode's color tone. */
+    /** The phrase chord for this bar, held. */
     private static void chords(Theme theme, Theme.StateDef state, Director.BarInfo info, long start, long seed,
                                Director.Ids ids, List<Director.Played> notes) {
-        HarmonicRhythm.Slot slot = HarmonicRhythm.at(state.key(), info.bar(), theme.phraseBars());
-        for (int degree : slot.degrees()) {
+        Progression.Chord chord = harmony(state, info.bar());
+        for (int interval : chord.intervals()) {
             long id = ids.take();
-            int midi = scaleMidi(state.key(), degree, 4);
+            int midi = chord.rootMidi(4) + interval;
             notes.add(played(id, start, "1/1", midi, PitchName.name(midi), velocity(info.intensity()),
-                    12, "chords", info, seed, state.id(), slot.cadence() ? "cadence" : "chord"));
+                    12, "chords", info, seed, state.id(), chord.cadence() ? "cadence" : "chord"));
         }
     }
 
     /** Two held bell tones, the root and the fifth. */
     private static void bell(Theme.StateDef state, Director.BarInfo info, long start, long seed,
                              Director.Ids ids, List<Director.Played> notes) {
+        Progression.Chord chord = harmony(state, info.bar());
         for (int degree : new int[] {0, 4}) {
             long id = ids.take();
-            int midi = scaleMidi(state.key(), degree, 5);
+            int midi = chord.midi(degree, 5);
             notes.add(played(id, start, "1/1", midi, PitchName.name(midi), velocity(info.intensity()),
                     6, "bell", info, seed, state.id(), "bell"));
         }
@@ -379,6 +390,35 @@ public final class StockLayers {
 
     private static boolean on(Theme.StateDef state, String path) {
         return state.composition() != null && state.composition().flag(path, false);
+    }
+
+    /** The chord this bar plays. A missing progression uses the eight-bar default. */
+    private static Progression.Chord harmony(Theme.StateDef state, int bar) {
+        Composition composition = state.composition();
+        List<String> numerals = composition == null ? List.of() : composition.list("harmony.progression");
+        int rhythm = composition == null ? 1 : composition.number("harmony.harmonicRhythm", 1);
+        boolean leading = composition != null && composition.flag("scale.leadingTone", false);
+        boolean pedal = composition != null && (composition.flag("harmony.pedal", false)
+                || "pedal".equals(composition.text("harmony.style", "")));
+        return Progression.of(state.key(), numerals, rhythm, leading, pedal, cadences(composition)).at(bar);
+    }
+
+    private static Map<Integer, String> cadences(Composition composition) {
+        Map<Integer, String> marks = new LinkedHashMap<>();
+        if (composition == null) {
+            return marks;
+        }
+        String prefix = "harmony.cadences.";
+        for (Map.Entry<String, Composition.Leaf> entry : composition.leaves().entrySet()) {
+            if (!entry.getKey().startsWith(prefix)) {
+                continue;
+            }
+            String index = entry.getKey().substring(prefix.length());
+            if (!index.isEmpty() && index.chars().allMatch(Character::isDigit)) {
+                marks.put(Integer.parseInt(index), entry.getValue().value());
+            }
+        }
+        return marks;
     }
 
     private static int scaleMidi(Key key, int degree, int octave) {

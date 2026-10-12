@@ -40,3 +40,12 @@ exit: 3
 stdout-contains: error code=THEME_UNKNOWN_KEY
 stdout-contains: path=/states/sneaking/harmny
 stdout-contains: did you mean harmony
+
+---
+name: fantasy phrase marks its cadences
+args: theme resolve --genre fantasy --state peaceful
+exit: 0
+stdout-contains: harmony.progression=i,VI,iv,V,i,VI,V,i
+stdout-contains: harmony.cadences.4=half
+stdout-contains: harmony.cadences.8=authentic
+stdout-contains: scale.leadingTone=true

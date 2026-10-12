@@ -5,6 +5,7 @@ import org.junit.jupiter.api.Test;
 
 import java.nio.file.Path;
 import java.util.List;
+import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -96,6 +97,48 @@ class TheoryTest {
         assertEquals("3-11A", form.name());
         assertEquals("0,3,7", form.pcs());
         assertEquals("3-11", form.forte("3-11"));
+    }
+
+    @Test
+    void aMinorPhraseRaisesTheDominantAndKeepsTheBassMoving() {
+        Key key = Key.parse("A aeolian");
+        Progression phrase = Progression.of(key, List.of(), 1, true, false, Map.of());
+        Progression.Chord dominant = phrase.at(4);
+        assertEquals("V7", dominant.numeral());
+        assertEquals(List.of(4, 8, 11, 2), pcs(dominant));
+        Progression.Chord tonic = phrase.at(1);
+        assertEquals("i", tonic.numeral());
+        assertEquals(9, tonic.rootPc());
+        int[] roots = new int[8];
+        int run = 1;
+        int longest = 1;
+        for (int bar = 1; bar <= 8; bar++) {
+            roots[bar - 1] = phrase.at(bar).rootPc();
+            if (bar > 1 && roots[bar - 1] == roots[bar - 2]) {
+                run++;
+                longest = Math.max(longest, run);
+            } else if (bar > 1) {
+                run = 1;
+            }
+        }
+        assertTrue(longest <= 4, "roots stayed put for " + longest + " bars");
+    }
+
+    @Test
+    void aDiminishedTriadIsKeptOnlyOnTwoAndSeven() {
+        Key key = Key.parse("C major");
+        Progression phrase = Progression.of(key, List.of("iiidim", "viidim", "iidim"), 1, false, false, Map.of(1, "iiidim"));
+        assertEquals(List.of(0, 3, 7), java.util.Arrays.stream(phrase.at(1).intervals()).boxed().toList());
+        assertEquals(List.of(0, 3, 6), java.util.Arrays.stream(phrase.at(2).intervals()).boxed().toList());
+        assertEquals(List.of(0, 3, 6), java.util.Arrays.stream(phrase.at(3).intervals()).boxed().toList());
+    }
+
+    private static List<Integer> pcs(Progression.Chord chord) {
+        List<Integer> pcs = new java.util.ArrayList<>();
+        for (int interval : chord.intervals()) {
+            pcs.add(Math.floorMod(chord.rootPc() + interval, 12));
+        }
+        return pcs;
     }
 
     @Test

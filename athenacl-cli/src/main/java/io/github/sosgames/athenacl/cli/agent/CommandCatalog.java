@@ -89,11 +89,12 @@ public final class CommandCatalog {
                     "athenacl.result.soundbank/1"),
             new CommandInfo(
                     "describe",
-                    "describe scale lists a mode. describe chord names a roman numeral. describe instruments counts presets.",
+                    "describe scale lists a mode. describe chord names a roman numeral. describe instruments counts presets. describe pos lists the value generators.",
                     List.of(
                             gradle("describe scale D-dorian"),
                             gradle("describe chord Dm7 --key D-dorian"),
-                            gradle("describe instruments --soundbank generaluser")),
+                            gradle("describe instruments --soundbank generaluser"),
+                            gradle("describe pos --group value")),
                     false,
                     "athenacl.result.instruments/1"),
             new CommandInfo(
@@ -184,8 +185,10 @@ public final class CommandCatalog {
                     "athenacl.result.compat/1"),
             new CommandInfo(
                     "conformance",
-                    "conformance list counts the 31 pregui MIDI demo scripts. conformance run checks that each script has commands. conformance run --subset slice compares the LineGroove beats to their golden MIDI.",
-                    List.of(gradle("conformance list")),
+                    "conformance list counts the 31 pregui MIDI demo scripts. conformance run checks that each script has commands. conformance run --subset slice compares the LineGroove beats to their golden MIDI. conformance run --subset po.value samples the value generators.",
+                    List.of(
+                            gradle("conformance list"),
+                            gradle("conformance run --subset po.value")),
                     false,
                     "athenacl.result.conformance/1"),
             new CommandInfo(

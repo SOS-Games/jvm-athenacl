@@ -3,6 +3,7 @@ package io.github.sosgames.athenacl.cli.agent;
 
 import io.github.sosgames.athenacl.cli.model.ExitCode;
 import io.github.sosgames.athenacl.cli.model.KeyValue;
+import io.github.sosgames.athenacl.core.ValueGenerators;
 import io.github.sosgames.athenacl.theory.Chord;
 import io.github.sosgames.athenacl.theory.Key;
 import io.github.sosgames.athenacl.render.soundbank.InstrumentIndex;
@@ -15,6 +16,7 @@ import picocli.CommandLine;
 import javax.sound.midi.InvalidMidiDataException;
 import java.io.IOException;
 import java.nio.file.Path;
+import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -24,12 +26,14 @@ import java.util.concurrent.Callable;
  * {@code describe scale} lists a mode, {@code describe chord} names a roman numeral,
  * and {@code describe instruments} counts presets in a soundbank. GeneralUser GS is
  * {@code instruments=287 drumkits=13}. The bank has to be installed first.
+ * {@code describe pos --group value} lists the 45 value generators.
  */
-@CommandLine.Command(name = "describe", description = "Describe a scale, a chord, or a soundbank.",
+@CommandLine.Command(name = "describe", description = "Describe a scale, a chord, a soundbank, or the value generators.",
         subcommands = {
                 DescribeCommand.ScaleName.class,
                 DescribeCommand.ChordName.class,
-                DescribeCommand.Instruments.class
+                DescribeCommand.Instruments.class,
+                DescribeCommand.Pos.class
         })
 public class DescribeCommand implements Callable<Integer> {
     @CommandLine.ParentCommand AgentCli parent;
@@ -38,7 +42,7 @@ public class DescribeCommand implements Callable<Integer> {
     public Integer call() {
         parent.commandName = "describe";
         return parent.fail(ExitCode.USAGE, "USAGE", "argv[1]",
-                "usage: describe scale <key> | describe chord <symbol> --key <key> | describe instruments --soundbank <id>",
+                "usage: describe scale <key> | describe chord <symbol> --key <key> | describe instruments --soundbank <id> | describe pos --group value",
                 "Try describe scale D-dorian.");
     }
 
@@ -155,6 +159,45 @@ public class DescribeCommand implements Callable<Integer> {
                 return parent.fail(ExitCode.RUNTIME, "IO_ERROR", "--soundbank", e.getMessage(),
                         "Check that the soundbank file is readable.");
             }
+        }
+    }
+
+    @CommandLine.Command(name = "pos", description = "List parameter objects in one group.")
+    public static class Pos implements Callable<Integer> {
+        @CommandLine.ParentCommand DescribeCommand describe;
+        @CommandLine.Option(names = "--group", required = true, paramLabel = "<name>")
+        String group;
+
+        @Override
+        public Integer call() {
+            AgentCli parent = describe.parent;
+            parent.commandName = "describe pos";
+            if (!"value".equals(group)) {
+                return parent.fail(ExitCode.INVALID_INPUT, "INVALID_INPUT", "--group",
+                        "unknown group: " + group,
+                        "Try describe pos --group value.");
+            }
+            List<ValueGenerators.Generator> generators = ValueGenerators.valueGroup();
+            StringBuilder text = new StringBuilder();
+            Map<String, String> summary = new LinkedHashMap<>();
+            summary.put("group", "value");
+            summary.put("count", Integer.toString(generators.size()));
+            text.append(KeyValue.line(summary));
+            List<Map<String, String>> rows = new ArrayList<>();
+            for (ValueGenerators.Generator generator : generators) {
+                Map<String, String> fields = new LinkedHashMap<>();
+                fields.put("po", generator.acronym());
+                fields.put("name", generator.name());
+                text.append('\n').append(KeyValue.line(fields));
+                rows.add(fields);
+            }
+            text.append('\n');
+            Map<String, Object> data = new LinkedHashMap<>();
+            data.put("group", "value");
+            data.put("count", generators.size());
+            data.put("generators", rows);
+            return parent.finish(ExitCode.OK, text.toString(), "athenacl.result.pos/1",
+                    data, List.of(), List.of());
         }
     }
 }

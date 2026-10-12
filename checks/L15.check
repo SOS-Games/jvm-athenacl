@@ -1,0 +1,17 @@
+# L15 value generators. Directive list: AGENTS.md, section "Layer checks".
+
+name: value generators are listed
+args: describe pos --group value
+exit: 0
+stdout-contains: count=45
+stdout-contains: po=pr name=pathRead
+stdout-contains: po=si name=staticInst
+stdout-count: 45 po=
+
+---
+name: value samples match
+args: conformance run --subset po.value
+exit: 0
+stdout-contains: subset=po.value
+stdout-contains: pass=45
+stdout-contains: fail=0

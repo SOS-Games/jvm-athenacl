@@ -102,4 +102,10 @@ A note list such as `samples/notes/c-major-scale.yaml` renders to `score.mid`, `
 
 `po sample basketGen "oc,(1,2,3)" --n 6` prints `values=1,2,3,1,2,3`. `athena run conformance/demos/script02a.ath --out build/l14` plays the basic beat and matches the golden MIDI. `conformance run --subset slice` checks that beat and the shuffled snare (`script02b`) and prints `pass=2 fail=0`. `tpsd` and `tmsd` are separate generators. Each instrument is scored twice while it is built, and those notes are thrown away. A rest does not draw an amplitude.
 
-`gradlew layerCheck -Player=L14` passes (3 checks). The full `gradlew layerCheck` passes (118 checks).
+`gradlew layerCheck -Player=L14` passes (3 checks).
+
+## L15 — Value generators
+
+`describe pos --group value` lists the 45 public value generators. The private operator base is not one of them. `conformance run --subset po.value` samples each generator six times at seed 7 and prints `pass=45 fail=0`. The samples stay off the wave and breakpoint generators.
+
+`gradlew layerCheck -Player=L15` passes (2 checks). The full `gradlew layerCheck` passes (120 checks).

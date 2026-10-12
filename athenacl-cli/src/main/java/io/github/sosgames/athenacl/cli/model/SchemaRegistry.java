@@ -56,6 +56,7 @@ public final class SchemaRegistry {
             "athenacl.result.conformance/1",
             "athenacl.result.conformance-run/1",
             "athenacl.result.po/1",
+            "athenacl.result.pos/1",
             "athenacl.result.athena/1");
 
     private SchemaRegistry() {

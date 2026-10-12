@@ -57,6 +57,13 @@ class CoreTest {
     }
 
     @Test
+    void valueGeneratorsMatchGolden() throws Exception {
+        ValueGenerators.Check check = ValueGenerators.check(Path.of("conformance/po/value.txt"));
+        assertEquals(List.of(), check.failed());
+        assertEquals(45, check.pass());
+    }
+
+    @Test
     void basketWalksInOrder() {
         assertEquals(List.of("1", "2", "3", "1", "2", "3"),
                 ParameterObjects.sample("basketGen", "oc,(1,2,3)", 6, 0));

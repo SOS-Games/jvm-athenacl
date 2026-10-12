@@ -1,0 +1,27 @@
+genre: yo
+character: "shamisen"
+meter: "4/4"
+palette: "shamisen,flute,koto,bass,drums"
+limits: "Yo's five notes sit inside ionian. The shamisen is the GM program."
+loudness:
+  reference: -23
+  maxSpread: 6
+  offsets: {sneaking: -1.5, peaceful: -1.0, trading: -1.0, partying: 1.5, danger: 2.0, combat: 4.0}
+scale: {tonic: C, mode: ionian, leadingTone: false}
+harmony: {style: modal, progression: [i, VII, i, VII], harmonicRhythm: 1, sevenths: none}
+cadence: {strength: weak, every: 8}
+drone: {enabled: false}
+voicing: {style: close, voiceLead: true, maxLeap: 4}
+lead: {enabled: true, phrase: period, rhythmCells: [lsS, sslL], register: [A4, E6]}
+hooks: {enabled: false, candidates: 8}
+tempo: {bpm: 72}
+layers: [harp, lead, chords, bass, drums]
+programs: {harp: 106, lead: 73, chords: 107, bass: 32, drums: 0}
+instruments: {harp: shamisen, lead: flute, chords: koto, bass: bass.acoustic, drums: drums.standard}
+density:
+  pad: {degrees: [0, 2, 4]}
+  arp: {degrees: [0, 2, 4, 2], steps: 8}
+  bass: {step: 2}
+  taiko: {step: 2, minVelocity: 0}
+  brass: {stab: false}
+  drums: {fill: false}

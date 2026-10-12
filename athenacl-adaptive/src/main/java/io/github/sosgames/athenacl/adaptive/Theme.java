@@ -124,24 +124,30 @@ public record Theme(
     }
 
     public record StateDef(String id, Key key, int tempo, List<String> layers, String stinger,
-                           Map<String, Integer> programs, Map<String, String> instruments, String meter) {
+                           Map<String, Integer> programs, Map<String, String> instruments, String meter,
+                           Composition composition) {
         public StateDef(String id, Key key, int tempo, List<String> layers, String stinger) {
-            this(id, key, tempo, layers, stinger, Map.of(), Map.of(), null);
+            this(id, key, tempo, layers, stinger, Map.of(), Map.of(), null, null);
         }
 
         public StateDef(String id, Key key, int tempo, List<String> layers, String stinger,
                         Map<String, Integer> programs) {
-            this(id, key, tempo, layers, stinger, programs, Map.of(), null);
+            this(id, key, tempo, layers, stinger, programs, Map.of(), null, null);
         }
 
         public StateDef(String id, Key key, int tempo, List<String> layers, String stinger,
                         Map<String, Integer> programs, Map<String, String> instruments) {
-            this(id, key, tempo, layers, stinger, programs, instruments, null);
+            this(id, key, tempo, layers, stinger, programs, instruments, null, null);
+        }
+
+        public StateDef(String id, Key key, int tempo, List<String> layers, String stinger,
+                        Map<String, Integer> programs, Map<String, String> instruments, String meter) {
+            this(id, key, tempo, layers, stinger, programs, instruments, meter, null);
         }
 
         /** Same state, heard in this key. The declared meter stays. */
         public StateDef withKey(Key key) {
-            return new StateDef(id, key, tempo, layers, stinger, programs, instruments, meter);
+            return new StateDef(id, key, tempo, layers, stinger, programs, instruments, meter, composition);
         }
 
         public StateDef {

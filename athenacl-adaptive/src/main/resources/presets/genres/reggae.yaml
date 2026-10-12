@@ -1,0 +1,27 @@
+genre: reggae
+character: "skank"
+meter: "4/4"
+palette: "organ,bass,guitar,rhodes,drums"
+limits: "Offbeat organ, guitar, and a slow bass. No sung lyrics."
+loudness:
+  reference: -23
+  maxSpread: 6
+  offsets: {sneaking: -1.5, peaceful: -1.0, trading: -1.0, partying: 1.5, danger: 2.0, combat: 4.0}
+scale: {tonic: A, mode: dorian, leadingTone: false}
+harmony: {style: modal, progression: [i, VII, i, VII], harmonicRhythm: 1, sevenths: none}
+cadence: {strength: weak, every: 8}
+drone: {enabled: false}
+voicing: {style: close, voiceLead: true, maxLeap: 4}
+lead: {enabled: true, phrase: period, rhythmCells: [lsS, sslL], register: [A4, E6]}
+hooks: {enabled: false, candidates: 8}
+tempo: {bpm: 76}
+layers: [chords, bass, lead, pad, harp, drums]
+programs: {chords: 16, bass: 33, lead: 27, pad: 4, harp: 24, drums: 0}
+instruments: {chords: organ, bass: bass.finger, lead: guitar.clean, pad: rhodes, harp: nylon, drums: drums.standard}
+density:
+  pad: {degrees: [0, 2, 4, 5]}
+  arp: {degrees: [0, 2, 4, 2], steps: 8}
+  bass: {step: 2}
+  taiko: {step: 2, minVelocity: 0}
+  brass: {stab: false}
+  drums: {fill: false}

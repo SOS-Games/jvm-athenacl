@@ -1,0 +1,27 @@
+genre: rock
+character: "backbeat"
+meter: "4/4"
+palette: "guitar,bass,drums,organ,piano"
+limits: "Backbeat, two guitars, and organ. GM guitar is not a real amp."
+loudness:
+  reference: -23
+  maxSpread: 6
+  offsets: {sneaking: -1.5, peaceful: -1.0, trading: -1.0, partying: 1.5, danger: 2.0, combat: 4.0}
+scale: {tonic: E, mode: mixolydian, leadingTone: false}
+harmony: {style: modal, progression: [i, VII, i, VII], harmonicRhythm: 1, sevenths: none}
+cadence: {strength: weak, every: 8}
+drone: {enabled: false}
+voicing: {style: close, voiceLead: true, maxLeap: 4}
+lead: {enabled: true, phrase: period, rhythmCells: [lsS, sslL], register: [A4, E6]}
+hooks: {enabled: false, candidates: 8}
+tempo: {bpm: 128}
+layers: [lead, bass, drums, chords, harp, pad]
+programs: {lead: 29, bass: 33, drums: 0, chords: 16, harp: 27, pad: 0}
+instruments: {lead: guitar.overdrive, bass: bass.finger, drums: drums.standard, chords: organ, harp: guitar.clean, pad: piano}
+density:
+  pad: {degrees: [0, 2, 4]}
+  arp: {degrees: [0, 2, 4, 2], steps: 8}
+  bass: {step: 2}
+  taiko: {step: 2, minVelocity: 0}
+  brass: {stab: false}
+  drums: {fill: false}

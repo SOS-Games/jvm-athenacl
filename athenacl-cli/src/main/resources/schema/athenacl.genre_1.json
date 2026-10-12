@@ -1,0 +1,23 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "athenacl.genre/1",
+  "type": "object",
+  "required": ["genre", "scale", "harmony", "tempo"],
+  "properties": {
+    "genre": { "type": "string" },
+    "scale": { "type": "object" },
+    "harmony": { "type": "object" },
+    "cadence": { "type": "object" },
+    "drone": { "type": "object" },
+    "voicing": { "type": "object" },
+    "lead": { "type": "object" },
+    "hooks": { "type": "object" },
+    "instruments": { "type": "object" },
+    "tempo": { "type": "object" },
+    "density": { "type": "object" },
+    "dynamics": { "type": "object" },
+    "layers": { "type": "array" },
+    "programs": { "type": "object" }
+  },
+  "additionalProperties": true
+}

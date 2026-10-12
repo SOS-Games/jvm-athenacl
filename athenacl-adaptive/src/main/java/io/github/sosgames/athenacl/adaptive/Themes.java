@@ -66,6 +66,9 @@ public final class Themes {
         List<ThemeIssue> warnings = new ArrayList<>();
         String id = text(root, "id", name);
         String presetId = root.path("preset").asText("").trim();
+        if (presetId.isBlank()) {
+            presetId = root.path("genre").asText("").trim();
+        }
         Presets.Preset preset = null;
         if (!presetId.isBlank()) {
             preset = Presets.get(presetId);
@@ -332,6 +335,7 @@ public final class Themes {
     }
 
     private static Theme.StateDef stateDef(String id, JsonNode body, int bpm, List<ThemeIssue> issues) {
+        issues.addAll(Resolver.unknownKeys(id, body));
         String keyText = body.path("key").asText("C major");
         Key key;
         try {
@@ -349,6 +353,7 @@ public final class Themes {
 
     /** A preset state keeps its instruments when the theme only overrides a field such as tempo. */
     private static Theme.StateDef overlay(Theme.StateDef existing, JsonNode body, List<ThemeIssue> issues) {
+        issues.addAll(Resolver.unknownKeys(existing.id(), body));
         Key key = existing.key();
         if (body.hasNonNull("key")) {
             try {
@@ -370,7 +375,7 @@ public final class Themes {
                 : existing.stinger();
         String meter = body.has("meter") ? meter(existing.id(), body, issues) : existing.meter();
         return new Theme.StateDef(existing.id(), key, tempo, layers, stinger, existing.programs(),
-                existing.instruments(), meter);
+                existing.instruments(), meter, existing.composition());
     }
 
     private static List<String> layers(String id, JsonNode body, List<ThemeIssue> issues) {

@@ -126,10 +126,11 @@ public final class CommandCatalog {
                     "athenacl.result.rhythm/1"),
             new CommandInfo(
                     "theme",
-                    "theme validate checks states and transitions. theme explain prints the states a theme will play.",
+                    "theme validate checks states and transitions. theme explain prints the states a theme will play. theme resolve prints one genre and state after the merge.",
                     List.of(
                             gradle("theme validate samples/themes/poc.yaml"),
-                            gradle("theme explain samples/themes/poc.yaml")),
+                            gradle("theme explain samples/themes/poc.yaml"),
+                            gradle("theme resolve --genre fantasy --state sneaking")),
                     false,
                     "athenacl.result.validate/1"),
             new CommandInfo(

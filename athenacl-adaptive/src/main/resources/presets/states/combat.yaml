@@ -1,0 +1,7 @@
+state: combat
+density:
+  bass: {step: 1}
+  taiko: {step: 1, minVelocity: 114}
+  arp: {steps: 16}
+  brass: {stab: true}
+  drums: {fill: true}

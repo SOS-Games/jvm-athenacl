@@ -1,0 +1,27 @@
+genre: jazz
+character: "swing"
+meter: "4/4"
+palette: "piano,bass,ride,trumpet,vibes,trombone"
+limits: "Piano, bass, trumpet, vibes, trombone, and a kit. The swing is the character, not a copied tune."
+loudness:
+  reference: -23
+  maxSpread: 6
+  offsets: {sneaking: -1.5, peaceful: -1.0, trading: -1.0, partying: 1.5, danger: 2.0, combat: 4.0}
+scale: {tonic: F, mode: dorian, leadingTone: false}
+harmony: {style: modal, progression: [i, VII, i, VII], harmonicRhythm: 1, sevenths: none}
+cadence: {strength: weak, every: 8}
+drone: {enabled: false}
+voicing: {style: close, voiceLead: true, maxLeap: 4}
+lead: {enabled: true, phrase: period, rhythmCells: [lsS, sslL], register: [A4, E6]}
+hooks: {enabled: false, candidates: 8}
+tempo: {bpm: 120}
+layers: [chords, bass, drums, lead, bell, brass]
+programs: {chords: 0, bass: 32, drums: 0, lead: 56, bell: 11, brass: 57}
+instruments: {chords: piano, bass: bass.acoustic, drums: drums.standard, lead: trumpet, bell: vibes, brass: trombone}
+density:
+  pad: {degrees: [0, 2, 4, 5]}
+  arp: {degrees: [0, 2, 4, 2], steps: 8}
+  bass: {step: 2}
+  taiko: {step: 2, minVelocity: 0}
+  brass: {stab: false}
+  drums: {fill: false}

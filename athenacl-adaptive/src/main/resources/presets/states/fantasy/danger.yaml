@@ -1,0 +1,5 @@
+scale: {tonic: E, mode: phrygian}
+tempo: {bpm: 100}
+layers: [drone, pad, bass, brass, taiko]
+programs: {drone: 49, pad: 52, bass: 43, brass: 60, taiko: 116}
+instruments: {drone: strings.slow, pad: choir, bass: cello, brass: horn, taiko: taiko}

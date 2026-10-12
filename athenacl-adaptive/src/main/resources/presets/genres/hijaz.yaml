@@ -1,0 +1,27 @@
+genre: hijaz
+character: "maqam"
+meter: "4/4"
+palette: "oboe,strings,cello,nylon,choir"
+limits: "Phrygian dominant stands in for Hijaz. A 12-tone sketch, not a maqam performance."
+loudness:
+  reference: -23
+  maxSpread: 6
+  offsets: {sneaking: -1.5, peaceful: -1.0, trading: -1.0, partying: 1.5, danger: 2.0, combat: 4.0}
+scale: {tonic: E, mode: phrygian-dominant, leadingTone: false}
+harmony: {style: modal, progression: [i, VII, i, VII], harmonicRhythm: 1, sevenths: none}
+cadence: {strength: weak, every: 8}
+drone: {enabled: false}
+voicing: {style: close, voiceLead: true, maxLeap: 4}
+lead: {enabled: true, phrase: period, rhythmCells: [lsS, sslL], register: [A4, E6]}
+hooks: {enabled: false, candidates: 8}
+tempo: {bpm: 90}
+layers: [lead, pad, bass, harp, drone]
+programs: {lead: 68, pad: 48, bass: 43, harp: 24, drone: 52}
+instruments: {lead: oboe, pad: strings, bass: cello, harp: nylon, drone: choir}
+density:
+  pad: {degrees: [0, 2, 4]}
+  arp: {degrees: [0, 2, 4, 2], steps: 8}
+  bass: {step: 2}
+  taiko: {step: 2, minVelocity: 0}
+  brass: {stab: false}
+  drums: {fill: false}

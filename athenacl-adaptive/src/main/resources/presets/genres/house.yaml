@@ -1,0 +1,27 @@
+genre: house
+character: "kick-four"
+meter: "4/4"
+palette: "pad,bass,808,square,saw,celesta"
+limits: "A four-on-the-floor grid with two leads. No sidechain until the effects stage."
+loudness:
+  reference: -23
+  maxSpread: 6
+  offsets: {sneaking: -1.5, peaceful: -1.0, trading: -1.0, partying: 1.5, danger: 2.0, combat: 4.0}
+scale: {tonic: A, mode: aeolian, leadingTone: false}
+harmony: {style: modal, progression: [i, VII, i, VII], harmonicRhythm: 1, sevenths: none}
+cadence: {strength: weak, every: 8}
+drone: {enabled: false}
+voicing: {style: close, voiceLead: true, maxLeap: 4}
+lead: {enabled: true, phrase: period, rhythmCells: [lsS, sslL], register: [A4, E6]}
+hooks: {enabled: false, candidates: 8}
+tempo: {bpm: 124}
+layers: [pad, bass, drums, arp, lead, bell]
+programs: {pad: 88, bass: 38, drums: 25, arp: 80, lead: 81, bell: 8}
+instruments: {pad: pad.newage, bass: bass.synth, drums: drums.808, arp: lead.square, lead: lead.saw, bell: celesta}
+density:
+  pad: {degrees: [0, 2, 4]}
+  arp: {degrees: [0, 2, 4, 2], steps: 8}
+  bass: {step: 2}
+  taiko: {step: 2, minVelocity: 0}
+  brass: {stab: false}
+  drums: {fill: false}

@@ -1,0 +1,27 @@
+genre: ambient
+character: "sparse,pad"
+meter: "4/4"
+palette: "pad,celesta,choir,harp,flute,cello"
+limits: "Slow pads, choir, harp, and flute. No filter sweeps until the effects stage."
+loudness:
+  reference: -23
+  maxSpread: 6
+  offsets: {sneaking: -1.5, peaceful: -1.0, trading: -1.0, partying: 1.5, danger: 2.0, combat: 4.0}
+scale: {tonic: C, mode: lydian, leadingTone: false}
+harmony: {style: modal, progression: [i, VII, i, VII], harmonicRhythm: 1, sevenths: none}
+cadence: {strength: weak, every: 8}
+drone: {enabled: false}
+voicing: {style: close, voiceLead: true, maxLeap: 4}
+lead: {enabled: true, phrase: period, rhythmCells: [lsS, sslL], register: [A4, E6]}
+hooks: {enabled: false, candidates: 8}
+tempo: {bpm: 60}
+layers: [pad, bell, drone, chords, lead, bass]
+programs: {pad: 89, bell: 8, drone: 52, chords: 46, lead: 73, bass: 43}
+instruments: {pad: pad.warm, bell: celesta, drone: choir, chords: harp, lead: flute, bass: cello}
+density:
+  pad: {degrees: [0, 2, 4]}
+  arp: {degrees: [0, 2, 4, 3], steps: 8}
+  bass: {step: 2}
+  taiko: {step: 2, minVelocity: 0}
+  brass: {stab: false}
+  drums: {fill: false}

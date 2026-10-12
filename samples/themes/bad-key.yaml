@@ -1,0 +1,4 @@
+id: bad-key
+states:
+  sneaking:
+    harmny: {style: pedal}

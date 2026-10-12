@@ -1,0 +1,12 @@
+state: sneaking
+scale: {mode: dorian, leadingTone: false}
+harmony: {style: pedal, harmonicRhythm: 2}
+cadence: {strength: weak}
+drone: {enabled: true, degree: 0, octave: 2}
+lead: {phrase: sentence, rhythmCells: [long-rest, pizz-pair], density: 0.4}
+hooks: {every: 2}
+tempo: {relative: 0.8}
+density:
+  layers: {drums: off, arp: sparse}
+  pad: {degrees: [0, 2, 4, 5]}
+dynamics: {base: 48}

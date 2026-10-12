@@ -1,0 +1,7 @@
+scale: {tonic: D, mode: dorian}
+tempo: {bpm: 100}
+layers: [harp, pad, bass, lead]
+programs: {harp: 46, pad: 52, bass: 43, lead: 73}
+instruments: {harp: harp, pad: choir, bass: cello, lead: flute}
+density:
+  pad: {degrees: [0, 2, 4, 5]}

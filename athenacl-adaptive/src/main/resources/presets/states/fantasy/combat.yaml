@@ -1,0 +1,6 @@
+scale: {tonic: D, mode: aeolian}
+tempo: {bpm: 100}
+layers: [pad, brass, bass, lead, taiko, drums]
+programs: {pad: 48, brass: 60, bass: 43, lead: 56, taiko: 116, drums: 0}
+instruments: {pad: strings, brass: horn, bass: cello, lead: trumpet, taiko: taiko, drums: drums.orchestral}
+harmony: {progression: [i, VI, VII, V], harmonicRhythm: 1}

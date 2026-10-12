@@ -1,0 +1,27 @@
+genre: pentatonic
+character: "five-note"
+meter: "4/4"
+palette: "flute,harp,strings,bass,marimba,drums"
+limits: "Major pentatonic sits inside ionian. These instruments play the seven-note parent."
+loudness:
+  reference: -23
+  maxSpread: 6
+  offsets: {sneaking: -1.5, peaceful: -1.0, trading: -1.0, partying: 1.5, danger: 2.0, combat: 4.0}
+scale: {tonic: C, mode: ionian, leadingTone: false}
+harmony: {style: modal, progression: [i, VII, i, VII], harmonicRhythm: 1, sevenths: none}
+cadence: {strength: weak, every: 8}
+drone: {enabled: false}
+voicing: {style: close, voiceLead: true, maxLeap: 4}
+lead: {enabled: true, phrase: period, rhythmCells: [lsS, sslL], register: [A4, E6]}
+hooks: {enabled: false, candidates: 8}
+tempo: {bpm: 96}
+layers: [lead, harp, pad, bass, chords, drums]
+programs: {lead: 73, harp: 46, pad: 48, bass: 32, chords: 12, drums: 0}
+instruments: {lead: flute, harp: harp, pad: strings, bass: bass.acoustic, chords: marimba, drums: drums.standard}
+density:
+  pad: {degrees: [0, 2, 4]}
+  arp: {degrees: [0, 2, 4, 2], steps: 8}
+  bass: {step: 2}
+  taiko: {step: 2, minVelocity: 0}
+  brass: {stab: false}
+  drums: {fill: false}

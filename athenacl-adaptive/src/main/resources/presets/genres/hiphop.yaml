@@ -1,0 +1,27 @@
+genre: hiphop
+character: "trap"
+meter: "4/4"
+palette: "808,pad,drums,saw,rhodes"
+limits: "Instrumental only. GM has no rap vocals."
+loudness:
+  reference: -23
+  maxSpread: 6
+  offsets: {sneaking: -1.5, peaceful: -1.0, trading: -1.0, partying: 1.5, danger: 2.0, combat: 4.0}
+scale: {tonic: D, mode: aeolian, leadingTone: false}
+harmony: {style: modal, progression: [i, VII, i, VII], harmonicRhythm: 1, sevenths: none}
+cadence: {strength: weak, every: 8}
+drone: {enabled: false}
+voicing: {style: close, voiceLead: true, maxLeap: 4}
+lead: {enabled: true, phrase: period, rhythmCells: [lsS, sslL], register: [A4, E6]}
+hooks: {enabled: false, candidates: 8}
+tempo: {bpm: 84}
+layers: [bass, pad, drums, lead, chords, arp]
+programs: {bass: 38, pad: 88, drums: 25, lead: 81, chords: 4, arp: 80}
+instruments: {bass: bass.synth, pad: pad.newage, drums: drums.808, lead: lead.saw, chords: rhodes, arp: lead.square}
+density:
+  pad: {degrees: [0, 2, 4]}
+  arp: {degrees: [0, 2, 4, 2], steps: 8}
+  bass: {step: 2}
+  taiko: {step: 2, minVelocity: 0}
+  brass: {stab: false}
+  drums: {fill: false}

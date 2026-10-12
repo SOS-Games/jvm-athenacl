@@ -25,7 +25,7 @@ import java.util.List;
  * so a later window matches the full render.
  * Combat uses the same motif turned upside down and shortened, with a trumpet, taiko on
  * every beat, horn stabs, and a kick-snare drum pattern.
- * A dorian pad also sounds the sixth, so the key guess can tell dorian from aeolian.
+ * A pad's degrees come from the resolved state, so a sixth is data rather than a mode test.
  * When the theme has {@code hooks:}, the lead's idea is the critic's pick. That pick is
  * made once per state, before the bar loop. A theme without the block still calls
  * {@code MotifGenerator}, so L7's notes stay the same.
@@ -136,7 +136,7 @@ public final class StockLayers {
 
     private static void pad(Theme.StateDef state, Director.BarInfo info, long start, long seed,
                             Director.Ids ids, List<Director.Played> notes) {
-        int[] degrees = "dorian".equals(state.key().mode().id()) ? new int[] {0, 2, 4, 5} : new int[] {0, 2, 4};
+        int[] degrees = degrees(state, "density.pad.degrees", 0, 2, 4);
         for (int degree : degrees) {
             long id = ids.take();
             int midi = scaleMidi(state.key(), degree, 4);
@@ -148,7 +148,7 @@ public final class StockLayers {
     private static void bass(Theme.StateDef state, Director.BarInfo info, long start, long seed,
                              Director.Ids ids, List<Director.Played> notes) {
         int midi = scaleMidi(state.key(), 0, 2);
-        int step = combat(state) ? 1 : 2;
+        int step = count(state, "density.bass.step", 2);
         for (int beat = 0; beat < 4; beat += step) {
             long id = ids.take();
             notes.add(played(id, start + beat * TimeBase.PPQ, "1/4", midi, PitchName.name(midi),
@@ -258,8 +258,9 @@ public final class StockLayers {
     private static void taiko(Theme.StateDef state, Director.BarInfo info, long start, long seed,
                               Director.Ids ids, List<Director.Played> notes) {
         int midi = 45;
-        int step = combat(state) ? 1 : 2;
-        int vel = combat(state) ? Math.max(velocity(info.intensity()), 114) : velocity(info.intensity());
+        int step = count(state, "density.taiko.step", 2);
+        int floor = count(state, "density.taiko.minVelocity", 0);
+        int vel = floor > 0 ? Math.max(velocity(info.intensity()), floor) : velocity(info.intensity());
         for (int beat = 0; beat < 4; beat += step) {
             long id = ids.take();
             notes.add(played(id, start + beat * TimeBase.PPQ, "1/8", midi, PitchName.name(midi),
@@ -269,7 +270,7 @@ public final class StockLayers {
 
     private static void brass(Theme.StateDef state, Director.BarInfo info, long start, long seed,
                               Director.Ids ids, List<Director.Played> notes) {
-        if (combat(state)) {
+        if (on(state, "density.brass.stab")) {
             int vel = Math.max(velocity(info.intensity()), 110);
             for (int beat = 0; beat < 4; beat += 2) {
                 for (int degree : new int[] {0, 4}) {
@@ -291,7 +292,7 @@ public final class StockLayers {
 
     private static void drums(Theme.StateDef state, Director.BarInfo info, long start, long seed,
                               Director.Ids ids, List<Director.Played> notes) {
-        if (combat(state)) {
+        if (on(state, "density.drums.fill")) {
             hit(ids, notes, info, seed, state, start, 0, "1/8", 36, 124);
             hit(ids, notes, info, seed, state, start, 2, "1/8", 36, 124);
             hit(ids, notes, info, seed, state, start, 1, "1/8", 38, 118);
@@ -321,10 +322,11 @@ public final class StockLayers {
     /** Even notes on the eighth, or the sixteenth in combat. Every attack sits on that grid. */
     private static void arp(Theme.StateDef state, Director.BarInfo info, long start, long seed,
                             Director.Ids ids, List<Director.Played> notes) {
-        int[] degrees = "lydian".equals(state.key().mode().id()) ? new int[] {0, 2, 4, 3} : new int[] {0, 2, 4, 2};
-        int steps = combat(state) ? 16 : 8;
-        String duration = combat(state) ? "1/16" : "1/8";
-        long cell = TimeBase.PPQ / (combat(state) ? 4 : 2);
+        int[] degrees = degrees(state, "density.arp.degrees", 0, 2, 4, 2);
+        int steps = count(state, "density.arp.steps", 8);
+        boolean sixteenths = steps >= 16;
+        String duration = sixteenths ? "1/16" : "1/8";
+        long cell = TimeBase.PPQ / (sixteenths ? 4 : 2);
         for (int i = 0; i < steps; i++) {
             long id = ids.take();
             int midi = scaleMidi(state.key(), degrees[i % degrees.length], 5);
@@ -356,8 +358,27 @@ public final class StockLayers {
         }
     }
 
-    private static boolean combat(Theme.StateDef state) {
-        return "combat".equals(state.id());
+    private static int[] degrees(Theme.StateDef state, String path, int... fallback) {
+        if (state.composition() == null) {
+            return fallback;
+        }
+        List<Integer> listed = state.composition().ints(path);
+        if (listed.isEmpty()) {
+            return fallback;
+        }
+        int[] values = new int[listed.size()];
+        for (int i = 0; i < listed.size(); i++) {
+            values[i] = listed.get(i);
+        }
+        return values;
+    }
+
+    private static int count(Theme.StateDef state, String path, int fallback) {
+        return state.composition() == null ? fallback : state.composition().number(path, fallback);
+    }
+
+    private static boolean on(Theme.StateDef state, String path) {
+        return state.composition() != null && state.composition().flag(path, false);
     }
 
     private static int scaleMidi(Key key, int degree, int octave) {

@@ -1,0 +1,27 @@
+genre: orchestral
+character: "cinematic,strings"
+meter: "4/4"
+palette: "strings,horn,timpani,flute,harp,cello"
+limits: "GM strings, horn, timpani, flute, harp, and cello. No sung lyrics."
+loudness:
+  reference: -23
+  maxSpread: 6
+  offsets: {sneaking: -1.5, peaceful: -1.0, trading: -1.0, partying: 1.5, danger: 2.0, combat: 4.0}
+scale: {tonic: D, mode: aeolian, leadingTone: false}
+harmony: {style: modal, progression: [i, VII, i, VII], harmonicRhythm: 1, sevenths: none}
+cadence: {strength: weak, every: 8}
+drone: {enabled: false}
+voicing: {style: close, voiceLead: true, maxLeap: 4}
+lead: {enabled: true, phrase: period, rhythmCells: [lsS, sslL], register: [A4, E6]}
+hooks: {enabled: false, candidates: 8}
+tempo: {bpm: 72}
+layers: [pad, brass, taiko, lead, harp, bass]
+programs: {pad: 48, brass: 60, taiko: 47, lead: 73, harp: 46, bass: 43}
+instruments: {pad: strings, brass: horn, taiko: timpani, lead: flute, harp: harp, bass: cello}
+density:
+  pad: {degrees: [0, 2, 4]}
+  arp: {degrees: [0, 2, 4, 2], steps: 8}
+  bass: {step: 2}
+  taiko: {step: 2, minVelocity: 0}
+  brass: {stab: false}
+  drums: {fill: false}

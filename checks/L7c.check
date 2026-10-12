@@ -1,0 +1,42 @@
+# L7c melodic engine, composition model. Directive list: AGENTS.md, section "Layer checks".
+
+name: resolve fantasy sneaking
+args: theme resolve --genre fantasy --state sneaking
+exit: 0
+stdout-contains: scale.mode=dorian
+stdout-contains: scale.leadingTone=false
+stdout-contains: harmony.style=pedal
+stdout-contains: drone.enabled=true
+stdout-contains: tempo.bpm=77
+stdout-contains: lead.phrase=sentence
+stdout-contains: hooks.enabled=true
+stdout-contains: instruments.lead=flute
+
+---
+name: explain the merge chain
+args: theme resolve --genre fantasy --state sneaking --explain
+exit: 0
+stdout-contains: from=genre:fantasy|state:sneaking|state:fantasy/sneaking
+
+---
+name: a theme file overrides the state
+args: theme resolve themes/my-dungeon.yaml --state sneaking
+exit: 0
+stdout-contains: drone.enabled=false
+stdout-contains: from=theme:themes/my-dungeon.yaml
+stdout-contains: instruments.lead=clarinet
+
+---
+name: every genre can lead
+args: theme resolve --genre lofi --state combat --json
+exit: 0
+json-document
+json-equals: data.lead.enabled true
+
+---
+name: unknown module names the nearest key
+args: theme validate samples/themes/bad-key.yaml
+exit: 3
+stdout-contains: error code=THEME_UNKNOWN_KEY
+stdout-contains: path=/states/sneaking/harmny
+stdout-contains: did you mean harmony

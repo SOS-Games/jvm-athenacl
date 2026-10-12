@@ -4,7 +4,7 @@ Instructions for AI coding agents working in **jvm-athenacl**.
 
 ## Project
 
-GPL-3.0-or-later Java 21 rewrite of athenaCL as an adaptive game-music engine for libGDX desktop. Package `io.github.sosgames.athenacl`. Layer plan: [docs/research/05-project-plan.md](docs/research/05-project-plan.md). L0a–L21, L1b (instrument kits), and L7b (hook generator and melody critic) are in the tree. Do not start L6b or L9b until the user asks.
+GPL-3.0-or-later Java 21 rewrite of athenaCL as an adaptive game-music engine for libGDX desktop. Package `io.github.sosgames.athenacl`. Layer plan: [docs/research/05-project-plan.md](docs/research/05-project-plan.md). L0a–L21, L1b (instrument kits), L7b (hook generator and melody critic), and L7c step 0 (genre and state resolution) are in the tree. Do not start L6b or L9b until the user asks.
 
 - Java 21 (`options.release = 21`). Versions live in `gradle.properties`.
 - Groovy Gradle, same shape as SOS-Games/jvm-mw. Root `gradlew layerCheck`. CLI: `gradlew :athenacl-cli:agentCli --args="help"`.
@@ -72,6 +72,7 @@ gradlew.bat :athenacl-cli:agentCli --args="theory modulate D-dorian F-lydian --m
 gradlew.bat :athenacl-cli:agentCli --args="rhythm pattern x..x..x. --meter 6/8 --bars 2 --drum-grid"
 gradlew.bat :athenacl-cli:agentCli --args="rhythm poly 3:2 --bars 2 --out build/l3p"
 gradlew.bat :athenacl-cli:agentCli --args="theme validate samples/themes/poc.yaml"
+gradlew.bat :athenacl-cli:agentCli --args="theme resolve --genre fantasy --state sneaking"
 gradlew.bat :athenacl-cli:agentCli --args="render samples/themes/poc.yaml --timeline samples/timelines/poc.json --seed 42 --out build/l4"
 gradlew.bat :athenacl-cli:agentCli --args="preset list"
 gradlew.bat :athenacl-cli:agentCli --args="preset show fantasy"
@@ -105,7 +106,7 @@ gradlew.bat :athenacl-cli:agentCli --args="melody generate --key E-minor --candi
 | analyze | You want EBU R128 integrated loudness and true peak for a WAV or a render directory. A swung render also prints `swing.measured=`. `analyze <dir> --by state` prints each state's offset from the contour. A motif render also prints `motif.reuse.per8bars=`. |
 | theory | You want `theory progression` to voice-lead roman numerals, or `theory modulate` to plan a key change. |
 | rhythm | You want `rhythm pattern` to print a drum grid, or `rhythm poly` to write 3-against-2 into `events.jsonl`. |
-| theme | You want `theme validate` to check a theme file, or `theme explain` to print its states. |
+| theme | You want `theme validate` to check a theme file, `theme explain` to print its states, or `theme resolve --genre fantasy --state sneaking` to print one merged state. |
 | preset | You want `preset list` for the genre presets, `preset show fantasy` or `preset show scifi-space` for instruments and GM limits, or `preset audition reggae --bars 8 --seed 1` to play eight bars and print the character. |
 | motif | You want `motif generate` to grow a short idea, `motif transform` to turn it over, or `motif import` to read a MIDI melody. |
 | melody | You want `melody generate` to rank hook candidates, `melody score` to rate a MIDI line, `melody rate` to write an A/B row, or `melody fit` to turn ratings into weights. |
@@ -144,6 +145,10 @@ Published schema ids:
 - `athenacl.result.poly/1`
 - `athenacl.result.validate/1`
 - `athenacl.result.explain/1`
+- `athenacl.result.resolve/1`
+- `athenacl.genre/1`
+- `athenacl.state/1`
+- `athenacl.theme/1`
 - `athenacl.result.trace/1`
 - `athenacl.result.bar/1`
 - `athenacl.result.replay/1`

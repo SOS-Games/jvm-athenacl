@@ -1,0 +1,5 @@
+scale: {tonic: A, mode: lydian, leadingTone: false}
+tempo: {bpm: 100}
+layers: [pad, arp, bass]
+programs: {pad: 95, arp: 80, bass: 38}
+instruments: {pad: pad.sweep, arp: lead.square, bass: bass.synth}

@@ -1,0 +1,21 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "athenacl.state/1",
+  "type": "object",
+  "properties": {
+    "state": { "type": "string" },
+    "scale": { "type": "object" },
+    "harmony": { "type": "object" },
+    "cadence": { "type": "object" },
+    "drone": { "type": "object" },
+    "voicing": { "type": "object" },
+    "lead": { "type": "object" },
+    "hooks": { "type": "object" },
+    "instruments": { "type": "object" },
+    "tempo": { "type": "object" },
+    "density": { "type": "object" },
+    "dynamics": { "type": "object" },
+    "layers": { "type": "array" }
+  },
+  "additionalProperties": true
+}

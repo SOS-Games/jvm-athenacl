@@ -145,3 +145,7 @@ A note list such as `samples/notes/c-major-scale.yaml` renders to `score.mid`, `
 `preset list` prints `presets=25`: fantasy, sci-fi, fourteen more genres, and nine world packs. `preset audition reggae --bars 8 --seed 1` prints `character=skank` and a note count above 0. Hijaz plays E phrygian dominant. The five-note packs play the seven-note scale that contains those notes.
 
 `gradlew layerCheck -Player=L21` passes (3 checks). The full `gradlew layerCheck` passes (138 checks).
+
+## L7c — Melodic engine
+
+Step 0 moves the presets into `presets/genres` and `presets/states`. `theme resolve` merges genre defaults, the generic state, the genre-specific state, then the theme file. Lists replace and maps merge. Each value records which layer set it. StockLayers reads those density fields instead of testing the mode or the state name. Note hashes of existing themes can change where a state theme now supplies the pattern. `gradlew layerCheck -Player=L7c` is the resolve checks.

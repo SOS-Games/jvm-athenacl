@@ -1,0 +1,10 @@
+id: my-dungeon
+genre: fantasy
+bars: 16
+meter: "4/4"
+states:
+  sneaking:
+    drone: {enabled: false}
+    instruments: {lead: clarinet}
+  combat:
+    tempo: {bpm: 140}

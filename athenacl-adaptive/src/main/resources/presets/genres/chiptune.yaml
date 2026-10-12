@@ -1,0 +1,27 @@
+genre: chiptune
+character: "square"
+meter: "4/4"
+palette: "square,saw,bass,808,pad,celesta"
+limits: "Square and saw leads. No bitcrush until the effects stage."
+loudness:
+  reference: -23
+  maxSpread: 6
+  offsets: {sneaking: -1.5, peaceful: -1.0, trading: -1.0, partying: 1.5, danger: 2.0, combat: 4.0}
+scale: {tonic: C, mode: ionian, leadingTone: false}
+harmony: {style: modal, progression: [i, VII, i, VII], harmonicRhythm: 1, sevenths: none}
+cadence: {strength: weak, every: 8}
+drone: {enabled: false}
+voicing: {style: close, voiceLead: true, maxLeap: 4}
+lead: {enabled: true, phrase: period, rhythmCells: [lsS, sslL], register: [A4, E6]}
+hooks: {enabled: false, candidates: 8}
+tempo: {bpm: 140}
+layers: [arp, bass, lead, drums, pad, bell]
+programs: {arp: 80, bass: 38, lead: 81, drums: 25, pad: 88, bell: 8}
+instruments: {arp: lead.square, bass: bass.synth, lead: lead.saw, drums: drums.808, pad: pad.newage, bell: celesta}
+density:
+  pad: {degrees: [0, 2, 4]}
+  arp: {degrees: [0, 2, 4, 2], steps: 8}
+  bass: {step: 2}
+  taiko: {step: 2, minVelocity: 0}
+  brass: {stab: false}
+  drums: {fill: false}

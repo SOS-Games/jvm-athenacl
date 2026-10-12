@@ -1,0 +1,5 @@
+scale: {tonic: A, mode: aeolian}
+tempo: {bpm: 100}
+layers: [harp, pad, bass, lead]
+programs: {pad: 48, harp: 46, bass: 43, lead: 73}
+instruments: {harp: harp, pad: strings, bass: cello, lead: flute}

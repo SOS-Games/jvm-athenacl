@@ -3,7 +3,11 @@ package io.github.sosgames.athenacl.theory;
 
 import java.util.Locale;
 
-/** The seven diatonic modes. {@code major} means ionian and {@code minor} means aeolian. */
+/**
+ * The seven diatonic modes, plus phrygian dominant for the maqam, flamenco, and klezmer packs.
+ * {@code major} means ionian and {@code minor} means aeolian. Phrygian dominant is a 12-tone
+ * stand-in, not a claim about traditional practice.
+ */
 public enum Mode {
     IONIAN("ionian", 0, 2, 4, 5, 7, 9, 11),
     DORIAN("dorian", 0, 2, 3, 5, 7, 9, 10),
@@ -11,7 +15,8 @@ public enum Mode {
     LYDIAN("lydian", 0, 2, 4, 6, 7, 9, 11),
     MIXOLYDIAN("mixolydian", 0, 2, 4, 5, 7, 9, 10),
     AEOLIAN("aeolian", 0, 2, 3, 5, 7, 8, 10),
-    LOCRIAN("locrian", 0, 1, 3, 5, 6, 8, 10);
+    LOCRIAN("locrian", 0, 1, 3, 5, 6, 8, 10),
+    PHRYGIAN_DOMINANT("phrygian-dominant", 0, 1, 4, 5, 7, 8, 10);
 
     private final String id;
     private final int[] steps;

@@ -4,7 +4,7 @@ Instructions for AI coding agents working in **jvm-athenacl**.
 
 ## Project
 
-GPL-3.0-or-later Java 21 rewrite of athenaCL as an adaptive game-music engine for libGDX desktop. Package `io.github.sosgames.athenacl`. Layer plan: [docs/research/05-project-plan.md](docs/research/05-project-plan.md). L0a–L20, L1b (instrument kits), and L7b (hook generator and melody critic) are in the tree. Do not start L6b or L9b until the user asks.
+GPL-3.0-or-later Java 21 rewrite of athenaCL as an adaptive game-music engine for libGDX desktop. Package `io.github.sosgames.athenacl`. Layer plan: [docs/research/05-project-plan.md](docs/research/05-project-plan.md). L0a–L21, L1b (instrument kits), and L7b (hook generator and melody critic) are in the tree. Do not start L6b or L9b until the user asks.
 
 - Java 21 (`options.release = 21`). Versions live in `gradle.properties`.
 - Groovy Gradle, same shape as SOS-Games/jvm-mw. Root `gradlew layerCheck`. CLI: `gradlew :athenacl-cli:agentCli --args="help"`.
@@ -73,8 +73,10 @@ gradlew.bat :athenacl-cli:agentCli --args="rhythm pattern x..x..x. --meter 6/8 -
 gradlew.bat :athenacl-cli:agentCli --args="rhythm poly 3:2 --bars 2 --out build/l3p"
 gradlew.bat :athenacl-cli:agentCli --args="theme validate samples/themes/poc.yaml"
 gradlew.bat :athenacl-cli:agentCli --args="render samples/themes/poc.yaml --timeline samples/timelines/poc.json --seed 42 --out build/l4"
+gradlew.bat :athenacl-cli:agentCli --args="preset list"
 gradlew.bat :athenacl-cli:agentCli --args="preset show fantasy"
 gradlew.bat :athenacl-cli:agentCli --args="preset show scifi-space"
+gradlew.bat :athenacl-cli:agentCli --args="preset audition reggae --bars 8 --seed 1"
 gradlew.bat :athenacl-cli:agentCli --args="theme explain themes/fantasy-dungeon.yaml"
 gradlew.bat :athenacl-cli:agentCli --args="render themes/fantasy-dungeon.yaml --timeline samples/timelines/dungeon-tour.json --seed 1 --out build/l5 --formats mid,wav,events,txt"
 gradlew.bat :athenacl-cli:agentCli --args="analyze build/l5 --by state"
@@ -104,7 +106,7 @@ gradlew.bat :athenacl-cli:agentCli --args="melody generate --key E-minor --candi
 | theory | You want `theory progression` to voice-lead roman numerals, or `theory modulate` to plan a key change. |
 | rhythm | You want `rhythm pattern` to print a drum grid, or `rhythm poly` to write 3-against-2 into `events.jsonl`. |
 | theme | You want `theme validate` to check a theme file, or `theme explain` to print its states. |
-| preset | You want `preset show fantasy` or `preset show scifi-space` for a preset's instruments and GM limits. |
+| preset | You want `preset list` for the genre presets, `preset show fantasy` or `preset show scifi-space` for instruments and GM limits, or `preset audition reggae --bars 8 --seed 1` to play eight bars and print the character. |
 | motif | You want `motif generate` to grow a short idea, `motif transform` to turn it over, or `motif import` to read a MIDI melody. |
 | melody | You want `melody generate` to rank hook candidates, `melody score` to rate a MIDI line, `melody rate` to write an A/B row, or `melody fit` to turn ratings into weights. |
 | adapt | You want the scheduler snapshot: `state=`, `intensity=`, `bar=`, `sched.lookaheadMs=`, and `cpu.msPerBar=`. |
@@ -146,6 +148,8 @@ Published schema ids:
 - `athenacl.result.bar/1`
 - `athenacl.result.replay/1`
 - `athenacl.result.preset/1`
+- `athenacl.result.preset-list/1`
+- `athenacl.result.preset-audition/1`
 - `athenacl.result.motif/1`
 - `athenacl.result.melody/1`
 - `athenacl.result.fuzz/1`
@@ -328,7 +332,7 @@ A theme `hooks:` block replaces the L7 generator for that file. The picked hook 
 
 ## Instrument kits
 
-`instruments/gm-lite.yaml` is the default kit (GeneralUser GS). `instruments/gm-full.yaml` extends it and prefers MuseScore_General where it says so. `soundbank install musescore-general` downloads that SF2. An SF3 file is rejected with `SOUNDBANK_SF3_UNSUPPORTED` before Gervill opens it. `kit validate` checks the checksum, the license, and that two instruments did not receive the same slot. `instruments compare` prints `loudness.probe=` after each instrument is brought to about -20 LUFS, and `raw.deltaLu=` for the gap before that. `render --kit gm-full` puts each named instrument on its own slot.
+`instruments/gm-lite.yaml` is the default kit (GeneralUser GS). `instruments/gm-full.yaml` extends it and plays every named instrument from MuseScore_General, falling back to GeneralUser when a patch is missing. `soundbank install musescore-general` downloads that SF2. An SF3 file is rejected with `SOUNDBANK_SF3_UNSUPPORTED` before Gervill opens it. `kit validate` checks the checksum, the license, and that two instruments did not receive the same slot. `instruments compare` prints `loudness.probe=` after each instrument is brought to about -20 LUFS, and `raw.deltaLu=` for the gap before that. `render --kit gm-full` puts each named instrument on its own slot.
 
 `themes/fantasy-dungeon.yaml` names `instruments.kits: [gm-lite]` and the preset maps each layer to a kit instrument (`harp`, `strings`, `cello`, `flute`, and the rest). A render of that theme normalizes those instruments, then trims each state onto the loudness contour. The event-log hash stays the program-change log, not the trim.
 
@@ -336,7 +340,7 @@ A theme `hooks:` block replaces the L7 generator for that file. The picked hook 
 
 Entering combat or danger waits for the next beat and drops notes already queued after that beat. Other states still wait for the bar. `render themes/fantasy-dungeon.yaml --timeline samples/timelines/ambush.json --seed 1 --out build/l6` lands on beat 3 of bar 4. `debug trace build/l6 --transitions` prints `quantize=beat`, `retracted=`, and `latency.ms=`. `debug check build/l6 --stuck-notes` prints `stuck=0`. `debug fuzz-transitions themes/fantasy-dungeon.yaml --runs 1000 --seed 1` prints `lateTransitions=0`.
 
-`adapt themes/fantasy-dungeon.yaml --seed 1` prints `state=`, `intensity=`, `bar=`, `sched.lookaheadMs=150`, `cpu.msPerBar=`, `kit=gm-lite`, and `instruments=`. `gradlew :athenacl-gdx:run` opens a small window that plays the ambush through that kit and shows the same line. The combat theme's kit is rendered on a background thread and takes over at the next bar from bar 8. F3 writes `build/athenacl-snapshot.txt`. F4 hides the line.
+`adapt themes/fantasy-dungeon.yaml --seed 1` prints `state=`, `intensity=`, `bar=`, `sched.lookaheadMs=150`, `cpu.msPerBar=`, `kit=gm-lite`, and `instruments=`. `gradlew :athenacl-gdx:run` opens a window that plays the ambush, then a button for each other track and each genre preset. The window renders through `gm-full` (MuseScore_General). The combat theme's kit is rendered on a background thread and takes over at the next bar from bar 8. F3 writes `build/athenacl-snapshot.txt`. F4 hides the line.
 
 ## Overlays and wind-downs
 
@@ -392,6 +396,10 @@ A named `from` beats a wildcard, so entering combat or danger still waits for th
 
 `describe commands --group b` prints `count=48`, from `TCcp` through `menu`. `describe commands --group all` prints `count=103`. The source assigns a name 104 times, and `AUpc` is assigned twice, so the distinct names are 103. `conformance run --subset commands.b` prints `pass=48 fail=0`. The golden is `conformance/po/commands-b.txt`. `athena prompt --line "tpsd 7"` prints `command=TPsd args=7`. `?` is help, `!` is shell, `q` is quit, `man` is help, and `pi` opens the path menu. `help --json` lists every name under `athenaCommands`. The line is resolved and not run.
 
-## Not in L20
+## Genre presets
 
-Playing the other demo scripts, the interactive prompt, and the command bodies. Noise temperaments, spectral pitch, sieve complement and exclusive-or, and the event loops of the other textures. Markov, grammar, and automata stay on the value-generator samples. Do not add them in a drive-by change.
+`preset list` prints `presets=25`, the two starter presets plus fourteen genres and nine world packs. `preset audition reggae --bars 8 --seed 1` prints `character=skank` and `notes=` above 0. `hijaz` plays E phrygian dominant, a 12-tone stand-in for that maqam. Hirajoshi, yo, pentatonic, pelog, and slendro name the five-note set and play the seven-note scale that contains it. These packs are not a performance of that tradition.
+
+## Not in L21
+
+Playing the other demo scripts, the interactive prompt, and the command bodies. Filter sweeps, sidechain, bitcrush, vinyl crackle, and sung lyrics. Noise temperaments, spectral pitch, sieve complement and exclusive-or, and the event loops of the other textures. Markov, grammar, and automata stay on the value-generator samples. Do not add them in a drive-by change.

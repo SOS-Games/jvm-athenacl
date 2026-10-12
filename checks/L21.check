@@ -1,0 +1,30 @@
+# L21 other genres. Directive list: AGENTS.md, section "Layer checks".
+
+name: preset list has at least sixteen
+args: preset list
+exit: 0
+stdout-contains: presets=25
+stdout-contains: preset=fantasy
+stdout-contains: preset=metal
+stdout-contains: preset=hijaz
+stdout-count: 25 preset=
+
+---
+name: reggae audition is a skank
+args: preset audition reggae --bars 8 --seed 1
+exit: 0
+stdout-contains: preset=reggae
+stdout-contains: bars=8
+stdout-contains: seed=1
+stdout-contains: meter=4/4
+stdout-contains: character=skank
+stdout-regex: notes=[1-9]
+
+---
+name: hijaz audition uses phrygian dominant
+args: preset audition hijaz --bars 8 --seed 1
+exit: 0
+stdout-contains: preset=hijaz
+stdout-contains: key=E-phrygian-dominant
+stdout-contains: character=maqam
+stdout-regex: notes=[1-9]

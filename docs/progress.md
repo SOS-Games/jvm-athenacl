@@ -138,4 +138,10 @@ A note list such as `samples/notes/c-major-scale.yaml` renders to `score.mid`, `
 
 `describe commands --group b` lists the other 48 command names, from `TCcp` through `menu`. `describe commands --group all` lists all 103 distinct names. `AUpc` is assigned twice in the source. `athena prompt --line "tpsd 7"` prints `command=TPsd`. `help --json` lists every name. The line is resolved and not run.
 
-`gradlew layerCheck -Player=L20` passes (6 checks). The full `gradlew layerCheck` passes (135 checks).
+`gradlew layerCheck -Player=L20` passes (6 checks).
+
+## L21 — Other genres
+
+`preset list` prints `presets=25`: fantasy, sci-fi, fourteen more genres, and nine world packs. `preset audition reggae --bars 8 --seed 1` prints `character=skank` and a note count above 0. Hijaz plays E phrygian dominant. The five-note packs play the seven-note scale that contains those notes.
+
+`gradlew layerCheck -Player=L21` passes (3 checks). The full `gradlew layerCheck` passes (138 checks).

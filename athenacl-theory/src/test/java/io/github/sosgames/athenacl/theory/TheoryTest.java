@@ -19,6 +19,14 @@ class TheoryTest {
     }
 
     @Test
+    void phrygianDominantRoundTrips() {
+        Key key = Key.parse("E phrygian-dominant");
+        assertEquals("E-phrygian-dominant", key.name());
+        assertEquals("E,F,G#,A,B,C,D", key.pcs());
+        assertEquals(key.name(), Key.parse(key.name()).name());
+    }
+
+    @Test
     void minorSeventhInDorian() {
         Chord chord = Chord.parse("Dm7");
         Key key = Key.parse("D dorian");

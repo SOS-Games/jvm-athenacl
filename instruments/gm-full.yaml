@@ -14,5 +14,47 @@ sources:
       file: licenses/MuseScore_General_License.md
 instruments:
   piano: {source: msg, bank: 0, program: 0, fallback: [gm-lite:piano]}
+  harp: {source: msg, bank: 0, program: 46, gainDb: -1.5, keyRange: [C1, G7], outOfRange: fold, fallback: [gm-lite:harp]}
+  strings: {source: msg, bank: 0, program: 48, fallback: [gm-lite:strings]}
   choir: {source: msg, bank: 0, program: 52, fallback: [gm-lite:choir]}
+  flute: {source: msg, bank: 0, program: 73, fallback: [gm-lite:flute]}
+  panflute: {source: msg, bank: 0, program: 75, fallback: [gm-lite:panflute]}
+  fiddle: {source: msg, bank: 0, program: 110, fallback: [gm-lite:fiddle]}
+  taiko: {source: msg, bank: 0, program: 116, transpose: -12, fallback: [gm-lite:taiko]}
+  bass.synth: {source: msg, bank: 0, program: 38, fallback: [gm-lite:bass.synth]}
+  drums.orchestral: {source: msg, drumkit: 48, fallback: [gm-lite:drums.orchestral]}
   drums.808: {source: msg, drumkit: 25, fallback: [gm-lite:drums.808]}
+  cello: {source: msg, bank: 0, program: 43, fallback: [gm-lite:cello]}
+  horn: {source: msg, bank: 0, program: 60, fallback: [gm-lite:horn]}
+  trumpet: {source: msg, bank: 0, program: 56, fallback: [gm-lite:trumpet]}
+  strings.slow: {source: msg, bank: 0, program: 49, fallback: [gm-lite:strings.slow]}
+  pad.newage: {source: msg, bank: 0, program: 88, fallback: [gm-lite:pad.newage]}
+  pad.warm: {source: msg, bank: 0, program: 89, fallback: [gm-lite:pad.warm]}
+  pad.sweep: {source: msg, bank: 0, program: 95, fallback: [gm-lite:pad.sweep]}
+  lead.square: {source: msg, bank: 0, program: 80, fallback: [gm-lite:lead.square]}
+  lead.saw: {source: msg, bank: 0, program: 81, fallback: [gm-lite:lead.saw]}
+  fx.atmosphere: {source: msg, bank: 0, program: 99, fallback: [gm-lite:fx.atmosphere]}
+  celesta: {source: msg, bank: 0, program: 8, fallback: [gm-lite:celesta]}
+  rhodes: {source: msg, bank: 0, program: 4, fallback: [gm-lite:rhodes]}
+  clav: {source: msg, bank: 0, program: 7, fallback: [gm-lite:clav]}
+  vibes: {source: msg, bank: 0, program: 11, fallback: [gm-lite:vibes]}
+  marimba: {source: msg, bank: 0, program: 12, fallback: [gm-lite:marimba]}
+  organ: {source: msg, bank: 0, program: 16, fallback: [gm-lite:organ]}
+  accordion: {source: msg, bank: 0, program: 21, fallback: [gm-lite:accordion]}
+  nylon: {source: msg, bank: 0, program: 24, fallback: [gm-lite:nylon]}
+  guitar.clean: {source: msg, bank: 0, program: 27, fallback: [gm-lite:guitar.clean]}
+  guitar.overdrive: {source: msg, bank: 0, program: 29, fallback: [gm-lite:guitar.overdrive]}
+  guitar.distortion: {source: msg, bank: 0, program: 30, fallback: [gm-lite:guitar.distortion]}
+  bass.acoustic: {source: msg, bank: 0, program: 32, fallback: [gm-lite:bass.acoustic]}
+  bass.finger: {source: msg, bank: 0, program: 33, fallback: [gm-lite:bass.finger]}
+  violin: {source: msg, bank: 0, program: 40, fallback: [gm-lite:violin]}
+  pizzicato: {source: msg, bank: 0, program: 45, fallback: [gm-lite:pizzicato]}
+  timpani: {source: msg, bank: 0, program: 47, fallback: [gm-lite:timpani]}
+  trombone: {source: msg, bank: 0, program: 57, fallback: [gm-lite:trombone]}
+  oboe: {source: msg, bank: 0, program: 68, fallback: [gm-lite:oboe]}
+  clarinet: {source: msg, bank: 0, program: 71, fallback: [gm-lite:clarinet]}
+  sitar: {source: msg, bank: 0, program: 104, fallback: [gm-lite:sitar]}
+  shamisen: {source: msg, bank: 0, program: 106, fallback: [gm-lite:shamisen]}
+  koto: {source: msg, bank: 0, program: 107, fallback: [gm-lite:koto]}
+  kalimba: {source: msg, bank: 0, program: 108, fallback: [gm-lite:kalimba]}
+  drums.standard: {source: msg, drumkit: 0, fallback: [gm-lite:drums.standard]}

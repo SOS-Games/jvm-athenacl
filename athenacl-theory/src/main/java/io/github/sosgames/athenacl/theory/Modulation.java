@@ -123,7 +123,7 @@ public final class Modulation {
         return switch (mode) {
             case IONIAN -> 0;
             case DORIAN -> 2;
-            case PHRYGIAN -> 4;
+            case PHRYGIAN, PHRYGIAN_DOMINANT -> 4;
             case LYDIAN -> 5;
             case MIXOLYDIAN -> 7;
             case AEOLIAN -> 9;

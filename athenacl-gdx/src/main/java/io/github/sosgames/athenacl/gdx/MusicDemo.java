@@ -20,6 +20,7 @@ import com.badlogic.gdx.utils.ScreenUtils;
 import io.github.sosgames.athenacl.adaptive.ControlLog;
 import io.github.sosgames.athenacl.adaptive.Director;
 import io.github.sosgames.athenacl.adaptive.LiveClock;
+import io.github.sosgames.athenacl.adaptive.Presets;
 import io.github.sosgames.athenacl.adaptive.Theme;
 import io.github.sosgames.athenacl.adaptive.ThemeSwitch;
 import io.github.sosgames.athenacl.adaptive.Themes;
@@ -38,27 +39,50 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
- * Plays the ambush through the theme's kit, then can swap to the combat theme at a bar line.
- * The next kit is rendered on a background thread and becomes audible on the next bar after bar 8,
- * until a track button is pressed. Each button starts that piece from the beginning.
- * The line under the scheduler is how far through the current track you are.
- * F3 writes {@code build/athenacl-snapshot.txt}. F4 hides the scheduler line.
+ * Plays each track through the MuseScore kit ({@code gm-full}).
+ * The ambush can still swap to the combat theme at a bar line. That kit is rendered on a
+ * background thread and becomes audible on the next bar after bar 8, until a track button
+ * is pressed. Each button starts that piece from the beginning. Genre buttons are the
+ * presets that do not already have a track. The line under the scheduler is how far
+ * through the current track you are. F3 writes {@code build/athenacl-snapshot.txt}.
+ * F4 hides the scheduler line.
  */
 public class MusicDemo extends ApplicationAdapter {
     private static final int SWAP_BAR = 8;
+    private static final int COLUMNS = 5;
+    /** Window playback uses MuseScore_General. Theme files still name their own kit. */
+    private static final String KIT = "gm-full";
 
-    private record Track(String name, String theme, String timeline) {
+    private record Track(String name, String theme, String timeline, String preset) {
     }
 
-    private static final Track[] TRACKS = {
-            new Track("Ambush", "themes/fantasy-dungeon.yaml", "samples/timelines/ambush.json"),
-            new Track("Dungeon", "themes/fantasy-dungeon.yaml", "samples/timelines/dungeon-tour.json"),
-            new Track("Combat", "themes/fantasy-combat.yaml", null),
-            new Track("Party", "themes/fantasy-party.yaml", null),
-            new Track("Trading", "themes/fantasy-trading.yaml", null),
-            new Track("Space", "themes/scifi-space.yaml", "samples/timelines/dungeon-tour.json"),
-            new Track("Space combat", "themes/scifi-combat.yaml", null)
-    };
+    private static final Track[] TRACKS = tracks();
+
+    private static Track[] tracks() {
+        List<Track> list = new ArrayList<>();
+        list.add(new Track("Ambush", "themes/fantasy-dungeon.yaml", "samples/timelines/ambush.json", null));
+        list.add(new Track("Dungeon", "themes/fantasy-dungeon.yaml", "samples/timelines/dungeon-tour.json", null));
+        list.add(new Track("Combat", "themes/fantasy-combat.yaml", null, null));
+        list.add(new Track("Party", "themes/fantasy-party.yaml", null, null));
+        list.add(new Track("Trading", "themes/fantasy-trading.yaml", null, null));
+        list.add(new Track("Space", "themes/scifi-space.yaml", "samples/timelines/dungeon-tour.json", null));
+        list.add(new Track("Space combat", "themes/scifi-combat.yaml", null, null));
+        for (String id : Presets.ids()) {
+            if ("fantasy".equals(id) || "scifi-space".equals(id)) {
+                continue;
+            }
+            list.add(new Track(label(id), null, null, id));
+        }
+        return list.toArray(Track[]::new);
+    }
+
+    private static String label(String id) {
+        return switch (id) {
+            case "hiphop" -> "Hip-hop";
+            case "lofi" -> "Lo-fi";
+            default -> id.substring(0, 1).toUpperCase() + id.substring(1);
+        };
+    }
 
     private SpriteBatch batch;
     private ShapeRenderer shapes;
@@ -97,13 +121,14 @@ public class MusicDemo extends ApplicationAdapter {
         font = new BitmapFont();
         skin = buttonSkin(font);
         stage = new Stage(new ScreenViewport());
+        float stride = (Gdx.graphics.getWidth() - 32f) / COLUMNS;
         for (int i = 0; i < TRACKS.length; i++) {
             Track track = TRACKS[i];
             TextButton button = new TextButton(track.name, skin);
-            int column = i % 4;
-            int row = i / 4;
-            button.setPosition(16 + column * 270f, 16 + row * 44f);
-            button.setSize(258, 36);
+            int column = i % COLUMNS;
+            int row = i / COLUMNS;
+            button.setPosition(16 + column * stride, 16 + row * 44f);
+            button.setSize(stride - 12f, 36);
             button.addListener(new ChangeListener() {
                 @Override
                 public void changed(ChangeEvent event, com.badlogic.gdx.scenes.scene2d.Actor actor) {
@@ -115,7 +140,7 @@ public class MusicDemo extends ApplicationAdapter {
         }
         Gdx.input.setInputProcessor(stage);
         try {
-            Theme theme = Themes.load(Path.of(TRACKS[0].theme));
+            Theme theme = load(TRACKS[0]);
             clock = LiveClock.start(theme, ControlLog.readTimeline(Path.of(TRACKS[0].timeline)), 1);
             clocks.put(TRACKS[0].name, clock);
             device = Gdx.audio.newAudioDevice(44100, false);
@@ -147,7 +172,7 @@ public class MusicDemo extends ApplicationAdapter {
             clock.poll(Gdx.graphics.getDeltaTime());
             if (!playStandby && standbyWav != null && "fantasy-combat".equals(swap.poll(clock.bar()))) {
                 try {
-                    Theme combat = Themes.load(Path.of("themes/fantasy-combat.yaml"));
+                    Theme combat = load(track("Combat"));
                     clock = LiveClock.start(combat, combat.timeline(), 1);
                     playStandby = true;
                 } catch (Exception e) {
@@ -181,16 +206,17 @@ public class MusicDemo extends ApplicationAdapter {
     private void drawProgress(float width) {
         float barWidth = Math.min(640f, width - 32f);
         float fraction = trackSeconds <= 0 ? 0f : (float) Math.min(1.0, heardSeconds / trackSeconds);
+        float barY = 28 + ((TRACKS.length + COLUMNS - 1) / COLUMNS) * 44f;
         batch.begin();
         font.setColor(Color.WHITE);
-        font.draw(batch, nowPlaying + "  " + timestamp(heardSeconds) + " / " + timestamp(trackSeconds), 16, 168);
+        font.draw(batch, nowPlaying + "  " + timestamp(heardSeconds) + " / " + timestamp(trackSeconds), 16, barY + 36);
         batch.end();
         shapes.setProjectionMatrix(batch.getProjectionMatrix());
         shapes.begin(ShapeRenderer.ShapeType.Filled);
         shapes.setColor(0.18f, 0.2f, 0.24f, 1f);
-        shapes.rect(16, 128, barWidth, 12);
+        shapes.rect(16, barY, barWidth, 12);
         shapes.setColor(0.45f, 0.78f, 0.86f, 1f);
-        shapes.rect(16, 128, barWidth * fraction, 12);
+        shapes.rect(16, barY, barWidth * fraction, 12);
         shapes.end();
     }
 
@@ -243,7 +269,7 @@ public class MusicDemo extends ApplicationAdapter {
                 if (wav == null) {
                     Gdx.app.postRunnable(() -> showRendering(track.name));
                     next = open(track);
-                    wav = ThemeMix.wav(Themes.load(Path.of(track.theme)), next.performance().score(), states(next));
+                    wav = ThemeMix.wav(load(track), next.performance().score(), states(next));
                     cache.put(track.name, wav);
                     clocks.put(track.name, next);
                     Gdx.app.postRunnable(this::showLabels);
@@ -262,11 +288,42 @@ public class MusicDemo extends ApplicationAdapter {
     }
 
     private static LiveClock open(Track track) throws Exception {
-        Theme theme = Themes.load(Path.of(track.theme));
+        Theme theme = load(track);
         List<Theme.Control> controls = track.timeline == null
                 ? theme.timeline()
                 : ControlLog.readTimeline(Path.of(track.timeline));
         return LiveClock.start(theme, controls, 1);
+    }
+
+    /** Theme file, or a short tour of a preset. Playback always uses {@link #KIT}. */
+    private static Theme load(Track track) throws Exception {
+        Theme theme;
+        if (track.preset != null) {
+            Presets.Preset preset = Presets.get(track.preset);
+            String yaml = """
+                    id: %s
+                    preset: %s
+                    bars: 14
+                    meter: "%s"
+                    timeline:
+                      - {bar: 1, state: peaceful, intensity: 0.65}
+                      - {bar: 5, state: combat, intensity: 1}
+                      - {bar: 9, state: partying, intensity: 0.85}
+                    """.formatted(track.preset, track.preset, preset.meter());
+            theme = Themes.parse(track.preset + ".yaml", yaml);
+        } else {
+            theme = Themes.load(Path.of(track.theme));
+        }
+        return theme.withKits(List.of(KIT));
+    }
+
+    private static Track track(String name) {
+        for (Track track : TRACKS) {
+            if (track.name.equals(name)) {
+                return track;
+            }
+        }
+        throw new IllegalArgumentException(name);
     }
 
     private void handoff(String name, byte[] wav, LiveClock next) {
@@ -290,7 +347,7 @@ public class MusicDemo extends ApplicationAdapter {
 
     private void preloadCombat() {
         try {
-            Theme combat = Themes.load(Path.of("themes/fantasy-combat.yaml"));
+            Theme combat = load(track("Combat"));
             LiveClock next = LiveClock.start(combat, combat.timeline(), 1);
             byte[] wav = ThemeMix.wav(combat, next.performance().score(), states(next));
             standbyWav = wav;
@@ -310,7 +367,7 @@ public class MusicDemo extends ApplicationAdapter {
 
     private void playScore() {
         try {
-            Theme theme = Themes.load(Path.of(TRACKS[0].theme));
+            Theme theme = load(TRACKS[0]);
             byte[] wav = ThemeMix.wav(theme, clock.performance().score(), states(clock));
             cache.put("Ambush", wav);
             preload = new Thread(this::preloadCombat, "athenacl-kit");

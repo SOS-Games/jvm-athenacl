@@ -13,11 +13,12 @@ import java.util.concurrent.Callable;
 
 /**
  * Shows a built-in genre preset. {@code preset show fantasy} names the instruments
- * and the GM limit: choir and taiko, no sung lyrics. The director never sees the preset
- * itself; {@code theme explain} shows the theme after the merge.
+ * and the GM limit: choir and taiko, no sung lyrics. {@code preset list} counts them.
+ * {@code preset audition} plays eight bars and prints the genre character. The director
+ * never sees the preset itself; {@code theme explain} shows the theme after the merge.
  */
 @CommandLine.Command(name = "preset", description = "Show a built-in genre preset.",
-        subcommands = {PresetCommand.Show.class})
+        subcommands = {PresetCommand.Show.class, PresetCommand.ListPresets.class, PresetCommand.Audition.class})
 public class PresetCommand implements Callable<Integer> {
     @CommandLine.ParentCommand AgentCli parent;
 
@@ -25,7 +26,7 @@ public class PresetCommand implements Callable<Integer> {
     public Integer call() {
         parent.commandName = "preset";
         return parent.fail(ExitCode.USAGE, "USAGE", "argv[1]",
-                "usage: preset show <id>",
+                "usage: preset list | preset show <id> | preset audition <id> --bars 8 --seed 1",
                 "Known ids: " + String.join(", ", Presets.ids()) + ".");
     }
 
@@ -56,12 +57,102 @@ public class PresetCommand implements Callable<Integer> {
             }
             Map<String, String> fields = new LinkedHashMap<>();
             fields.put("preset", preset.id());
+            fields.put("meter", preset.meter());
+            fields.put("character", preset.character());
             fields.put("instruments", preset.instruments());
             fields.put("limits", preset.limits());
             Map<String, Object> data = new LinkedHashMap<>();
             data.put("preset", preset.id());
+            data.put("meter", preset.meter());
+            data.put("character", preset.character());
             data.put("limits", preset.limits());
             return parent.finish(ExitCode.OK, KeyValue.line(fields), "athenacl.result.preset/1",
+                    data, List.of(), List.of());
+        }
+    }
+
+    @CommandLine.Command(name = "list", description = "List the built-in genre presets.")
+    static class ListPresets implements Callable<Integer> {
+        @CommandLine.ParentCommand PresetCommand presetCommand;
+
+        @Override
+        public Integer call() {
+            AgentCli parent = presetCommand.cli();
+            parent.commandName = "preset list";
+            List<String> ids = Presets.ids();
+            StringBuilder text = new StringBuilder();
+            Map<String, String> summary = new LinkedHashMap<>();
+            summary.put("presets", Integer.toString(ids.size()));
+            text.append(KeyValue.line(summary));
+            for (String id : ids) {
+                Map<String, String> fields = new LinkedHashMap<>();
+                fields.put("preset", id);
+                text.append('\n').append(KeyValue.line(fields));
+            }
+            text.append('\n');
+            Map<String, Object> data = new LinkedHashMap<>();
+            data.put("presets", ids.size());
+            data.put("ids", ids);
+            return parent.finish(ExitCode.OK, text.toString(), "athenacl.result.preset-list/1",
+                    data, List.of(), List.of());
+        }
+    }
+
+    @CommandLine.Command(name = "audition", description = "Play a preset and print its character.")
+    static class Audition implements Callable<Integer> {
+        @CommandLine.ParentCommand PresetCommand presetCommand;
+        @CommandLine.Parameters(index = "0", arity = "0..1", paramLabel = "<id>")
+        String id;
+        @CommandLine.Option(names = "--bars", paramLabel = "<n>", defaultValue = "8")
+        int bars;
+        @CommandLine.Option(names = "--seed", paramLabel = "<n>", defaultValue = "1")
+        long seed;
+
+        @Override
+        public Integer call() {
+            AgentCli parent = presetCommand.cli();
+            parent.commandName = "preset audition";
+            if (id == null || id.isBlank()) {
+                return parent.fail(ExitCode.USAGE, "USAGE", "argv[2]",
+                        "usage: preset audition <id> --bars 8 --seed 1",
+                        "Known ids: " + String.join(", ", Presets.ids()) + ".");
+            }
+            if (Presets.get(id) == null) {
+                return parent.fail(ExitCode.NOT_FOUND, "NOT_FOUND", "argv[2]",
+                        "unknown preset " + id,
+                        "Known ids: " + String.join(", ", Presets.ids()) + ".");
+            }
+            Presets.Audition played;
+            try {
+                played = Presets.audition(id, bars, seed);
+            } catch (IllegalArgumentException e) {
+                return parent.fail(ExitCode.INVALID_INPUT, "INVALID_INPUT", "--bars", e.getMessage(),
+                        "Use --bars 8 or another positive count.");
+            } catch (io.github.sosgames.athenacl.adaptive.ThemeException e) {
+                return parent.fail(ExitCode.INVALID_INPUT, "INVALID_INPUT", "preset", e.getMessage(),
+                        "The preset could not be played.");
+            }
+            Map<String, String> fields = new LinkedHashMap<>();
+            fields.put("preset", played.id());
+            fields.put("bars", Integer.toString(played.bars()));
+            fields.put("seed", Long.toString(played.seed()));
+            fields.put("key", played.key());
+            fields.put("bpm", Integer.toString(played.bpm()));
+            fields.put("meter", played.meter());
+            fields.put("character", played.character());
+            fields.put("instruments", played.instruments());
+            fields.put("notes", Integer.toString(played.notes()));
+            Map<String, Object> data = new LinkedHashMap<>();
+            data.put("preset", played.id());
+            data.put("bars", played.bars());
+            data.put("seed", played.seed());
+            data.put("key", played.key());
+            data.put("bpm", played.bpm());
+            data.put("meter", played.meter());
+            data.put("character", played.character());
+            data.put("notes", played.notes());
+            ExitCode code = played.notes() > 0 ? ExitCode.OK : ExitCode.CHECK_FAILED;
+            return parent.finish(code, KeyValue.line(fields), "athenacl.result.preset-audition/1",
                     data, List.of(), List.of());
         }
     }

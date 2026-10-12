@@ -25,7 +25,7 @@ public record Key(int letter, int accidental, int tonicPc, Mode mode) {
         String tonic;
         String modeName;
         int space = trimmed.indexOf(' ');
-        int hyphen = trimmed.lastIndexOf('-');
+        int hyphen = trimmed.indexOf('-');
         if (space > 0) {
             tonic = trimmed.substring(0, space).trim();
             modeName = trimmed.substring(space + 1).trim();

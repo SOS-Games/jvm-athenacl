@@ -37,6 +37,7 @@ public final class HarmonicRhythm {
             case LYDIAN -> 3;
             case DORIAN, AEOLIAN -> 5;
             case PHRYGIAN -> 1;
+            case PHRYGIAN_DOMINANT -> 2;
             case MIXOLYDIAN -> 6;
             case LOCRIAN -> 4;
             case IONIAN -> -1;

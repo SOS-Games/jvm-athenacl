@@ -134,10 +134,12 @@ public final class CommandCatalog {
                     "athenacl.result.validate/1"),
             new CommandInfo(
                     "preset",
-                    "preset show prints a built-in genre preset: instruments and the GM limits.",
+                    "preset list counts the genre presets. preset show prints instruments and the GM limits. preset audition plays eight bars and prints the character.",
                     List.of(
+                            gradle("preset list"),
                             gradle("preset show fantasy"),
-                            gradle("preset show scifi-space")),
+                            gradle("preset show scifi-space"),
+                            gradle("preset audition reggae --bars 8 --seed 1")),
                     false,
                     "athenacl.result.preset/1"),
             new CommandInfo(

@@ -18,6 +18,7 @@ instruments:
   strings: {source: gu, bank: 0, program: 48}
   choir: {source: gu, bank: 0, program: 52}
   flute: {source: gu, bank: 0, program: 73}
+  panflute: {source: gu, bank: 0, program: 75}
   fiddle: {source: gu, bank: 0, program: 110}
   taiko: {source: gu, bank: 0, program: 116, transpose: -12}
   pad.halo: {source: gu, bank: 0, program: 94}
@@ -35,3 +36,26 @@ instruments:
   lead.saw: {source: gu, bank: 0, program: 81}
   fx.atmosphere: {source: gu, bank: 0, program: 99}
   celesta: {source: gu, bank: 0, program: 8}
+  rhodes: {source: gu, bank: 0, program: 4}
+  clav: {source: gu, bank: 0, program: 7}
+  vibes: {source: gu, bank: 0, program: 11}
+  marimba: {source: gu, bank: 0, program: 12}
+  organ: {source: gu, bank: 0, program: 16}
+  accordion: {source: gu, bank: 0, program: 21}
+  nylon: {source: gu, bank: 0, program: 24}
+  guitar.clean: {source: gu, bank: 0, program: 27}
+  guitar.overdrive: {source: gu, bank: 0, program: 29}
+  guitar.distortion: {source: gu, bank: 0, program: 30}
+  bass.acoustic: {source: gu, bank: 0, program: 32}
+  bass.finger: {source: gu, bank: 0, program: 33}
+  violin: {source: gu, bank: 0, program: 40}
+  pizzicato: {source: gu, bank: 0, program: 45}
+  timpani: {source: gu, bank: 0, program: 47}
+  trombone: {source: gu, bank: 0, program: 57}
+  oboe: {source: gu, bank: 0, program: 68}
+  clarinet: {source: gu, bank: 0, program: 71}
+  sitar: {source: gu, bank: 0, program: 104}
+  shamisen: {source: gu, bank: 0, program: 106}
+  koto: {source: gu, bank: 0, program: 107}
+  kalimba: {source: gu, bank: 0, program: 108}
+  drums.standard: {source: gu, drumkit: 0}

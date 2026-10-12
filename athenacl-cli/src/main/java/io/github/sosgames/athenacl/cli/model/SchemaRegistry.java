@@ -54,7 +54,8 @@ public final class SchemaRegistry {
             "athenacl.result.credits/1",
             "athenacl.result.compat/1",
             "athenacl.result.conformance/1",
-            "athenacl.result.conformance-run/1");
+            "athenacl.result.conformance-run/1",
+            "athenacl.result.athena/1");
 
     private SchemaRegistry() {
     }

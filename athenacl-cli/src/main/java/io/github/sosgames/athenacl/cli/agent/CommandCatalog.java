@@ -187,7 +187,13 @@ public final class CommandCatalog {
                     "conformance list counts the 31 pregui MIDI demo scripts. conformance run checks that each script has commands.",
                     List.of(gradle("conformance list")),
                     false,
-                    "athenacl.result.conformance/1"));
+                    "athenacl.result.conformance/1"),
+            new CommandInfo(
+                    "athena",
+                    "athena run plays a path-only script and checks the MIDI against the golden file beside it.",
+                    List.of(gradle("athena run conformance/paths/c-major.ath --out build/l13")),
+                    true,
+                    "athenacl.result.athena/1"));
 
     private CommandCatalog() {
     }

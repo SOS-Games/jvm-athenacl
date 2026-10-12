@@ -1,0 +1,30 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "athenacl.result.athena/1",
+  "type": "object",
+  "required": ["schema", "ok", "command", "data", "warnings", "errors", "meta"],
+  "properties": {
+    "schema": { "const": "athenacl.result.athena/1" },
+    "ok": { "type": "boolean" },
+    "command": { "const": "athena run" },
+    "data": {
+      "type": "object",
+      "required": ["script", "notes", "tracks", "bytes", "hash", "bytesEqualGolden", "dryRun"],
+      "properties": {
+        "script": { "type": "string" },
+        "notes": { "type": "integer" },
+        "tracks": { "type": "integer" },
+        "bytes": { "type": "integer" },
+        "hash": { "type": "string" },
+        "bytesEqualGolden": { "type": "boolean" },
+        "dryRun": { "type": "boolean" }
+      }
+    },
+    "warnings": { "type": "array" },
+    "errors": { "type": "array" },
+    "meta": {
+      "type": "object",
+      "required": ["version", "seed", "durationMs"]
+    }
+  }
+}

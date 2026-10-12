@@ -1,0 +1,10 @@
+# Path-only: two tracks, a flat, and unequal group weights.
+pin low c3,e3,g3 d$3,f3,a$3
+pin high c5
+tempo 96
+total 3
+pidf low 1,2
+velocity 80
+pan 40
+program 12
+eln

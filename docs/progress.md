@@ -90,4 +90,10 @@ A note list such as `samples/notes/c-major-scale.yaml` renders to `score.mid`, `
 
 `compat random --seed 7 --n 5` prints the five CPython `random()` draws for that seed. The generator also matches `randint`, `choice`, and `shuffle`. `gauss`, `expovariate`, and `betavariate` stay within 1e-15 of CPython. `Py.round` is half-to-even, and integer division matches Python on negatives. Argument strings are quoted and read as Python values. A fuzz test round-trips random literals and argument strings. `conformance/demos` holds the 31 MIDI demo scripts. `conformance list` prints `scripts=31`. `conformance run` checks that each script has commands. MIDI bytes are compared once a script can be played.
 
-`gradlew layerCheck -Player=L12` passes (3 checks). The full `gradlew layerCheck` passes (112 checks).
+`gradlew layerCheck -Player=L12` passes (3 checks).
+
+## L13 — Path slice
+
+`athena run conformance/paths/c-major.ath --out build/l13` writes MIDI for a path with no texture. Pitch names, pitch groups, and the event list are in. The file matches the golden MIDI beside the script (`bytesEqualGolden=true`). A script that uses a texture exits 3. Set-class names, textures, and the 31 demo scripts are later slices.
+
+`gradlew layerCheck -Player=L13` passes (3 checks). The full `gradlew layerCheck` passes (115 checks).

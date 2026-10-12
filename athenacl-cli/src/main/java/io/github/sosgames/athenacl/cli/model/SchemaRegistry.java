@@ -59,6 +59,8 @@ public final class SchemaRegistry {
             "athenacl.result.pos/1",
             "athenacl.result.textures/1",
             "athenacl.result.setclass/1",
+            "athenacl.result.commands/1",
+            "athenacl.result.prompt/1",
             "athenacl.result.athena/1");
 
     private SchemaRegistry() {

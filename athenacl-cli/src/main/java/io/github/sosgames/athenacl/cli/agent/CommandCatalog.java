@@ -89,7 +89,7 @@ public final class CommandCatalog {
                     "athenacl.result.soundbank/1"),
             new CommandInfo(
                     "describe",
-                    "describe scale lists a mode. describe chord names a roman numeral. describe instruments counts presets. describe pos lists value, wave, or rhythm generators. describe textures lists the texture modules. describe setclass names a Forte set class.",
+                    "describe scale lists a mode. describe chord names a roman numeral. describe instruments counts presets. describe pos lists value, wave, or rhythm generators. describe textures lists the texture modules. describe setclass names a Forte set class. describe commands lists athenaCL commands. --group b is the second half and --group all is every name.",
                     List.of(
                             gradle("describe scale D-dorian"),
                             gradle("describe chord Dm7 --key D-dorian"),
@@ -97,7 +97,9 @@ public final class CommandCatalog {
                             gradle("describe pos --group value"),
                             gradle("describe pos --group omde"),
                             gradle("describe textures"),
-                            gradle("describe setclass 3-11")),
+                            gradle("describe setclass 3-11"),
+                            gradle("describe commands"),
+                            gradle("describe commands --group b")),
                     false,
                     "athenacl.result.instruments/1"),
             new CommandInfo(
@@ -188,13 +190,15 @@ public final class CommandCatalog {
                     "athenacl.result.compat/1"),
             new CommandInfo(
                     "conformance",
-                    "conformance list counts the 31 pregui MIDI demo scripts. conformance run checks that each script has commands. conformance run --subset slice compares the LineGroove beats to their golden MIDI. conformance run --subset po.value samples the value generators. conformance run --subset po.omde,po.rhythm samples the wave, breakpoint, and rhythm generators. conformance run --subset texture,clone checks the texture modules and the clone filters. conformance run --subset sieve,generators checks sieves, tunings, and generator fixtures.",
+                    "conformance list counts the 31 pregui MIDI demo scripts. conformance run checks that each script has commands. conformance run --subset slice compares the LineGroove beats to their golden MIDI. conformance run --subset po.value samples the value generators. conformance run --subset po.omde,po.rhythm samples the wave, breakpoint, and rhythm generators. conformance run --subset texture,clone checks the texture modules and the clone filters. conformance run --subset sieve,generators checks sieves, tunings, and generator fixtures. conformance run --subset commands.a,xml checks the first 55 commands and one project file. conformance run --subset commands.b checks the other 48 command names.",
                     List.of(
                             gradle("conformance list"),
                             gradle("conformance run --subset po.value"),
                             gradle("conformance run --subset po.omde,po.rhythm"),
                             gradle("conformance run --subset texture,clone"),
-                            gradle("conformance run --subset sieve,generators")),
+                            gradle("conformance run --subset sieve,generators"),
+                            gradle("conformance run --subset commands.a,xml"),
+                            gradle("conformance run --subset commands.b")),
                     false,
                     "athenacl.result.conformance/1"),
             new CommandInfo(
@@ -205,8 +209,10 @@ public final class CommandCatalog {
                     "athenacl.result.po/1"),
             new CommandInfo(
                     "athena",
-                    "athena run plays a path or a LineGroove beat and checks the MIDI against the golden file beside it.",
-                    List.of(gradle("athena run conformance/paths/c-major.ath --out build/l13")),
+                    "athena run plays a path or a LineGroove beat and checks the MIDI against the golden file beside it. athena prompt resolves one command line and does not run it.",
+                    List.of(
+                            gradle("athena run conformance/paths/c-major.ath --out build/l13"),
+                            gradle("athena prompt --line \"tpsd 7\"")),
                     true,
                     "athenacl.result.athena/1"));
 

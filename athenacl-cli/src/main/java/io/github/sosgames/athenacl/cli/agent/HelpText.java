@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 package io.github.sosgames.athenacl.cli.agent;
 
+import io.github.sosgames.athenacl.core.CommandPrompt;
+
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -51,6 +53,7 @@ final class HelpText {
         }
         Map<String, Object> data = new LinkedHashMap<>();
         data.put("commands", list);
+        data.put("athenaCommands", CommandPrompt.names());
         return data;
     }
 

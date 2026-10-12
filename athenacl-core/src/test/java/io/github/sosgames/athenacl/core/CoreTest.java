@@ -74,6 +74,49 @@ class CoreTest {
     }
 
     @Test
+    void commandsAndProjectXmlMatchGolden() throws Exception {
+        CommandsA.Check check = CommandsA.check(
+                Path.of("conformance/po/commands-a.txt"),
+                Path.of("conformance/po/project.xml"));
+        assertEquals(List.of(), check.failed());
+        assertEquals(56, check.pass());
+    }
+
+    @Test
+    void remainingCommandsMatchGolden() throws Exception {
+        CommandsB.Check check = CommandsB.check(Path.of("conformance/po/commands-b.txt"));
+        assertEquals(List.of(), check.failed());
+        assertEquals(48, check.pass());
+        assertEquals(103, CommandPrompt.names().size());
+    }
+
+    @Test
+    void promptCorrectsACommandLine() {
+        assertEquals("TIls", CommandPrompt.correct("tils"));
+        assertEquals("TIls", CommandPrompt.correct("TILS"));
+        assertEquals("TIls extra Command MAY be 3 4 5 345,1.234,345",
+                CommandPrompt.correct("TILS extra Command MAY be 3 4 5 345,1.234,345"));
+        assertEquals("AOl A file With caps", CommandPrompt.correct("aol A file With caps"));
+        assertEquals("TIn BLOB 234", CommandPrompt.correct("tin BLOB 234"));
+        assertEquals("APea mp /Applications/QuickTime Player.app",
+                CommandPrompt.correct("apEA mp /Applications/QuickTime Player.app"));
+        assertEquals("TIn     BLOB      234   23.235",
+                CommandPrompt.correct("tin     BLOB      234   23.235"));
+        CommandPrompt.Line seed = CommandPrompt.parse("tpsd 7");
+        assertEquals("TPsd", seed.command());
+        assertEquals("7", seed.args());
+        CommandPrompt.Line help = CommandPrompt.parse("? test");
+        assertEquals("help", help.command());
+        assertEquals("test", help.args());
+        CommandPrompt.Line menu = CommandPrompt.parse("pi");
+        assertEquals("menu", menu.command());
+        assertEquals("PI", menu.prefix());
+        assertEquals("quit", CommandPrompt.parse("q").command());
+        assertEquals("help", CommandPrompt.parse("man").command());
+        assertThrows(IllegalArgumentException.class, () -> CommandPrompt.parse("nope"));
+    }
+
+    @Test
     void textureAndCloneMatchGolden() throws Exception {
         TextureClone.Check check = TextureClone.check(Path.of("conformance/po/texture-clone.txt"));
         assertEquals(List.of(), check.failed());

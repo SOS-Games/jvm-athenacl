@@ -4,7 +4,7 @@ Instructions for AI coding agents working in **jvm-athenacl**.
 
 ## Project
 
-GPL-3.0-or-later Java 21 rewrite of athenaCL as an adaptive game-music engine for libGDX desktop. Package `io.github.sosgames.athenacl`. Layer plan: [docs/research/05-project-plan.md](docs/research/05-project-plan.md). L0a–L18, L1b (instrument kits), and L7b (hook generator and melody critic) are in the tree. Do not start L6b or L9b until the user asks.
+GPL-3.0-or-later Java 21 rewrite of athenaCL as an adaptive game-music engine for libGDX desktop. Package `io.github.sosgames.athenacl`. Layer plan: [docs/research/05-project-plan.md](docs/research/05-project-plan.md). L0a–L20, L1b (instrument kits), and L7b (hook generator and melody critic) are in the tree. Do not start L6b or L9b until the user asks.
 
 - Java 21 (`options.release = 21`). Versions live in `gradle.properties`.
 - Groovy Gradle, same shape as SOS-Games/jvm-mw. Root `gradlew layerCheck`. CLI: `gradlew :athenacl-cli:agentCli --args="help"`.
@@ -54,6 +54,11 @@ gradlew.bat :athenacl-cli:agentCli --args="describe setclass 3-11"
 gradlew.bat :athenacl-cli:agentCli --args="conformance run --subset po.omde,po.rhythm"
 gradlew.bat :athenacl-cli:agentCli --args="conformance run --subset texture,clone"
 gradlew.bat :athenacl-cli:agentCli --args="conformance run --subset sieve,generators"
+gradlew.bat :athenacl-cli:agentCli --args="describe commands"
+gradlew.bat :athenacl-cli:agentCli --args="conformance run --subset commands.a,xml"
+gradlew.bat :athenacl-cli:agentCli --args="describe commands --group b"
+gradlew.bat :athenacl-cli:agentCli --args="conformance run --subset commands.b"
+gradlew.bat :athenacl-cli:agentCli --args="athena prompt --line \"tpsd 7\""
 gradlew.bat :athenacl-cli:agentCli --args="po sample basketGen \"oc,(1,2,3)\" --n 6"
 gradlew.bat :athenacl-cli:agentCli --args="athena run conformance/paths/c-major.ath --out build/l13"
 gradlew.bat :athenacl-cli:agentCli --args="athena run conformance/demos/script02a.ath --out build/l14"
@@ -90,11 +95,11 @@ gradlew.bat :athenacl-cli:agentCli --args="melody generate --key E-minor --candi
 | debug | You want `debug determinism` (same event-log hash twice, optionally `--fork-jvm`), `debug bisect` (first bar where two renders split), `debug inspect` (filter notes with `--where`), `debug check --loudness`, `debug check --stuck-notes`, `debug bar`, `debug trace --transitions`, `debug replay`, `debug fuzz-transitions`, or `debug overhead`. |
 | diff | You want a semantic diff of two themes, or the first bar where two render directories split. `--fail-on-diff` exits 6 when they differ. |
 | compat | You want CPython `random()` draws. `compat random --seed 7 --n 5` prints the five values the port must match. |
-| conformance | You want `conformance list` to count the 31 pregui MIDI demo scripts, `conformance run` to check that each script has commands, `conformance run --subset slice` to compare the LineGroove beats to their golden MIDI, `conformance run --subset po.value` to sample the value generators, `conformance run --subset po.omde,po.rhythm` to sample the wave, breakpoint, and rhythm generators, `conformance run --subset texture,clone` to check the texture modules and the clone filters, or `conformance run --subset sieve,generators` to check sieves, tunings, and generator fixtures. |
+| conformance | You want `conformance list` to count the 31 pregui MIDI demo scripts, `conformance run` to check that each script has commands, `conformance run --subset slice` to compare the LineGroove beats to their golden MIDI, `conformance run --subset po.value` to sample the value generators, `conformance run --subset po.omde,po.rhythm` to sample the wave, breakpoint, and rhythm generators, `conformance run --subset texture,clone` to check the texture modules and the clone filters, `conformance run --subset sieve,generators` to check sieves, tunings, and generator fixtures, `conformance run --subset commands.a,xml` to check the first 55 commands and one project file, or `conformance run --subset commands.b` to check the other 48 command names. |
 | po | You want `po sample basketGen "oc,(1,2,3)" --n 6` to walk a basket and print `values=1,2,3,1,2,3`. |
-| athena | You want `athena run` to play a path or a LineGroove beat and check its MIDI against the golden file beside it. |
+| athena | You want `athena run` to play a path or a LineGroove beat and check its MIDI against the golden file beside it, or `athena prompt --line` to resolve one command line. |
 | soundbank | You want to install, list, or show GeneralUser GS or MuseScore_General. An `.sf3` file is rejected. |
-| describe | You want `describe scale`, `describe chord`, `describe instruments` (287 presets and 13 drum kits in GeneralUser GS), `describe pos --group value` (45 value generators), `describe pos --group omde` (36 wave and breakpoint generators), `describe pos --group rhythm` (13 rhythm generators), `describe textures` (14 texture modules), or `describe setclass 3-11` (a Forte set class). |
+| describe | You want `describe scale`, `describe chord`, `describe instruments` (287 presets and 13 drum kits in GeneralUser GS), `describe pos --group value` (45 value generators), `describe pos --group omde` (36 wave and breakpoint generators), `describe pos --group rhythm` (13 rhythm generators), `describe textures` (14 texture modules), `describe setclass 3-11` (a Forte set class), `describe commands` (the first 55 athenaCL commands), or `describe commands --group b` (the other 48). |
 | analyze | You want EBU R128 integrated loudness and true peak for a WAV or a render directory. A swung render also prints `swing.measured=`. `analyze <dir> --by state` prints each state's offset from the contour. A motif render also prints `motif.reuse.per8bars=`. |
 | theory | You want `theory progression` to voice-lead roman numerals, or `theory modulate` to plan a key change. |
 | rhythm | You want `rhythm pattern` to print a drum grid, or `rhythm poly` to write 3-against-2 into `events.jsonl`. |
@@ -155,6 +160,8 @@ Published schema ids:
 - `athenacl.result.pos/1`
 - `athenacl.result.textures/1`
 - `athenacl.result.setclass/1`
+- `athenacl.result.commands/1`
+- `athenacl.result.prompt/1`
 - `athenacl.result.athena/1`
 
 When you add a command, add it to `CommandCatalog`, add a row to the table above, and add a block to the layer's `checks/L*.check`. `LayerCheckTest` fails if the table is missing a catalog command.
@@ -377,6 +384,14 @@ A named `from` beats a wildcard, so entering combat or danger still waits for th
 
 `describe setclass 3-11` prints `forte=3-11`, `pcs=0,3,7`, and `icv=0,0,1,1,1,0`. That is the major triad. `3-11B` is the inversion, `0,4,7`. The table has 351 forms. `conformance run --subset sieve,generators` checks five sieves over the integers 0 through 23, four tunings, six steps of the logistic map, the permutations of `1,2,3`, and three set classes. It prints `pass=14 fail=0`. The golden is `conformance/po/sieve-generators.txt`. A sieve `3@2` keeps the remainder 2. `&` is intersection and `|` is union.
 
-## Not in L18
+## Commands and project files
 
-Noise temperaments, spectral pitch, sieve complement and exclusive-or, and the rest of the athenaCL commands. Markov, grammar, and automata stay on the value-generator samples. Do not add them in a drive-by change.
+`describe commands` prints `count=55` and one `command=` line per name, from `w` through `TCe`. The source lists 104 command names. This half is the ones that come first. `conformance run --subset commands.a,xml` checks that list and one project file. It prints `pass=56 fail=0`. The goldens are `conformance/po/commands-a.txt` and `conformance/po/project.xml`. The file has three sections under `athenaObject`. Keys are alphabetical. A `&` in a value is written as `&amp;`. A voice library is tagged `pi`.
+
+## Commands and the prompt
+
+`describe commands --group b` prints `count=48`, from `TCcp` through `menu`. `describe commands --group all` prints `count=103`. The source assigns a name 104 times, and `AUpc` is assigned twice, so the distinct names are 103. `conformance run --subset commands.b` prints `pass=48 fail=0`. The golden is `conformance/po/commands-b.txt`. `athena prompt --line "tpsd 7"` prints `command=TPsd args=7`. `?` is help, `!` is shell, `q` is quit, `man` is help, and `pi` opens the path menu. `help --json` lists every name under `athenaCommands`. The line is resolved and not run.
+
+## Not in L20
+
+Playing the other demo scripts, the interactive prompt, and the command bodies. Noise temperaments, spectral pitch, sieve complement and exclusive-or, and the event loops of the other textures. Markov, grammar, and automata stay on the value-generator samples. Do not add them in a drive-by change.

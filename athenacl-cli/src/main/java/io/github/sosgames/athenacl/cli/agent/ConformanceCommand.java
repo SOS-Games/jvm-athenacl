@@ -4,6 +4,8 @@ package io.github.sosgames.athenacl.cli.agent;
 import io.github.sosgames.athenacl.cli.model.ExitCode;
 import io.github.sosgames.athenacl.cli.model.KeyValue;
 import io.github.sosgames.athenacl.compat.DemoCorpus;
+import io.github.sosgames.athenacl.core.CommandsA;
+import io.github.sosgames.athenacl.core.CommandsB;
 import io.github.sosgames.athenacl.core.OmdeGenerators;
 import io.github.sosgames.athenacl.core.PathScript;
 import io.github.sosgames.athenacl.core.RhythmGenerators;
@@ -33,6 +35,8 @@ import java.util.concurrent.Callable;
  * wave, breakpoint, and rhythm generators. {@code run --subset texture,clone} checks
  * the texture modules, their static switches, and the clone filters.
  * {@code run --subset sieve,generators} checks sieves, tunings, and generator fixtures.
+ * {@code run --subset commands.a,xml} checks the first 55 commands and one project file.
+ * {@code run --subset commands.b} checks the other 48 command names.
  */
 public final class ConformanceCommand {
     static final Path DEMOS = Path.of("conformance/demos");
@@ -158,10 +162,16 @@ public final class ConformanceCommand {
             if ("sieve,generators".equals(subset)) {
                 return sieveGenerators(parent);
             }
+            if ("commands.a,xml".equals(subset)) {
+                return commandsXml(parent);
+            }
+            if ("commands.b".equals(subset)) {
+                return commandsB(parent);
+            }
             if (!"slice".equals(subset)) {
                 return parent.fail(ExitCode.USAGE, "USAGE", "--subset",
                         "unknown subset: " + subset,
-                        "Try conformance run --subset slice, conformance run --subset po.value, conformance run --subset po.omde,po.rhythm, conformance run --subset texture,clone, or conformance run --subset sieve,generators.");
+                        "Try conformance run --subset slice, conformance run --subset po.value, conformance run --subset po.omde,po.rhythm, conformance run --subset texture,clone, conformance run --subset sieve,generators, conformance run --subset commands.a,xml, or conformance run --subset commands.b.");
             }
             int pass = 0;
             int fail = 0;
@@ -330,6 +340,69 @@ public final class ConformanceCommand {
             fields.put("fail", Integer.toString(check.fail()));
             Map<String, Object> data = new LinkedHashMap<>();
             data.put("subset", "sieve,generators");
+            data.put("pass", check.pass());
+            data.put("fail", check.fail());
+            ExitCode code = check.fail() == 0 ? ExitCode.OK : ExitCode.CHECK_FAILED;
+            return parent.finish(code, KeyValue.line(fields), "athenacl.result.conformance-run/1",
+                    data, List.of(), List.of());
+        }
+
+        private Integer commandsXml(AgentCli parent) {
+            Path names = Path.of("conformance/po/commands-a.txt");
+            Path xml = Path.of("conformance/po/project.xml");
+            if (!Files.isRegularFile(names)) {
+                return parent.fail(ExitCode.NOT_FOUND, "NOT_FOUND", "conformance/po/commands-a.txt",
+                        "command golden not found",
+                        "Run from the repo root, where conformance/po lives.");
+            }
+            if (!Files.isRegularFile(xml)) {
+                return parent.fail(ExitCode.NOT_FOUND, "NOT_FOUND", "conformance/po/project.xml",
+                        "project golden not found",
+                        "Run from the repo root, where conformance/po lives.");
+            }
+            CommandsA.Check check;
+            try {
+                check = CommandsA.check(names, xml);
+            } catch (IOException e) {
+                return parent.fail(ExitCode.RUNTIME, "IO_ERROR", "conformance/po", e.getMessage(),
+                        "Check that the command golden is readable.");
+            } catch (RuntimeException e) {
+                return parent.fail(ExitCode.CHECK_FAILED, "CHECK_FAILED", "commands.a,xml", e.getMessage(),
+                        "The command sample did not match the golden.");
+            }
+            Map<String, String> fields = new LinkedHashMap<>();
+            fields.put("subset", "commands.a,xml");
+            fields.put("pass", Integer.toString(check.pass()));
+            fields.put("fail", Integer.toString(check.fail()));
+            Map<String, Object> data = new LinkedHashMap<>();
+            data.put("subset", "commands.a,xml");
+            data.put("pass", check.pass());
+            data.put("fail", check.fail());
+            ExitCode code = check.fail() == 0 ? ExitCode.OK : ExitCode.CHECK_FAILED;
+            return parent.finish(code, KeyValue.line(fields), "athenacl.result.conformance-run/1",
+                    data, List.of(), List.of());
+        }
+
+        private Integer commandsB(AgentCli parent) {
+            Path names = Path.of("conformance/po/commands-b.txt");
+            if (!Files.isRegularFile(names)) {
+                return parent.fail(ExitCode.NOT_FOUND, "NOT_FOUND", "conformance/po/commands-b.txt",
+                        "command golden not found",
+                        "Run from the repo root, where conformance/po lives.");
+            }
+            CommandsB.Check check;
+            try {
+                check = CommandsB.check(names);
+            } catch (IOException e) {
+                return parent.fail(ExitCode.RUNTIME, "IO_ERROR", "conformance/po/commands-b.txt", e.getMessage(),
+                        "Check that the command golden is readable.");
+            }
+            Map<String, String> fields = new LinkedHashMap<>();
+            fields.put("subset", "commands.b");
+            fields.put("pass", Integer.toString(check.pass()));
+            fields.put("fail", Integer.toString(check.fail()));
+            Map<String, Object> data = new LinkedHashMap<>();
+            data.put("subset", "commands.b");
             data.put("pass", check.pass());
             data.put("fail", check.fail());
             ExitCode code = check.fail() == 0 ? ExitCode.OK : ExitCode.CHECK_FAILED;

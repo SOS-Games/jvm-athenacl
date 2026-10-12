@@ -1,0 +1,17 @@
+# L19 commands and project XML. Directive list: AGENTS.md, section "Layer checks".
+
+name: first 55 commands
+args: describe commands
+exit: 0
+stdout-contains: count=55
+stdout-contains: command=w
+stdout-contains: command=TCe
+stdout-count: 55 command=
+
+---
+name: command names and project xml match
+args: conformance run --subset commands.a,xml
+exit: 0
+stdout-contains: subset=commands.a,xml
+stdout-contains: pass=56
+stdout-contains: fail=0

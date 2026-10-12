@@ -1,0 +1,23 @@
+<?xml version="1.0"?>
+<athenaObject>
+	<athena>
+		<attr key="name" value="c-major"/>
+		<attr key="tempo" value="120"/>
+	</athena>
+	<paths>
+		<a>
+			<attr key="pcs" value="(0, 4, 7)"/>
+			<pi name="voiceLib">
+				<v1>
+					<attr key="ps" value="60"/>
+				</v1>
+			</pi>
+		</a>
+	</paths>
+	<textures>
+		<lg>
+			<attr key="amp" value="0.7 &amp; 1"/>
+			<attr key="inst" value="0"/>
+		</lg>
+	</textures>
+</athenaObject>

@@ -1,0 +1,50 @@
+# L20 remaining commands and the prompt. Directive list: AGENTS.md, section "Layer checks".
+
+name: second half of the commands
+args: describe commands --group b
+exit: 0
+stdout-contains: group=b
+stdout-contains: count=48
+stdout-contains: command=TCcp
+stdout-contains: command=menu
+stdout-count: 48 command=
+
+---
+name: every command name
+args: describe commands --group all
+exit: 0
+stdout-contains: group=all
+stdout-contains: count=103
+stdout-contains: command=w
+stdout-contains: command=menu
+stdout-count: 103 command=
+
+---
+name: command b names match
+args: conformance run --subset commands.b
+exit: 0
+stdout-contains: subset=commands.b
+stdout-contains: pass=48
+stdout-contains: fail=0
+
+---
+name: prompt corrects tpsd
+args: athena prompt --line "tpsd 7"
+exit: 0
+stdout-contains: command=TPsd
+stdout-contains: args=7
+
+---
+name: question mark is help
+args: athena prompt --line "?"
+exit: 0
+stdout-contains: command=help
+
+---
+name: help json lists every athena command
+args: help --json
+exit: 0
+json-document
+stdout-contains: TCcp
+stdout-contains: AUma
+stdout-contains: menu

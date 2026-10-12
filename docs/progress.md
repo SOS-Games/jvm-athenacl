@@ -126,4 +126,16 @@ A note list such as `samples/notes/c-major-scale.yaml` renders to `score.mid`, `
 
 `describe setclass 3-11` prints `forte=3-11`, `pcs=0,3,7`, and `icv=0,0,1,1,1,0`. The table has 351 forms. `conformance run --subset sieve,generators` checks five sieves, four tunings, the logistic map, permutations, and three set classes. It prints `pass=14 fail=0`.
 
-`gradlew layerCheck -Player=L18` passes (2 checks). The full `gradlew layerCheck` passes (127 checks).
+`gradlew layerCheck -Player=L18` passes (2 checks).
+
+## L19 — Commands and project files
+
+`describe commands` lists the first 55 command names, from `w` through `TCe`. The source has 104 names. `conformance run --subset commands.a,xml` checks that list and one project file. It prints `pass=56 fail=0`.
+
+`gradlew layerCheck -Player=L19` passes (2 checks).
+
+## L20 — Commands and the prompt
+
+`describe commands --group b` lists the other 48 command names, from `TCcp` through `menu`. `describe commands --group all` lists all 103 distinct names. `AUpc` is assigned twice in the source. `athena prompt --line "tpsd 7"` prints `command=TPsd`. `help --json` lists every name. The line is resolved and not run.
+
+`gradlew layerCheck -Player=L20` passes (6 checks). The full `gradlew layerCheck` passes (135 checks).

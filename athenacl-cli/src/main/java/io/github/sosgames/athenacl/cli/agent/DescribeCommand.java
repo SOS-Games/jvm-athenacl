@@ -3,6 +3,9 @@ package io.github.sosgames.athenacl.cli.agent;
 
 import io.github.sosgames.athenacl.cli.model.ExitCode;
 import io.github.sosgames.athenacl.cli.model.KeyValue;
+import io.github.sosgames.athenacl.core.CommandPrompt;
+import io.github.sosgames.athenacl.core.CommandsA;
+import io.github.sosgames.athenacl.core.CommandsB;
 import io.github.sosgames.athenacl.core.OmdeGenerators;
 import io.github.sosgames.athenacl.core.RhythmGenerators;
 import io.github.sosgames.athenacl.core.TextureModules;
@@ -35,6 +38,8 @@ import java.util.concurrent.Callable;
  * {@code --group rhythm} lists the 13 rhythm generators.
  * {@code describe textures} lists the 14 texture modules.
  * {@code describe setclass 3-11} names a Forte set class.
+ * {@code describe commands} lists the first 55 athenaCL commands.
+ * {@code --group b} lists the other 48, and {@code --group all} lists all 103.
  */
 @CommandLine.Command(name = "describe", description = "Describe a scale, a chord, a soundbank, or the value generators.",
         subcommands = {
@@ -43,7 +48,8 @@ import java.util.concurrent.Callable;
                 DescribeCommand.Instruments.class,
                 DescribeCommand.Pos.class,
                 DescribeCommand.Textures.class,
-                DescribeCommand.SetName.class
+                DescribeCommand.SetName.class,
+                DescribeCommand.Commands.class
         })
 public class DescribeCommand implements Callable<Integer> {
     @CommandLine.ParentCommand AgentCli parent;
@@ -52,7 +58,7 @@ public class DescribeCommand implements Callable<Integer> {
     public Integer call() {
         parent.commandName = "describe";
         return parent.fail(ExitCode.USAGE, "USAGE", "argv[1]",
-                "usage: describe scale <key> | describe chord <symbol> --key <key> | describe instruments --soundbank <id> | describe pos --group value | describe textures | describe setclass <forte>",
+                "usage: describe scale <key> | describe chord <symbol> --key <key> | describe instruments --soundbank <id> | describe pos --group value | describe textures | describe setclass <forte> | describe commands --group b",
                 "Try describe scale D-dorian.");
     }
 
@@ -291,6 +297,49 @@ public class DescribeCommand implements Callable<Integer> {
                 return parent.fail(ExitCode.INVALID_INPUT, "INVALID_INPUT", "argv[1]", e.getMessage(),
                         "Use a Forte name such as 3-11.");
             }
+        }
+    }
+
+    @CommandLine.Command(name = "commands", description = "List athenaCL commands.")
+    public static class Commands implements Callable<Integer> {
+        @CommandLine.ParentCommand DescribeCommand describe;
+        @CommandLine.Option(names = "--group", paramLabel = "<name>", defaultValue = "a")
+        String group;
+
+        @Override
+        public Integer call() {
+            AgentCli parent = describe.parent;
+            parent.commandName = "describe commands";
+            List<String> names = switch (group) {
+                case "a" -> CommandsA.names();
+                case "b" -> CommandsB.names();
+                case "all" -> CommandPrompt.names();
+                default -> null;
+            };
+            if (names == null) {
+                return parent.fail(ExitCode.INVALID_INPUT, "INVALID_INPUT", "--group",
+                        "unknown group: " + group,
+                        "Try describe commands, describe commands --group b, or describe commands --group all.");
+            }
+            StringBuilder text = new StringBuilder();
+            Map<String, String> summary = new LinkedHashMap<>();
+            summary.put("group", group);
+            summary.put("count", Integer.toString(names.size()));
+            text.append(KeyValue.line(summary));
+            List<String> rows = new ArrayList<>();
+            for (String name : names) {
+                Map<String, String> fields = new LinkedHashMap<>();
+                fields.put("command", name);
+                text.append('\n').append(KeyValue.line(fields));
+                rows.add(name);
+            }
+            text.append('\n');
+            Map<String, Object> data = new LinkedHashMap<>();
+            data.put("group", group);
+            data.put("count", names.size());
+            data.put("commands", rows);
+            return parent.finish(ExitCode.OK, text.toString(), "athenacl.result.commands/1",
+                    data, List.of(), List.of());
         }
     }
 }

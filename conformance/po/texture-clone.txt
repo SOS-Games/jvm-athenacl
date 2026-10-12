@@ -1,0 +1,55 @@
+# fourteen textures, twenty-four public static switches, fifteen clone filters
+# filters see the values 1,2,3,4,5,6
+module	da	DroneArticulate	maxTimeOffset,levelFieldMonophonic,levelOctaveMonophonic
+module	ds	DroneSustain	maxTimeOffset,levelFieldPolyphonic,levelOctavePolyphonic
+module	ie	IntervalExpansion	loopWithinSet,ornamentLibrarySelect,ornamentMaxDensity,levelFieldMonophonic,levelOctaveMonophonic
+module	lc	LineCluster	parallelMotionList,pitchSelectorControl,levelFieldPolyphonic,levelOctavePolyphonic
+module	lg	LineGroove	parallelMotionList,pitchSelectorControl,levelFieldMonophonic,levelOctaveMonophonic
+module	lh	LiteralHorizontal	loopWithinSet,levelFieldMonophonic,levelOctaveMonophonic
+module	lv	LiteralVertical	loopWithinSet,maxTimeOffset,levelFieldPolyphonic,levelOctavePolyphonic,pathDurationFraction
+module	mo	MonophonicOrnament	loopWithinSet,ornamentLibrarySelect,ornamentMaxDensity,levelFieldMonophonic,levelOctaveMonophonic
+module	tf	TimeFill	pitchSelectorControl,levelFieldMonophonic,levelOctaveMonophonic,totalEventCount,levelEventPartition,eventDensityPartition
+module	ts	TimeSegment	pitchSelectorControl,levelFieldMonophonic,levelOctaveMonophonic,levelEventCount,totalSegmentCount
+module	hs	HarmonicShuffle	multisetSelectorControl,pitchSelectorControl,maxTimeOffset,levelFieldPolyphonic,levelOctavePolyphonic
+module	ha	HarmonicAssembly	maxTimeOffset,levelFieldPolyphonic,levelOctavePolyphonic
+module	il	InterpolateLine	pitchSelectorControl,levelFieldMonophonic,levelOctaveMonophonic,interpolationMethodControl,levelFrameDuration,parameterInterpolationControl,snapSustainTime,snapEventTime
+module	if	InterpolateFill	pitchSelectorControl,levelFieldMonophonic,levelOctaveMonophonic,totalEventCount,levelEventPartition,eventDensityPartition,interpolationMethodControl,levelFrameDuration,parameterInterpolationControl,snapSustainTime
+static	pml	1,2	0.25
+static	mto	0.1
+static	lws	on
+static	ols	off
+static	omd	0.5
+static	lfm	event
+static	lom	set
+static	lfp	voice
+static	lop	event
+static	lep	path
+static	imc	linear
+static	lfd	event
+static	pic	off
+static	sst	on
+static	set	off
+static	tec	8
+static	tsc	4
+static	edp	duration
+static	lec	segment
+static	psc	orderedCyclic
+static	msc	orderedCyclic
+static	pdf	on
+static	trs	textureTime
+static	rmt	off
+filter	b	1,2,3,4,5,6
+filter	r	9,9,9,9,9,9
+filter	ob	6,5,4,3,2,1
+filter	or	3,4,5,6,1,2
+filter	pl	2,1,6,5,4,3
+filter	fa	4,5,6,7,8,9
+filter	fm	2,4,6,8,10,12
+filter	fd	0.5,1.0,1.5,2.0,2.5,3.0
+filter	fma	1,3,5,7,9,11
+filter	fda	3.5,4.0,4.5,5.0,5.5,6.0
+filter	fp	1,4,9,16,25,36
+filter	fq	2,2,4,4,6,6
+filter	ffb	0,0,0,10,10,10
+filter	mf	2,2,3,4,5,5
+filter	msf	2.0,2.6,3.2,3.8,4.4,5.0

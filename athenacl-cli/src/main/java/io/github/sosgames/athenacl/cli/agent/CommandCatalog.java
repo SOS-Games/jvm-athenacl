@@ -89,13 +89,14 @@ public final class CommandCatalog {
                     "athenacl.result.soundbank/1"),
             new CommandInfo(
                     "describe",
-                    "describe scale lists a mode. describe chord names a roman numeral. describe instruments counts presets. describe pos lists value, wave, or rhythm generators.",
+                    "describe scale lists a mode. describe chord names a roman numeral. describe instruments counts presets. describe pos lists value, wave, or rhythm generators. describe textures lists the texture modules.",
                     List.of(
                             gradle("describe scale D-dorian"),
                             gradle("describe chord Dm7 --key D-dorian"),
                             gradle("describe instruments --soundbank generaluser"),
                             gradle("describe pos --group value"),
-                            gradle("describe pos --group omde")),
+                            gradle("describe pos --group omde"),
+                            gradle("describe textures")),
                     false,
                     "athenacl.result.instruments/1"),
             new CommandInfo(
@@ -186,11 +187,12 @@ public final class CommandCatalog {
                     "athenacl.result.compat/1"),
             new CommandInfo(
                     "conformance",
-                    "conformance list counts the 31 pregui MIDI demo scripts. conformance run checks that each script has commands. conformance run --subset slice compares the LineGroove beats to their golden MIDI. conformance run --subset po.value samples the value generators. conformance run --subset po.omde,po.rhythm samples the wave, breakpoint, and rhythm generators.",
+                    "conformance list counts the 31 pregui MIDI demo scripts. conformance run checks that each script has commands. conformance run --subset slice compares the LineGroove beats to their golden MIDI. conformance run --subset po.value samples the value generators. conformance run --subset po.omde,po.rhythm samples the wave, breakpoint, and rhythm generators. conformance run --subset texture,clone checks the texture modules and the clone filters.",
                     List.of(
                             gradle("conformance list"),
                             gradle("conformance run --subset po.value"),
-                            gradle("conformance run --subset po.omde,po.rhythm")),
+                            gradle("conformance run --subset po.omde,po.rhythm"),
+                            gradle("conformance run --subset texture,clone")),
                     false,
                     "athenacl.result.conformance/1"),
             new CommandInfo(

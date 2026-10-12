@@ -74,6 +74,13 @@ class CoreTest {
     }
 
     @Test
+    void textureAndCloneMatchGolden() throws Exception {
+        TextureClone.Check check = TextureClone.check(Path.of("conformance/po/texture-clone.txt"));
+        assertEquals(List.of(), check.failed());
+        assertEquals(53, check.pass());
+    }
+
+    @Test
     void basketWalksInOrder() {
         assertEquals(List.of("1", "2", "3", "1", "2", "3"),
                 ParameterObjects.sample("basketGen", "oc,(1,2,3)", 6, 0));

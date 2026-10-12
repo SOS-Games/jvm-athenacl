@@ -4,7 +4,7 @@ Instructions for AI coding agents working in **jvm-athenacl**.
 
 ## Project
 
-GPL-3.0-or-later Java 21 rewrite of athenaCL as an adaptive game-music engine for libGDX desktop. Package `io.github.sosgames.athenacl`. Layer plan: [docs/research/05-project-plan.md](docs/research/05-project-plan.md). L0a–L13, L1b (instrument kits), and L7b (hook generator and melody critic) are in the tree. Do not start L6b or L9b until the user asks.
+GPL-3.0-or-later Java 21 rewrite of athenaCL as an adaptive game-music engine for libGDX desktop. Package `io.github.sosgames.athenacl`. Layer plan: [docs/research/05-project-plan.md](docs/research/05-project-plan.md). L0a–L17, L1b (instrument kits), and L7b (hook generator and melody critic) are in the tree. Do not start L6b or L9b until the user asks.
 
 - Java 21 (`options.release = 21`). Versions live in `gradle.properties`.
 - Groovy Gradle, same shape as SOS-Games/jvm-mw. Root `gradlew layerCheck`. CLI: `gradlew :athenacl-cli:agentCli --args="help"`.
@@ -49,7 +49,9 @@ gradlew.bat :athenacl-cli:agentCli --args="conformance run --subset slice"
 gradlew.bat :athenacl-cli:agentCli --args="conformance run --subset po.value"
 gradlew.bat :athenacl-cli:agentCli --args="describe pos --group value"
 gradlew.bat :athenacl-cli:agentCli --args="describe pos --group omde"
+gradlew.bat :athenacl-cli:agentCli --args="describe textures"
 gradlew.bat :athenacl-cli:agentCli --args="conformance run --subset po.omde,po.rhythm"
+gradlew.bat :athenacl-cli:agentCli --args="conformance run --subset texture,clone"
 gradlew.bat :athenacl-cli:agentCli --args="po sample basketGen \"oc,(1,2,3)\" --n 6"
 gradlew.bat :athenacl-cli:agentCli --args="athena run conformance/paths/c-major.ath --out build/l13"
 gradlew.bat :athenacl-cli:agentCli --args="athena run conformance/demos/script02a.ath --out build/l14"
@@ -86,11 +88,11 @@ gradlew.bat :athenacl-cli:agentCli --args="melody generate --key E-minor --candi
 | debug | You want `debug determinism` (same event-log hash twice, optionally `--fork-jvm`), `debug bisect` (first bar where two renders split), `debug inspect` (filter notes with `--where`), `debug check --loudness`, `debug check --stuck-notes`, `debug bar`, `debug trace --transitions`, `debug replay`, `debug fuzz-transitions`, or `debug overhead`. |
 | diff | You want a semantic diff of two themes, or the first bar where two render directories split. `--fail-on-diff` exits 6 when they differ. |
 | compat | You want CPython `random()` draws. `compat random --seed 7 --n 5` prints the five values the port must match. |
-| conformance | You want `conformance list` to count the 31 pregui MIDI demo scripts, `conformance run` to check that each script has commands, `conformance run --subset slice` to compare the LineGroove beats to their golden MIDI, `conformance run --subset po.value` to sample the value generators, or `conformance run --subset po.omde,po.rhythm` to sample the wave, breakpoint, and rhythm generators. |
+| conformance | You want `conformance list` to count the 31 pregui MIDI demo scripts, `conformance run` to check that each script has commands, `conformance run --subset slice` to compare the LineGroove beats to their golden MIDI, `conformance run --subset po.value` to sample the value generators, `conformance run --subset po.omde,po.rhythm` to sample the wave, breakpoint, and rhythm generators, or `conformance run --subset texture,clone` to check the texture modules and the clone filters. |
 | po | You want `po sample basketGen "oc,(1,2,3)" --n 6` to walk a basket and print `values=1,2,3,1,2,3`. |
 | athena | You want `athena run` to play a path or a LineGroove beat and check its MIDI against the golden file beside it. |
 | soundbank | You want to install, list, or show GeneralUser GS or MuseScore_General. An `.sf3` file is rejected. |
-| describe | You want `describe scale`, `describe chord`, `describe instruments` (287 presets and 13 drum kits in GeneralUser GS), `describe pos --group value` (45 value generators), `describe pos --group omde` (36 wave and breakpoint generators), or `describe pos --group rhythm` (13 rhythm generators). |
+| describe | You want `describe scale`, `describe chord`, `describe instruments` (287 presets and 13 drum kits in GeneralUser GS), `describe pos --group value` (45 value generators), `describe pos --group omde` (36 wave and breakpoint generators), `describe pos --group rhythm` (13 rhythm generators), or `describe textures` (14 texture modules). |
 | analyze | You want EBU R128 integrated loudness and true peak for a WAV or a render directory. A swung render also prints `swing.measured=`. `analyze <dir> --by state` prints each state's offset from the contour. A motif render also prints `motif.reuse.per8bars=`. |
 | theory | You want `theory progression` to voice-lead roman numerals, or `theory modulate` to plan a key change. |
 | rhythm | You want `rhythm pattern` to print a drum grid, or `rhythm poly` to write 3-against-2 into `events.jsonl`. |
@@ -149,6 +151,7 @@ Published schema ids:
 - `athenacl.result.conformance-run/1`
 - `athenacl.result.po/1`
 - `athenacl.result.pos/1`
+- `athenacl.result.textures/1`
 - `athenacl.result.athena/1`
 
 When you add a command, add it to `CommandCatalog`, add a row to the table above, and add a block to the layer's `checks/L*.check`. `LayerCheckTest` fails if the table is missing a catalog command.
@@ -363,6 +366,10 @@ A named `from` beats a wildcard, so entering combat or danger still waits for th
 
 `describe pos --group omde` prints `count=36`. The plan's 44 counted eight private bases; those bases are not generators. `describe pos --group rhythm` prints `count=13`. `conformance run --subset po.omde,po.rhythm` samples each public generator six times with both streams seeded to 7 and prints `pass=49 fail=0`. The goldens are `conformance/po/omde.txt` and `conformance/po/rhythm.txt`. Gauss draws on the parameter stream. The other distributions draw on the texture stream. `iterateRhythmHold` treats a missing refresh as less than the event count, the way Python 2 did. A pulse compared with nothing uses identity.
 
-## Not in L16
+## Textures and clones
 
-The effects stage, SFZ kits, the other textures, and the rest of the athenaCL commands. Do not add them in a drive-by change.
+`describe textures` prints `count=14`, one line per texture module, including LineGroove. `conformance run --subset texture,clone` checks those modules, the 22 public texture-static switches, the 2 public clone-static switches, and the 15 public clone filters. It prints `pass=53 fail=0`. The golden is `conformance/po/texture-clone.txt`. The plan's 27, 3, and 17 counted private bases; those bases are not switches or filters. A selector written `oc` is stored as ordered cyclic. Clone filters see the values 1 through 6. An anchor multiply shifts by the lowest or highest value, scales, then shifts back.
+
+## Not in L17
+
+The event loops of the other thirteen textures, file parameter objects, the effects stage, SFZ kits, and the rest of the athenaCL commands. Do not add them in a drive-by change.

@@ -1,0 +1,18 @@
+# L17 textures and clone filters. Directive list: AGENTS.md, section "Layer checks".
+
+name: textures are listed
+args: describe textures
+exit: 0
+stdout-contains: count=14
+stdout-contains: texture=da name=DroneArticulate
+stdout-contains: texture=lg name=LineGroove
+stdout-contains: texture=if name=InterpolateFill
+stdout-count: 14 texture=
+
+---
+name: texture and clone samples match
+args: conformance run --subset texture,clone
+exit: 0
+stdout-contains: subset=texture,clone
+stdout-contains: pass=53
+stdout-contains: fail=0

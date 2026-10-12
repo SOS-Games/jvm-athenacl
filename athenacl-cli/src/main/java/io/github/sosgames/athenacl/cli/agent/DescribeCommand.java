@@ -5,6 +5,7 @@ import io.github.sosgames.athenacl.cli.model.ExitCode;
 import io.github.sosgames.athenacl.cli.model.KeyValue;
 import io.github.sosgames.athenacl.core.OmdeGenerators;
 import io.github.sosgames.athenacl.core.RhythmGenerators;
+import io.github.sosgames.athenacl.core.TextureModules;
 import io.github.sosgames.athenacl.core.ValueGenerators;
 import io.github.sosgames.athenacl.theory.Chord;
 import io.github.sosgames.athenacl.theory.Key;
@@ -31,13 +32,15 @@ import java.util.concurrent.Callable;
  * {@code describe pos --group value} lists the 45 value generators.
  * {@code --group omde} lists the 36 wave and breakpoint generators, and
  * {@code --group rhythm} lists the 13 rhythm generators.
+ * {@code describe textures} lists the 14 texture modules.
  */
 @CommandLine.Command(name = "describe", description = "Describe a scale, a chord, a soundbank, or the value generators.",
         subcommands = {
                 DescribeCommand.ScaleName.class,
                 DescribeCommand.ChordName.class,
                 DescribeCommand.Instruments.class,
-                DescribeCommand.Pos.class
+                DescribeCommand.Pos.class,
+                DescribeCommand.Textures.class
         })
 public class DescribeCommand implements Callable<Integer> {
     @CommandLine.ParentCommand AgentCli parent;
@@ -46,7 +49,7 @@ public class DescribeCommand implements Callable<Integer> {
     public Integer call() {
         parent.commandName = "describe";
         return parent.fail(ExitCode.USAGE, "USAGE", "argv[1]",
-                "usage: describe scale <key> | describe chord <symbol> --key <key> | describe instruments --soundbank <id> | describe pos --group value",
+                "usage: describe scale <key> | describe chord <symbol> --key <key> | describe instruments --soundbank <id> | describe pos --group value | describe textures",
                 "Try describe scale D-dorian.");
     }
 
@@ -220,6 +223,36 @@ public class DescribeCommand implements Callable<Integer> {
                 rows.add(new String[] {acronym.apply(generator), name.apply(generator)});
             }
             return rows;
+        }
+    }
+
+    @CommandLine.Command(name = "textures", description = "List the texture modules.")
+    public static class Textures implements Callable<Integer> {
+        @CommandLine.ParentCommand DescribeCommand describe;
+
+        @Override
+        public Integer call() {
+            AgentCli parent = describe.parent;
+            parent.commandName = "describe textures";
+            List<TextureModules.Module> modules = TextureModules.modules();
+            StringBuilder text = new StringBuilder();
+            Map<String, String> summary = new LinkedHashMap<>();
+            summary.put("count", Integer.toString(modules.size()));
+            text.append(KeyValue.line(summary));
+            List<Map<String, String>> rows = new ArrayList<>();
+            for (TextureModules.Module module : modules) {
+                Map<String, String> fields = new LinkedHashMap<>();
+                fields.put("texture", module.acronym());
+                fields.put("name", module.name());
+                text.append('\n').append(KeyValue.line(fields));
+                rows.add(fields);
+            }
+            text.append('\n');
+            Map<String, Object> data = new LinkedHashMap<>();
+            data.put("count", modules.size());
+            data.put("textures", rows);
+            return parent.finish(ExitCode.OK, text.toString(), "athenacl.result.textures/1",
+                    data, List.of(), List.of());
         }
     }
 }

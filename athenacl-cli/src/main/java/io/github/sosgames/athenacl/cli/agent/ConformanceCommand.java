@@ -7,6 +7,7 @@ import io.github.sosgames.athenacl.compat.DemoCorpus;
 import io.github.sosgames.athenacl.core.OmdeGenerators;
 import io.github.sosgames.athenacl.core.PathScript;
 import io.github.sosgames.athenacl.core.RhythmGenerators;
+import io.github.sosgames.athenacl.core.TextureClone;
 import io.github.sosgames.athenacl.core.ValueGenerators;
 import io.github.sosgames.athenacl.core.ScriptException;
 import io.github.sosgames.athenacl.core.ScriptRunner;
@@ -28,7 +29,8 @@ import java.util.concurrent.Callable;
  * each file has commands. {@code run --subset slice} plays the LineGroove beats and
  * compares each MIDI file to the golden beside the script. {@code run --subset po.value}
  * samples the value generators. {@code run --subset po.omde,po.rhythm} samples the
- * wave, breakpoint, and rhythm generators.
+ * wave, breakpoint, and rhythm generators. {@code run --subset texture,clone} checks
+ * the texture modules, their static switches, and the clone filters.
  */
 public final class ConformanceCommand {
     static final Path DEMOS = Path.of("conformance/demos");
@@ -148,10 +150,13 @@ public final class ConformanceCommand {
             if ("po.omde,po.rhythm".equals(subset)) {
                 return omdeRhythm(parent);
             }
+            if ("texture,clone".equals(subset)) {
+                return textureClone(parent);
+            }
             if (!"slice".equals(subset)) {
                 return parent.fail(ExitCode.USAGE, "USAGE", "--subset",
                         "unknown subset: " + subset,
-                        "Try conformance run --subset slice, conformance run --subset po.value, or conformance run --subset po.omde,po.rhythm.");
+                        "Try conformance run --subset slice, conformance run --subset po.value, conformance run --subset po.omde,po.rhythm, or conformance run --subset texture,clone.");
             }
             int pass = 0;
             int fail = 0;
@@ -263,6 +268,36 @@ public final class ConformanceCommand {
             data.put("pass", pass);
             data.put("fail", fail);
             ExitCode code = fail == 0 ? ExitCode.OK : ExitCode.CHECK_FAILED;
+            return parent.finish(code, KeyValue.line(fields), "athenacl.result.conformance-run/1",
+                    data, List.of(), List.of());
+        }
+
+        private Integer textureClone(AgentCli parent) {
+            Path golden = Path.of("conformance/po/texture-clone.txt");
+            if (!Files.isRegularFile(golden)) {
+                return parent.fail(ExitCode.NOT_FOUND, "NOT_FOUND", "conformance/po/texture-clone.txt",
+                        "texture golden not found",
+                        "Run from the repo root, where conformance/po lives.");
+            }
+            TextureClone.Check check;
+            try {
+                check = TextureClone.check(golden);
+            } catch (IOException e) {
+                return parent.fail(ExitCode.RUNTIME, "IO_ERROR", "conformance/po/texture-clone.txt", e.getMessage(),
+                        "Check that the texture golden is readable.");
+            } catch (RuntimeException e) {
+                return parent.fail(ExitCode.CHECK_FAILED, "CHECK_FAILED", "texture,clone", e.getMessage(),
+                        "The texture sample did not match the golden.");
+            }
+            Map<String, String> fields = new LinkedHashMap<>();
+            fields.put("subset", "texture,clone");
+            fields.put("pass", Integer.toString(check.pass()));
+            fields.put("fail", Integer.toString(check.fail()));
+            Map<String, Object> data = new LinkedHashMap<>();
+            data.put("subset", "texture,clone");
+            data.put("pass", check.pass());
+            data.put("fail", check.fail());
+            ExitCode code = check.fail() == 0 ? ExitCode.OK : ExitCode.CHECK_FAILED;
             return parent.finish(code, KeyValue.line(fields), "athenacl.result.conformance-run/1",
                     data, List.of(), List.of());
         }

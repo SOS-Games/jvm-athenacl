@@ -114,4 +114,10 @@ A note list such as `samples/notes/c-major-scale.yaml` renders to `score.mid`, `
 
 `describe pos --group omde` lists the 36 public wave, distribution, breakpoint, and envelope generators. The private bases are not generators. `describe pos --group rhythm` lists the 13 rhythm generators. `conformance run --subset po.omde,po.rhythm` samples each one six times at seed 7 and prints `pass=49 fail=0`.
 
-`gradlew layerCheck -Player=L16` passes (3 checks). The full `gradlew layerCheck` passes (123 checks).
+`gradlew layerCheck -Player=L16` passes (3 checks).
+
+## L17 — Textures and clones
+
+`describe textures` lists the 14 texture modules, including LineGroove. `conformance run --subset texture,clone` checks those modules, the 22 public texture switches, the 2 clone switches, and the 15 clone filters. It prints `pass=53 fail=0`. The private bases are not switches or filters.
+
+`gradlew layerCheck -Player=L17` passes (2 checks). The full `gradlew layerCheck` passes (125 checks).

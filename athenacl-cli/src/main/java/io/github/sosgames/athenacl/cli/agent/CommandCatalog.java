@@ -89,14 +89,15 @@ public final class CommandCatalog {
                     "athenacl.result.soundbank/1"),
             new CommandInfo(
                     "describe",
-                    "describe scale lists a mode. describe chord names a roman numeral. describe instruments counts presets. describe pos lists value, wave, or rhythm generators. describe textures lists the texture modules.",
+                    "describe scale lists a mode. describe chord names a roman numeral. describe instruments counts presets. describe pos lists value, wave, or rhythm generators. describe textures lists the texture modules. describe setclass names a Forte set class.",
                     List.of(
                             gradle("describe scale D-dorian"),
                             gradle("describe chord Dm7 --key D-dorian"),
                             gradle("describe instruments --soundbank generaluser"),
                             gradle("describe pos --group value"),
                             gradle("describe pos --group omde"),
-                            gradle("describe textures")),
+                            gradle("describe textures"),
+                            gradle("describe setclass 3-11")),
                     false,
                     "athenacl.result.instruments/1"),
             new CommandInfo(
@@ -187,12 +188,13 @@ public final class CommandCatalog {
                     "athenacl.result.compat/1"),
             new CommandInfo(
                     "conformance",
-                    "conformance list counts the 31 pregui MIDI demo scripts. conformance run checks that each script has commands. conformance run --subset slice compares the LineGroove beats to their golden MIDI. conformance run --subset po.value samples the value generators. conformance run --subset po.omde,po.rhythm samples the wave, breakpoint, and rhythm generators. conformance run --subset texture,clone checks the texture modules and the clone filters.",
+                    "conformance list counts the 31 pregui MIDI demo scripts. conformance run checks that each script has commands. conformance run --subset slice compares the LineGroove beats to their golden MIDI. conformance run --subset po.value samples the value generators. conformance run --subset po.omde,po.rhythm samples the wave, breakpoint, and rhythm generators. conformance run --subset texture,clone checks the texture modules and the clone filters. conformance run --subset sieve,generators checks sieves, tunings, and generator fixtures.",
                     List.of(
                             gradle("conformance list"),
                             gradle("conformance run --subset po.value"),
                             gradle("conformance run --subset po.omde,po.rhythm"),
-                            gradle("conformance run --subset texture,clone")),
+                            gradle("conformance run --subset texture,clone"),
+                            gradle("conformance run --subset sieve,generators")),
                     false,
                     "athenacl.result.conformance/1"),
             new CommandInfo(

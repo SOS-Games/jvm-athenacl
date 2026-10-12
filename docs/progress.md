@@ -120,4 +120,10 @@ A note list such as `samples/notes/c-major-scale.yaml` renders to `score.mid`, `
 
 `describe textures` lists the 14 texture modules, including LineGroove. `conformance run --subset texture,clone` checks those modules, the 22 public texture switches, the 2 clone switches, and the 15 clone filters. It prints `pass=53 fail=0`. The private bases are not switches or filters.
 
-`gradlew layerCheck -Player=L17` passes (2 checks). The full `gradlew layerCheck` passes (125 checks).
+`gradlew layerCheck -Player=L17` passes (2 checks).
+
+## L18 — Set classes, sieves, and generators
+
+`describe setclass 3-11` prints `forte=3-11`, `pcs=0,3,7`, and `icv=0,0,1,1,1,0`. The table has 351 forms. `conformance run --subset sieve,generators` checks five sieves, four tunings, the logistic map, permutations, and three set classes. It prints `pass=14 fail=0`.
+
+`gradlew layerCheck -Player=L18` passes (2 checks). The full `gradlew layerCheck` passes (127 checks).

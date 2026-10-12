@@ -9,6 +9,7 @@ import io.github.sosgames.athenacl.core.TextureModules;
 import io.github.sosgames.athenacl.core.ValueGenerators;
 import io.github.sosgames.athenacl.theory.Chord;
 import io.github.sosgames.athenacl.theory.Key;
+import io.github.sosgames.athenacl.theory.SetClass;
 import io.github.sosgames.athenacl.render.soundbank.InstrumentIndex;
 import io.github.sosgames.athenacl.render.soundbank.SoundbankCatalog;
 import io.github.sosgames.athenacl.render.soundbank.SoundbankPaths;
@@ -33,6 +34,7 @@ import java.util.concurrent.Callable;
  * {@code --group omde} lists the 36 wave and breakpoint generators, and
  * {@code --group rhythm} lists the 13 rhythm generators.
  * {@code describe textures} lists the 14 texture modules.
+ * {@code describe setclass 3-11} names a Forte set class.
  */
 @CommandLine.Command(name = "describe", description = "Describe a scale, a chord, a soundbank, or the value generators.",
         subcommands = {
@@ -40,7 +42,8 @@ import java.util.concurrent.Callable;
                 DescribeCommand.ChordName.class,
                 DescribeCommand.Instruments.class,
                 DescribeCommand.Pos.class,
-                DescribeCommand.Textures.class
+                DescribeCommand.Textures.class,
+                DescribeCommand.SetName.class
         })
 public class DescribeCommand implements Callable<Integer> {
     @CommandLine.ParentCommand AgentCli parent;
@@ -49,7 +52,7 @@ public class DescribeCommand implements Callable<Integer> {
     public Integer call() {
         parent.commandName = "describe";
         return parent.fail(ExitCode.USAGE, "USAGE", "argv[1]",
-                "usage: describe scale <key> | describe chord <symbol> --key <key> | describe instruments --soundbank <id> | describe pos --group value | describe textures",
+                "usage: describe scale <key> | describe chord <symbol> --key <key> | describe instruments --soundbank <id> | describe pos --group value | describe textures | describe setclass <forte>",
                 "Try describe scale D-dorian.");
     }
 
@@ -253,6 +256,41 @@ public class DescribeCommand implements Callable<Integer> {
             data.put("textures", rows);
             return parent.finish(ExitCode.OK, text.toString(), "athenacl.result.textures/1",
                     data, List.of(), List.of());
+        }
+    }
+
+    @CommandLine.Command(name = "setclass", description = "Show a Forte set class.")
+    public static class SetName implements Callable<Integer> {
+        @CommandLine.ParentCommand DescribeCommand describe;
+        @CommandLine.Parameters(index = "0", paramLabel = "<forte>")
+        String forte;
+
+        @Override
+        public Integer call() {
+            AgentCli parent = describe.parent;
+            parent.commandName = "describe setclass";
+            try {
+                SetClass form = SetClass.parse(forte);
+                Map<String, String> fields = new LinkedHashMap<>();
+                fields.put("forte", form.forte(forte));
+                fields.put("pcs", form.pcs());
+                fields.put("icv", form.icv());
+                if (!form.partner().isEmpty()) {
+                    fields.put("z", form.partner());
+                }
+                Map<String, Object> data = new LinkedHashMap<>();
+                data.put("forte", form.forte(forte));
+                data.put("pcs", form.pcs());
+                data.put("icv", form.icv());
+                if (!form.partner().isEmpty()) {
+                    data.put("z", form.partner());
+                }
+                return parent.finish(ExitCode.OK, KeyValue.line(fields), "athenacl.result.setclass/1",
+                        data, List.of(), List.of());
+            } catch (IllegalArgumentException e) {
+                return parent.fail(ExitCode.INVALID_INPUT, "INVALID_INPUT", "argv[1]", e.getMessage(),
+                        "Use a Forte name such as 3-11.");
+            }
         }
     }
 }

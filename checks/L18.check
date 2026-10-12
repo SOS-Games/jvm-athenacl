@@ -1,0 +1,16 @@
+# L18 set classes, sieves, and generators. Directive list: AGENTS.md, section "Layer checks".
+
+name: set class 3-11 is the major triad
+args: describe setclass 3-11
+exit: 0
+stdout-contains: forte=3-11
+stdout-contains: pcs=0,3,7
+stdout-contains: icv=0,0,1,1,1,0
+
+---
+name: sieve and generator samples match
+args: conformance run --subset sieve,generators
+exit: 0
+stdout-contains: subset=sieve,generators
+stdout-contains: pass=14
+stdout-contains: fail=0

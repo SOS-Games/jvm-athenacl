@@ -9,6 +9,7 @@ import io.github.sosgames.athenacl.core.PathScript;
 import io.github.sosgames.athenacl.core.RhythmGenerators;
 import io.github.sosgames.athenacl.core.TextureClone;
 import io.github.sosgames.athenacl.core.ValueGenerators;
+import io.github.sosgames.athenacl.theory.TheorySamples;
 import io.github.sosgames.athenacl.core.ScriptException;
 import io.github.sosgames.athenacl.core.ScriptRunner;
 import picocli.CommandLine;
@@ -31,6 +32,7 @@ import java.util.concurrent.Callable;
  * samples the value generators. {@code run --subset po.omde,po.rhythm} samples the
  * wave, breakpoint, and rhythm generators. {@code run --subset texture,clone} checks
  * the texture modules, their static switches, and the clone filters.
+ * {@code run --subset sieve,generators} checks sieves, tunings, and generator fixtures.
  */
 public final class ConformanceCommand {
     static final Path DEMOS = Path.of("conformance/demos");
@@ -153,10 +155,13 @@ public final class ConformanceCommand {
             if ("texture,clone".equals(subset)) {
                 return textureClone(parent);
             }
+            if ("sieve,generators".equals(subset)) {
+                return sieveGenerators(parent);
+            }
             if (!"slice".equals(subset)) {
                 return parent.fail(ExitCode.USAGE, "USAGE", "--subset",
                         "unknown subset: " + subset,
-                        "Try conformance run --subset slice, conformance run --subset po.value, conformance run --subset po.omde,po.rhythm, or conformance run --subset texture,clone.");
+                        "Try conformance run --subset slice, conformance run --subset po.value, conformance run --subset po.omde,po.rhythm, conformance run --subset texture,clone, or conformance run --subset sieve,generators.");
             }
             int pass = 0;
             int fail = 0;
@@ -295,6 +300,36 @@ public final class ConformanceCommand {
             fields.put("fail", Integer.toString(check.fail()));
             Map<String, Object> data = new LinkedHashMap<>();
             data.put("subset", "texture,clone");
+            data.put("pass", check.pass());
+            data.put("fail", check.fail());
+            ExitCode code = check.fail() == 0 ? ExitCode.OK : ExitCode.CHECK_FAILED;
+            return parent.finish(code, KeyValue.line(fields), "athenacl.result.conformance-run/1",
+                    data, List.of(), List.of());
+        }
+
+        private Integer sieveGenerators(AgentCli parent) {
+            Path golden = Path.of("conformance/po/sieve-generators.txt");
+            if (!Files.isRegularFile(golden)) {
+                return parent.fail(ExitCode.NOT_FOUND, "NOT_FOUND", "conformance/po/sieve-generators.txt",
+                        "sieve golden not found",
+                        "Run from the repo root, where conformance/po lives.");
+            }
+            TheorySamples.Check check;
+            try {
+                check = TheorySamples.check(golden);
+            } catch (IOException e) {
+                return parent.fail(ExitCode.RUNTIME, "IO_ERROR", "conformance/po/sieve-generators.txt", e.getMessage(),
+                        "Check that the sieve golden is readable.");
+            } catch (RuntimeException e) {
+                return parent.fail(ExitCode.CHECK_FAILED, "CHECK_FAILED", "sieve,generators", e.getMessage(),
+                        "The sieve sample did not match the golden.");
+            }
+            Map<String, String> fields = new LinkedHashMap<>();
+            fields.put("subset", "sieve,generators");
+            fields.put("pass", Integer.toString(check.pass()));
+            fields.put("fail", Integer.toString(check.fail()));
+            Map<String, Object> data = new LinkedHashMap<>();
+            data.put("subset", "sieve,generators");
             data.put("pass", check.pass());
             data.put("fail", check.fail());
             ExitCode code = check.fail() == 0 ? ExitCode.OK : ExitCode.CHECK_FAILED;

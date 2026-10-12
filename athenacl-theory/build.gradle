@@ -6,4 +6,5 @@ dependencies {
 
 test {
   useJUnitPlatform()
+  workingDir = rootProject.projectDir
 }

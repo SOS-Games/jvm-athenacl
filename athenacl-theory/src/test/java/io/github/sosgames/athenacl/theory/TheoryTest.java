@@ -3,6 +3,9 @@ package io.github.sosgames.athenacl.theory;
 
 import org.junit.jupiter.api.Test;
 
+import java.nio.file.Path;
+import java.util.List;
+
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -66,5 +69,20 @@ class TheoryTest {
             }
         }
         assertTrue(raised);
+    }
+
+    @Test
+    void majorTriadIsSetClassThreeEleven() {
+        SetClass form = SetClass.parse("3-11");
+        assertEquals("3-11A", form.name());
+        assertEquals("0,3,7", form.pcs());
+        assertEquals("3-11", form.forte("3-11"));
+    }
+
+    @Test
+    void sieveAndGeneratorsMatchGolden() throws Exception {
+        TheorySamples.Check check = TheorySamples.check(Path.of("conformance/po/sieve-generators.txt"));
+        assertEquals(List.of(), check.failed());
+        assertEquals(14, check.pass());
     }
 }

@@ -106,7 +106,7 @@ public final class MelodyCritic {
     private static Scored generated(Key key, long seed, String state, HookSettings settings,
                                     List<int[]> chords, Set<String> banned, int index, int[] scale) {
         RandomSource rng = DefaultRandom.of(seed).fork("hook".hashCode(), state.hashCode(), index);
-        HookGenerator.Grown grown = HookGenerator.grow(key, rng, settings);
+        HookGenerator.Grown grown = HookGenerator.grow(key, rng, settings, chords);
         int[] midi = new int[grown.motif().notes().size()];
         String[] durations = new String[midi.length];
         for (int i = 0; i < midi.length; i++) {

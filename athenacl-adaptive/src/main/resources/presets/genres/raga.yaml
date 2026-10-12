@@ -13,7 +13,7 @@ cadence: {strength: weak, every: 8}
 drone: {enabled: false}
 voicing: {style: close, voiceLead: true, maxLeap: 4}
 lead: {enabled: true, phrase: period, rhythmCells: [lsS, sslL], register: [A4, E6]}
-hooks: {enabled: false, candidates: 8}
+hooks: {enabled: true, candidates: 64}
 tempo: {bpm: 80}
 layers: [lead, drone, pad, harp, bass]
 programs: {lead: 104, drone: 49, pad: 48, harp: 75, bass: 43}

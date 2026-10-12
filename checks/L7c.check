@@ -54,3 +54,10 @@ stdout-contains: voicing.voiceLead=true
 stdout-contains: voicing.maxLeap=4
 stdout-contains: lead.phrase=period
 stdout-contains: lead.rhythmCells=lsS,sslL,dotted
+
+---
+name: hooks default to 64 candidates
+args: theme resolve --genre reggae --state peaceful
+exit: 0
+stdout-contains: hooks.enabled=true
+stdout-contains: hooks.candidates=64

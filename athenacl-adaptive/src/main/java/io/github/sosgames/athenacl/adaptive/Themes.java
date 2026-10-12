@@ -211,7 +211,7 @@ public final class Themes {
             throw new ThemeException(errors);
         }
         return new Theme(id, bars, bpm, numerator, denominator, states, stingers, quantize, rules, timeline,
-                presetId.isBlank() ? null : presetId, loudness, warnings, motifEvery, hold, kits, hooks(root),
+                presetId.isBlank() ? null : presetId, loudness, warnings, motifEvery, hold, kits, hooks(root, preset),
                 overlays, frameMs, phraseBars);
     }
 
@@ -531,11 +531,14 @@ public final class Themes {
         return String.join(",", layers).toLowerCase(Locale.ROOT);
     }
 
-    /** {@code hooks:} is optional. Absent means the lead keeps the L7 motif generator. */
-    private static HookSettings hooks(JsonNode root) {
+    /**
+     * A {@code hooks:} block on the theme replaces the preset. With no block, a preset that
+     * turns hooks on supplies the default 64 candidates.
+     */
+    private static HookSettings hooks(JsonNode root, Presets.Preset preset) {
         JsonNode node = root.get("hooks");
         if (node == null || !node.isObject()) {
-            return null;
+            return presetHooks(preset);
         }
         double[] weights = criticWeights(root.get("critic"));
         double[] band = noveltyBand(root.get("critic"));
@@ -551,6 +554,23 @@ public final class Themes {
         return hookSettings(node, weights, band, states);
     }
 
+    private static HookSettings presetHooks(Presets.Preset preset) {
+        if (preset == null || preset.states().isEmpty()) {
+            return null;
+        }
+        Composition composition = null;
+        for (Theme.StateDef state : preset.states().values()) {
+            if (state.composition() != null) {
+                composition = state.composition();
+                break;
+            }
+        }
+        if (composition == null || !composition.flag("hooks.enabled", false)) {
+            return null;
+        }
+        return HookSettings.defaults().withCandidates(composition.number("hooks.candidates", 64));
+    }
+
     private static HookSettings hookSettings(JsonNode node, double[] weights, double[] band,
                                              Map<String, HookSettings> states) {
         int min = 4;
@@ -560,7 +580,7 @@ public final class Themes {
             min = length.get(0).asInt(min);
             max = length.get(1).asInt(max);
         }
-        int candidates = node.path("candidates").asInt(8);
+        int candidates = node.path("candidates").asInt(64);
         List<String> cells = new ArrayList<>();
         JsonNode rhythm = node.get("rhythmCells");
         if (rhythm != null && rhythm.isArray()) {

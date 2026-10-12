@@ -10,8 +10,8 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * How a hook is grown and how the critic weighs it. A theme with no {@code hooks:} block
- * never builds one of these, and the lead keeps using {@code MotifGenerator}.
+ * How a hook is grown and how the critic weighs it. A preset can supply these when the
+ * theme file has no {@code hooks:} block. The theme's block wins when it has one.
  * Contour names here are the shapes the critic scores. They are not {@code Motif.contour()},
  * which stays the up/down/same string from L7.
  */

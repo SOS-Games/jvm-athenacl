@@ -27,14 +27,20 @@ public final class HookGenerator {
     }
 
     public static Grown grow(Key key, RandomSource rng, HookSettings settings) {
+        return grow(key, rng, settings, List.of());
+    }
+
+    /** {@code chords} are the pitch classes of each bar. Strong beats sit on the chord sounding then. */
+    public static Grown grow(Key key, RandomSource rng, HookSettings settings, List<int[]> chords) {
         int span = settings.maxNotes() - settings.minNotes();
         int count = settings.minNotes() + (span == 0 ? 0 : rng.nextInt(span + 1));
         String contour = pick(rng, settings.contours());
-        int variant = rng.nextInt(2);
         String cell = settings.cells().get(rng.nextInt(settings.cells().size()));
-        int[] degrees = shape(contour, count, variant);
-        String[] durations = durations(cell, degrees.length);
-        snapStrongBeats(key, degrees, durations);
+        int[] degrees = shape(contour, count, rng);
+        String[] durations = durations(cell, degrees.length, rng);
+        boolean[] chordTone = new boolean[degrees.length];
+        snapStrongBeats(key, degrees, durations, chords, chordTone);
+        keepOneLeap(degrees, chordTone);
         List<MotifNote> notes = new ArrayList<>();
         for (int i = 0; i < degrees.length; i++) {
             notes.add(new MotifNote(degrees[i], durations[i]));
@@ -65,66 +71,126 @@ public final class HookGenerator {
         return last;
     }
 
-    /** Scale degrees. The last note of a 4–6 note hook is the tonic. One interior leap, then steps. */
-    static int[] shape(String contour, int count, int variant) {
-        int[] degrees = new int[count];
+    /**
+     * One contour with a random interior. Steps stay within two degrees. One leap covers
+     * three to six degrees, and the last note is the tonic when that is still a step.
+     */
+    static int[] shape(String contour, int count, RandomSource rng) {
+        int n = Math.max(1, count);
+        int[] degrees = new int[n];
+        if (n == 1) {
+            return degrees;
+        }
+        int leap = 3 + rng.nextInt(4);
         if ("fall".equals(contour)) {
-            degrees[0] = 4;
-            if (count == 1) {
-                return degrees;
+            degrees[0] = Math.min(6, leap + rng.nextInt(Math.max(1, 7 - leap)));
+            int leapAt = n <= 3 ? 1 : 1 + rng.nextInt(n - 2);
+            int cursor = degrees[0];
+            for (int i = 1; i < n - 1; i++) {
+                if (i == leapAt) {
+                    cursor = Math.max(0, cursor - leap);
+                } else if (cursor > 0) {
+                    cursor -= 1;
+                }
+                degrees[i] = cursor;
             }
-            degrees[1] = 0;
-            for (int i = 2; i < count - 1; i++) {
-                degrees[i] = Math.min(2, i - 1);
+            degrees[n - 1] = 0;
+            return degrees;
+        }
+        boolean call = "call-response".equals(contour) && n >= 4;
+        degrees[0] = call ? 0 : rng.nextInt(2);
+        if (call) {
+            degrees[1] = 1 + rng.nextInt(2);
+        }
+        int leapAt = call ? Math.min(n - 2, 2 + (n > 4 ? rng.nextInt(n - 4) : 0)) : 1;
+        if (!call && n > 3) {
+            leapAt = 1 + rng.nextInt(n - 2);
+        }
+        int cursor = degrees[Math.min(leapAt, 1) == 1 && call ? 1 : 0];
+        for (int i = 1; i < n - 1; i++) {
+            if (call && i == 1) {
+                cursor = degrees[1];
+                degrees[i] = cursor;
+                continue;
             }
-            if (count > 2) {
-                degrees[count - 1] = count == 3 ? 2 : 0;
+            if (i == leapAt) {
+                cursor = Math.min(6, cursor + leap);
+            } else if (i < leapAt) {
+                cursor = Math.min(6, cursor + 1);
+            } else if (cursor > 0) {
+                cursor -= 1;
             }
-            return degrees;
-        }
-        if ("call-response".equals(contour) && count >= 4) {
-            degrees[0] = 0;
-            degrees[1] = 2;
-            degrees[2] = 4;
-            for (int i = 3; i < count - 1; i++) {
-                degrees[i] = Math.max(1, 4 - (i - 2));
-            }
-            degrees[count - 1] = 0;
-            return degrees;
-        }
-        degrees[0] = 0;
-        if (count == 1) {
-            return degrees;
-        }
-        if (count == 2) {
-            degrees[1] = 0;
-            return degrees;
-        }
-        if (count == 3) {
-            degrees[1] = variant == 0 ? 4 : 2;
-            degrees[2] = variant == 0 ? 2 : 0;
-            return degrees;
-        }
-        int leap = variant == 0 || count < 5 ? 4 : 5;
-        degrees[1] = leap;
-        int cursor = leap;
-        for (int i = 2; i < count - 1; i++) {
-            cursor = Math.max(1, cursor - 1);
             degrees[i] = cursor;
         }
-        degrees[count - 1] = 0;
+        degrees[n - 1] = 0;
         return degrees;
     }
 
-    static String[] durations(String cell, int count) {
-        return switch (cell == null ? "" : cell) {
-            case "driving-8ths" -> fill(count, "1/8");
-            case "long-short-short" -> cycle(count, "1/4", "1/8", "1/8");
-            case "short-short-long" -> cycle(count, "1/8", "1/8", "1/4");
-            case "anticipation" -> cycle(count, "1/8", "1/4");
-            case "even-quarters" -> fill(count, "1/4");
+    /** One skip of three to six degrees. A strong beat that already fits the chord stays put. */
+    private static void keepOneLeap(int[] degrees, boolean[] chordTone) {
+        if (degrees.length >= 2 && !chordTone[degrees.length - 1]) {
+            degrees[degrees.length - 1] = cadence(degrees[degrees.length - 2]);
+        }
+        boolean leaped = false;
+        for (int pass = 0; pass < 3; pass++) {
+            leaped = false;
+            for (int i = 1; i < degrees.length; i++) {
+                int gap = Math.abs(degrees[i] - degrees[i - 1]);
+                if (gap < 3) {
+                    continue;
+                }
+                if (!leaped && gap <= 6) {
+                    leaped = true;
+                    continue;
+                }
+                if (!chordTone[i]) {
+                    degrees[i] = stepToward(degrees[i - 1], degrees[i]);
+                } else if (!chordTone[i - 1]) {
+                    degrees[i - 1] = stepToward(degrees[i], degrees[i - 1]);
+                }
+            }
+        }
+        if (degrees.length >= 2 && !chordTone[degrees.length - 1]) {
+            degrees[degrees.length - 1] = cadence(degrees[degrees.length - 2]);
+            if (Math.abs(degrees[degrees.length - 1] - degrees[degrees.length - 2]) >= 3
+                    && !chordTone[degrees.length - 2]) {
+                degrees[degrees.length - 2] = stepToward(degrees[degrees.length - 1], degrees[degrees.length - 2]);
+            }
+        }
+    }
+
+    private static int stepToward(int anchor, int value) {
+        if (value == anchor) {
+            return anchor;
+        }
+        return anchor + Integer.signum(value - anchor);
+    }
+
+    private static int cadence(int previous) {
+        if (Math.abs(previous) <= 2) {
+            return 0;
+        }
+        return Math.abs(previous - 2) <= Math.abs(previous - 4) ? 2 : 4;
+    }
+
+    static String[] durations(String cell, int count, RandomSource rng) {
+        if (cell == null || cell.isBlank() || "hook".equals(cell)) {
+            return hook(count);
+        }
+        String[] pattern = switch (cell) {
+            case "driving-8ths" -> new String[] {"1/8"};
+            case "long-short-short" -> new String[] {"1/4", "1/8", "1/8"};
+            case "short-short-long" -> new String[] {"1/8", "1/8", "1/4"};
+            case "anticipation" -> new String[] {"1/8", "1/4"};
+            case "even-quarters" -> new String[] {"1/4"};
             default -> hook(count);
         };
+        int rotate = pattern.length <= 1 ? 0 : rng.nextInt(pattern.length);
+        String[] values = new String[count];
+        for (int i = 0; i < count; i++) {
+            values[i] = pattern[(i + rotate) % pattern.length];
+        }
+        return values;
     }
 
     private static String[] hook(int count) {
@@ -145,61 +211,64 @@ public final class HookGenerator {
         return durations;
     }
 
-    private static String[] fill(int count, String duration) {
-        String[] durations = new String[count];
-        for (int i = 0; i < count; i++) {
-            durations[i] = duration;
-        }
-        return durations;
-    }
-
-    private static String[] cycle(int count, String... pattern) {
-        String[] durations = new String[count];
-        for (int i = 0; i < count; i++) {
-            durations[i] = pattern[i % pattern.length];
-        }
-        return durations;
-    }
-
-    /** Chord tones on beats 1 and 3. The cadence note is left on the degree the shape chose. */
-    private static void snapStrongBeats(Key key, int[] degrees, String[] durations) {
+    /** Chord tones on beats 1 and 3. With no chord, that is the tonic triad. The last note stays put. */
+    private static void snapStrongBeats(Key key, int[] degrees, String[] durations, List<int[]> chords,
+                                         boolean[] chordTone) {
         long tick = 0;
         for (int i = 0; i < degrees.length && i < durations.length; i++) {
             boolean strong = tick % TimeBase.PPQ == 0
                     && ((tick / TimeBase.PPQ) % 4 == 0 || (tick / TimeBase.PPQ) % 4 == 2);
-            if (strong && i < degrees.length - 1 && !triad(degrees[i])) {
-                degrees[i] = nearestTriad(degrees[i]);
+            if (strong && i < degrees.length - 1) {
+                int[] pcs = chordAt(key, chords, i, degrees.length);
+                degrees[i] = nearestChordDegree(key, degrees[i], pcs);
+                chordTone[i] = true;
             }
             tick += TimeBase.durationTicks(durations[i]);
         }
-        if (degrees.length > 0) {
-            int last = degrees[degrees.length - 1];
-            if (last < 0 || last > 6) {
-                degrees[degrees.length - 1] = 0;
-            }
-        }
-        // Touch the key so a caller passing a real key still type-checks the scale size.
-        if (key.pitchClassNames().isEmpty() && degrees.length > 0) {
-            degrees[0] = 0;
-        }
     }
 
-    private static boolean triad(int degree) {
-        int wrapped = Math.floorMod(degree, 7);
-        return wrapped == 0 || wrapped == 2 || wrapped == 4;
+    private static int[] chordAt(Key key, List<int[]> chords, int index, int count) {
+        if (chords == null || chords.isEmpty()) {
+            return triadPcs(key);
+        }
+        int at = chords.size() == 1 ? 0 : Math.min(chords.size() - 1, index * chords.size() / Math.max(1, count));
+        int[] pcs = chords.get(at);
+        return pcs == null || pcs.length == 0 ? triadPcs(key) : pcs;
     }
 
-    private static int nearestTriad(int degree) {
-        int best = 0;
-        int bestDistance = Integer.MAX_VALUE;
-        for (int candidate : new int[] {0, 2, 4}) {
-            int distance = Math.abs(degree - candidate);
-            if (distance < bestDistance) {
-                bestDistance = distance;
-                best = candidate;
+    private static int[] triadPcs(Key key) {
+        int[] steps = key.mode().steps();
+        int tonic = key.tonicPc();
+        return new int[] {
+                tonic,
+                Math.floorMod(tonic + steps[Math.min(2, steps.length - 1)], 12),
+                Math.floorMod(tonic + steps[Math.min(4, steps.length - 1)], 12)
+        };
+    }
+
+    private static int nearestChordDegree(Key key, int degree, int[] pcs) {
+        if (matches(key, degree, pcs)) {
+            return degree;
+        }
+        for (int distance = 1; distance <= 7; distance++) {
+            if (matches(key, degree - distance, pcs)) {
+                return degree - distance;
+            }
+            if (matches(key, degree + distance, pcs)) {
+                return degree + distance;
             }
         }
-        return best;
+        return degree;
+    }
+
+    private static boolean matches(Key key, int degree, int[] pcs) {
+        int pc = Math.floorMod(key.degreeMidi(degree, 5), 12);
+        for (int tone : pcs) {
+            if (Math.floorMod(tone, 12) == pc) {
+                return true;
+            }
+        }
+        return false;
     }
 
     /** MIDI pitch for a scale degree in octave 5, where C4 is 60. */

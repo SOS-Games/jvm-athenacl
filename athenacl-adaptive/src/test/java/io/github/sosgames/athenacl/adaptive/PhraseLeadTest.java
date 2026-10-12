@@ -39,6 +39,18 @@ class PhraseLeadTest {
         Theme theme = Themes.load(java.nio.file.Path.of("themes/fantasy-dungeon.yaml"));
         Director.Performance performance = Director.perform(theme, List.of(), 1);
         assertMonophonic(lead(performance));
+        assertEquals(8, theme.hooks().candidates());
+    }
+
+    @Test
+    void aPresetSuppliesTheHookWhenTheThemeDoesNot() throws Exception {
+        Theme theme = Themes.parse("reggae.yaml", """
+                id: reggae
+                preset: reggae
+                bars: 2
+                meter: "4/4"
+                """);
+        assertEquals(64, theme.hooks().candidates());
     }
 
     private static void assertMonophonic(List<NoteEvent> lead) {

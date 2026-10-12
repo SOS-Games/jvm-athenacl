@@ -331,7 +331,7 @@ The lead is a four-bar phrase. The motif is that phrase's opening idea, fitted t
 
 `melody generate --key "E minor" --chords "i VI VII i" --candidates 64 --seed 3 --explain` prints one `cand=` line per candidate and then `chosen=`, `hook=h1`, `contour=` (arch, fall, rise-and-resolve, or call-response), and `form=` (`sentence` or `period`). The same seed prints the same text. `melody score` rates a MIDI file. `melody rate --choose a` writes one ratings line without asking. `melody fit` turns those rows into weights; the header date is `1970-01-01` and the hash covers the weight lines only.
 
-A theme `hooks:` block replaces the L7 generator for that file. The picked hook is still motif `m1`, so `PhrasePlan` keeps building the sentence, and `debug explain` adds `hook.cand=` and `score=` on those lead notes. The choice is made once per state before the bar loop. A theme with no `hooks:` block is unchanged. `themes/fantasy-dungeon.yaml` sets the block. `themes/fantasy-combat.yaml` does not.
+A preset turns hooks on unless the theme file has its own `hooks:` block, which replaces that default. The picked hook is still motif `m1`, so `PhrasePlan` keeps building the sentence, and `debug explain` adds `hook.cand=` and `score=` on those lead notes. The choice is made once per state before the bar loop. `themes/fantasy-dungeon.yaml` sets the block and asks for 8 candidates. A preset theme with no block uses 64.
 
 `samples/melodies/` holds short public-domain lines transcribed for the critic: Amazing Grace, Twinkle, and a random walk. They are fixtures, not renders.
 

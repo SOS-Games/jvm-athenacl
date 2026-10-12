@@ -108,4 +108,10 @@ A note list such as `samples/notes/c-major-scale.yaml` renders to `score.mid`, `
 
 `describe pos --group value` lists the 45 public value generators. The private operator base is not one of them. `conformance run --subset po.value` samples each generator six times at seed 7 and prints `pass=45 fail=0`. The samples stay off the wave and breakpoint generators.
 
-`gradlew layerCheck -Player=L15` passes (2 checks). The full `gradlew layerCheck` passes (120 checks).
+`gradlew layerCheck -Player=L15` passes (2 checks).
+
+## L16 — Waves, breakpoints, and rhythm
+
+`describe pos --group omde` lists the 36 public wave, distribution, breakpoint, and envelope generators. The private bases are not generators. `describe pos --group rhythm` lists the 13 rhythm generators. `conformance run --subset po.omde,po.rhythm` samples each one six times at seed 7 and prints `pass=49 fail=0`.
+
+`gradlew layerCheck -Player=L16` passes (3 checks). The full `gradlew layerCheck` passes (123 checks).

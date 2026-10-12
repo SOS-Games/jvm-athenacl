@@ -1,0 +1,26 @@
+# L16 wave, breakpoint, and rhythm generators. Directive list: AGENTS.md, section "Layer checks".
+
+name: omde generators are listed
+args: describe pos --group omde
+exit: 0
+stdout-contains: count=36
+stdout-contains: po=ws name=waveSine
+stdout-contains: po=ega name=envelopeGeneratorAdsr
+stdout-count: 36 po=
+
+---
+name: rhythm generators are listed
+args: describe pos --group rhythm
+exit: 0
+stdout-contains: count=13
+stdout-contains: po=cs name=convertSecond
+stdout-contains: po=irh name=iterateRhythmHold
+stdout-count: 13 po=
+
+---
+name: omde and rhythm samples match
+args: conformance run --subset po.omde,po.rhythm
+exit: 0
+stdout-contains: subset=po.omde,po.rhythm
+stdout-contains: pass=49
+stdout-contains: fail=0

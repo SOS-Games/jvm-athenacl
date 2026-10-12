@@ -64,6 +64,16 @@ class CoreTest {
     }
 
     @Test
+    void omdeAndRhythmMatchGolden() throws Exception {
+        OmdeGenerators.Check waves = OmdeGenerators.check(Path.of("conformance/po/omde.txt"));
+        RhythmGenerators.Check beats = RhythmGenerators.check(Path.of("conformance/po/rhythm.txt"));
+        assertEquals(List.of(), waves.failed());
+        assertEquals(List.of(), beats.failed());
+        assertEquals(36, waves.pass());
+        assertEquals(13, beats.pass());
+    }
+
+    @Test
     void basketWalksInOrder() {
         assertEquals(List.of("1", "2", "3", "1", "2", "3"),
                 ParameterObjects.sample("basketGen", "oc,(1,2,3)", 6, 0));

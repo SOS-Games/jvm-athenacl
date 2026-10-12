@@ -3,6 +3,8 @@ package io.github.sosgames.athenacl.cli.agent;
 
 import io.github.sosgames.athenacl.cli.model.ExitCode;
 import io.github.sosgames.athenacl.cli.model.KeyValue;
+import io.github.sosgames.athenacl.core.OmdeGenerators;
+import io.github.sosgames.athenacl.core.RhythmGenerators;
 import io.github.sosgames.athenacl.core.ValueGenerators;
 import io.github.sosgames.athenacl.theory.Chord;
 import io.github.sosgames.athenacl.theory.Key;
@@ -27,6 +29,8 @@ import java.util.concurrent.Callable;
  * and {@code describe instruments} counts presets in a soundbank. GeneralUser GS is
  * {@code instruments=287 drumkits=13}. The bank has to be installed first.
  * {@code describe pos --group value} lists the 45 value generators.
+ * {@code --group omde} lists the 36 wave and breakpoint generators, and
+ * {@code --group rhythm} lists the 13 rhythm generators.
  */
 @CommandLine.Command(name = "describe", description = "Describe a scale, a chord, a soundbank, or the value generators.",
         subcommands = {
@@ -172,32 +176,50 @@ public class DescribeCommand implements Callable<Integer> {
         public Integer call() {
             AgentCli parent = describe.parent;
             parent.commandName = "describe pos";
-            if (!"value".equals(group)) {
+            List<String[]> generators = switch (group) {
+                case "value" -> names(ValueGenerators.valueGroup(),
+                        ValueGenerators.Generator::acronym, ValueGenerators.Generator::name);
+                case "omde" -> names(OmdeGenerators.omdeGroup(),
+                        OmdeGenerators.Generator::acronym, OmdeGenerators.Generator::name);
+                case "rhythm" -> names(RhythmGenerators.rhythmGroup(),
+                        RhythmGenerators.Generator::acronym, RhythmGenerators.Generator::name);
+                default -> null;
+            };
+            if (generators == null) {
                 return parent.fail(ExitCode.INVALID_INPUT, "INVALID_INPUT", "--group",
                         "unknown group: " + group,
-                        "Try describe pos --group value.");
+                        "Try describe pos --group value, describe pos --group omde, or describe pos --group rhythm.");
             }
-            List<ValueGenerators.Generator> generators = ValueGenerators.valueGroup();
             StringBuilder text = new StringBuilder();
             Map<String, String> summary = new LinkedHashMap<>();
-            summary.put("group", "value");
+            summary.put("group", group);
             summary.put("count", Integer.toString(generators.size()));
             text.append(KeyValue.line(summary));
             List<Map<String, String>> rows = new ArrayList<>();
-            for (ValueGenerators.Generator generator : generators) {
+            for (String[] generator : generators) {
                 Map<String, String> fields = new LinkedHashMap<>();
-                fields.put("po", generator.acronym());
-                fields.put("name", generator.name());
+                fields.put("po", generator[0]);
+                fields.put("name", generator[1]);
                 text.append('\n').append(KeyValue.line(fields));
                 rows.add(fields);
             }
             text.append('\n');
             Map<String, Object> data = new LinkedHashMap<>();
-            data.put("group", "value");
+            data.put("group", group);
             data.put("count", generators.size());
             data.put("generators", rows);
             return parent.finish(ExitCode.OK, text.toString(), "athenacl.result.pos/1",
                     data, List.of(), List.of());
+        }
+
+        private static <T> List<String[]> names(List<T> generators,
+                java.util.function.Function<T, String> acronym,
+                java.util.function.Function<T, String> name) {
+            List<String[]> rows = new ArrayList<>();
+            for (T generator : generators) {
+                rows.add(new String[] {acronym.apply(generator), name.apply(generator)});
+            }
+            return rows;
         }
     }
 }

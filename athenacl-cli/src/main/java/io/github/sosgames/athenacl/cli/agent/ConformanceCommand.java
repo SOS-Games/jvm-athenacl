@@ -4,7 +4,9 @@ package io.github.sosgames.athenacl.cli.agent;
 import io.github.sosgames.athenacl.cli.model.ExitCode;
 import io.github.sosgames.athenacl.cli.model.KeyValue;
 import io.github.sosgames.athenacl.compat.DemoCorpus;
+import io.github.sosgames.athenacl.core.OmdeGenerators;
 import io.github.sosgames.athenacl.core.PathScript;
+import io.github.sosgames.athenacl.core.RhythmGenerators;
 import io.github.sosgames.athenacl.core.ValueGenerators;
 import io.github.sosgames.athenacl.core.ScriptException;
 import io.github.sosgames.athenacl.core.ScriptRunner;
@@ -25,7 +27,8 @@ import java.util.concurrent.Callable;
  * The pregui MIDI demo scripts. {@code list} counts them. {@code run} checks that
  * each file has commands. {@code run --subset slice} plays the LineGroove beats and
  * compares each MIDI file to the golden beside the script. {@code run --subset po.value}
- * samples the value generators.
+ * samples the value generators. {@code run --subset po.omde,po.rhythm} samples the
+ * wave, breakpoint, and rhythm generators.
  */
 public final class ConformanceCommand {
     static final Path DEMOS = Path.of("conformance/demos");
@@ -142,10 +145,13 @@ public final class ConformanceCommand {
             if ("po.value".equals(subset)) {
                 return values(parent);
             }
+            if ("po.omde,po.rhythm".equals(subset)) {
+                return omdeRhythm(parent);
+            }
             if (!"slice".equals(subset)) {
                 return parent.fail(ExitCode.USAGE, "USAGE", "--subset",
                         "unknown subset: " + subset,
-                        "Try conformance run --subset slice or conformance run --subset po.value.");
+                        "Try conformance run --subset slice, conformance run --subset po.value, or conformance run --subset po.omde,po.rhythm.");
             }
             int pass = 0;
             int fail = 0;
@@ -217,6 +223,46 @@ public final class ConformanceCommand {
             data.put("pass", check.pass());
             data.put("fail", check.fail());
             ExitCode code = check.fail() == 0 ? ExitCode.OK : ExitCode.CHECK_FAILED;
+            return parent.finish(code, KeyValue.line(fields), "athenacl.result.conformance-run/1",
+                    data, List.of(), List.of());
+        }
+
+        private Integer omdeRhythm(AgentCli parent) {
+            Path omde = Path.of("conformance/po/omde.txt");
+            Path rhythm = Path.of("conformance/po/rhythm.txt");
+            if (!Files.isRegularFile(omde)) {
+                return parent.fail(ExitCode.NOT_FOUND, "NOT_FOUND", "conformance/po/omde.txt",
+                        "omde golden not found",
+                        "Run from the repo root, where conformance/po lives.");
+            }
+            if (!Files.isRegularFile(rhythm)) {
+                return parent.fail(ExitCode.NOT_FOUND, "NOT_FOUND", "conformance/po/rhythm.txt",
+                        "rhythm golden not found",
+                        "Run from the repo root, where conformance/po lives.");
+            }
+            OmdeGenerators.Check waves;
+            RhythmGenerators.Check beats;
+            try {
+                waves = OmdeGenerators.check(omde);
+                beats = RhythmGenerators.check(rhythm);
+            } catch (IOException e) {
+                return parent.fail(ExitCode.RUNTIME, "IO_ERROR", "conformance/po", e.getMessage(),
+                        "Check that the generator goldens are readable.");
+            } catch (RuntimeException e) {
+                return parent.fail(ExitCode.CHECK_FAILED, "CHECK_FAILED", "po.omde,po.rhythm", e.getMessage(),
+                        "The generator sample did not match the golden.");
+            }
+            int pass = waves.pass() + beats.pass();
+            int fail = waves.fail() + beats.fail();
+            Map<String, String> fields = new LinkedHashMap<>();
+            fields.put("subset", "po.omde,po.rhythm");
+            fields.put("pass", Integer.toString(pass));
+            fields.put("fail", Integer.toString(fail));
+            Map<String, Object> data = new LinkedHashMap<>();
+            data.put("subset", "po.omde,po.rhythm");
+            data.put("pass", pass);
+            data.put("fail", fail);
+            ExitCode code = fail == 0 ? ExitCode.OK : ExitCode.CHECK_FAILED;
             return parent.finish(code, KeyValue.line(fields), "athenacl.result.conformance-run/1",
                     data, List.of(), List.of());
         }

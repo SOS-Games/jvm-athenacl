@@ -2,4 +2,4 @@ plugins {
   id("org.gradle.toolchains.foojay-resolver-convention") version "1.0.0"
 }
 rootProject.name = 'jvm-athenacl'
-include 'athenacl-events', 'athenacl-theory', 'athenacl-rhythm', 'athenacl-motif', 'athenacl-adaptive', 'athenacl-render', 'athenacl-instruments', 'athenacl-analysis', 'athenacl-debug', 'athenacl-soundbank-generaluser', 'athenacl-cli', 'athenacl-gdx'
+include 'athenacl-events', 'athenacl-compat', 'athenacl-theory', 'athenacl-rhythm', 'athenacl-motif', 'athenacl-adaptive', 'athenacl-render', 'athenacl-instruments', 'athenacl-analysis', 'athenacl-debug', 'athenacl-soundbank-generaluser', 'athenacl-cli', 'athenacl-gdx'

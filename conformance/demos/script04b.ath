@@ -1,0 +1,9 @@
+# 1/f Noise in Melodic Generation: LineGroove
+tpsd 7
+tmsd 7
+emo m
+tmo lg
+tin a 108
+tie r cs,(ls,e,10,(ru,.01,.2),(ru,.01,.2))
+tie f bs,(2,4,7,9,11,14,16,19,21,23),(n,100,1,0,1)
+eln

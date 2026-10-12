@@ -1,0 +1,10 @@
+# Grammar States as Pitch Transpositions
+tpsd 7
+tmsd 7
+emo m
+tmo lg
+tin a 15
+tie r pt,(c,8), (gt,a{1}b{2}c{4}d{8}@a{ab}b{cd}c{aadd}d{bc}@ac,8,oc),(c,1)
+tie f a,0,(gt,a{1}b{-1}c{7}d{-7}@a{ab}b{cd}c{ad}d{bc}@ac,10,oc)
+tie a gt,a{.25}b{.5}c{.75}d{1}@a{ab}b{cd}c{aadd}d{bc}@bbc,6,oc
+eln

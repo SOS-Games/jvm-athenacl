@@ -82,6 +82,12 @@ A note list such as `samples/notes/c-major-scale.yaml` renders to `score.mid`, `
 
 ## L11 — Debug depth
 
-`gradlew layerCheck -Player=L11` passes (10 checks). The full `gradlew layerCheck` passes (109 checks).
+`gradlew layerCheck -Player=L11` passes (10 checks).
 
 `debug bisect` names the first bar where two renders split, and the control call that caused it. `diff` compares two themes after the preset is merged, or two render directories. `debug determinism --fork-jvm` hashes a theme in a fresh process for each run. `render --debug provenance` and `--debug trace` write a sidecar and keep the same event-log hash as `--debug off`.
+
+## L12 — Port foundation
+
+`compat random --seed 7 --n 5` prints the five CPython `random()` draws for that seed. The generator also matches `randint`, `choice`, and `shuffle`. `gauss`, `expovariate`, and `betavariate` stay within 1e-15 of CPython. `Py.round` is half-to-even, and integer division matches Python on negatives. Argument strings are quoted and read as Python values. A fuzz test round-trips random literals and argument strings. `conformance/demos` holds the 31 MIDI demo scripts. `conformance list` prints `scripts=31`. `conformance run` checks that each script has commands. MIDI bytes are compared once a script can be played.
+
+`gradlew layerCheck -Player=L12` passes (3 checks). The full `gradlew layerCheck` passes (112 checks).

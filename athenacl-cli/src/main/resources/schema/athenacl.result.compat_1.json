@@ -1,0 +1,26 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "athenacl.result.compat/1",
+  "type": "object",
+  "required": ["schema", "ok", "command", "data", "warnings", "errors", "meta"],
+  "properties": {
+    "schema": { "const": "athenacl.result.compat/1" },
+    "ok": { "type": "boolean" },
+    "command": { "const": "compat random" },
+    "data": {
+      "type": "object",
+      "required": ["seed", "n", "values"],
+      "properties": {
+        "seed": { "type": "integer" },
+        "n": { "type": "integer" },
+        "values": { "type": "array" }
+      }
+    },
+    "warnings": { "type": "array" },
+    "errors": { "type": "array" },
+    "meta": {
+      "type": "object",
+      "required": ["version", "seed", "durationMs"]
+    }
+  }
+}

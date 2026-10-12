@@ -175,7 +175,19 @@ public final class CommandCatalog {
                     "credits writes CREDITS.md for the soundfonts a theme's kits use.",
                     List.of(gradle("credits samples/themes/two-banks.yaml --out build/credits")),
                     true,
-                    "athenacl.result.credits/1"));
+                    "athenacl.result.credits/1"),
+            new CommandInfo(
+                    "compat",
+                    "compat random prints CPython random() draws for a seed.",
+                    List.of(gradle("compat random --seed 7 --n 5")),
+                    false,
+                    "athenacl.result.compat/1"),
+            new CommandInfo(
+                    "conformance",
+                    "conformance list counts the 31 pregui MIDI demo scripts. conformance run checks that each script has commands.",
+                    List.of(gradle("conformance list")),
+                    false,
+                    "athenacl.result.conformance/1"));
 
     private CommandCatalog() {
     }

@@ -1,0 +1,11 @@
+# Markov-Based Value Generation
+tpsd 7
+tmsd 7
+emo m
+tin a 26
+tie r cs,(whps,e,(bg,rp,(5,10,15,20)),0,.200,.050)
+tie f mv,a{2}b{4}c{7}d{9}e{11}:{a=1|b=3|c=1|d=3|e=1}a:{a=9|e=1}b:{a=3|c=1}c:{b=3|d=1}d:{c=3|e=1}e:{d=1},(wp,e,100,0,1,0)
+tie a om,(mv,a{.4}b{.6}c{.8}d{1}:{a=6|b=4|c=3|d=1}),(whpp,e,(bg,rp,(5,15,10)))
+tie o mv,a{0}b{-1}c{-2}d{-3}a:{a=9|d=1}b:{a=3|b=1}c:{b=3|c=1}d:{c=1},(c,1)
+tie t 0,60
+eln

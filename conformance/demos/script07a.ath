@@ -1,0 +1,14 @@
+# The CA as a Generator of Melodies
+tpsd 7
+tmsd 7
+emo m
+pin a 5@0|7@2,c2,c7
+tmo ha
+tin a 27
+tie r pt,(c,8),(ig,(bg,rc,(2,3)),(bg,rc,(3,6,9))),(c,1)
+tie a ls,e,9,(ru,.2,1),(ru,.2,1)
+tie d0 c,0
+tie d1 cl,f{s}x{20},90,0,fria,oc
+tie d2 c,1
+tie d3 c,1
+eln

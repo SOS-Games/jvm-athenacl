@@ -4,7 +4,7 @@ Instructions for AI coding agents working in **jvm-athenacl**.
 
 ## Project
 
-GPL-3.0-or-later Java 21 rewrite of athenaCL as an adaptive game-music engine for libGDX desktop. Package `io.github.sosgames.athenacl`. Layer plan: [docs/research/05-project-plan.md](docs/research/05-project-plan.md). L0a–L11, L1b (instrument kits), and L7b (hook generator and melody critic) are in the tree. Do not start L6b or L9b until the user asks.
+GPL-3.0-or-later Java 21 rewrite of athenaCL as an adaptive game-music engine for libGDX desktop. Package `io.github.sosgames.athenacl`. Layer plan: [docs/research/05-project-plan.md](docs/research/05-project-plan.md). L0a–L12, L1b (instrument kits), and L7b (hook generator and melody critic) are in the tree. Do not start L6b or L9b until the user asks.
 
 - Java 21 (`options.release = 21`). Versions live in `gradle.properties`.
 - Groovy Gradle, same shape as SOS-Games/jvm-mw. Root `gradlew layerCheck`. CLI: `gradlew :athenacl-cli:agentCli --args="help"`.
@@ -43,6 +43,8 @@ gradlew.bat :athenacl-cli:agentCli --args="debug determinism samples/notes/c-maj
 gradlew.bat :athenacl-cli:agentCli --args="debug determinism themes/fantasy-dungeon.yaml --runs 2 --fork-jvm"
 gradlew.bat :athenacl-cli:agentCli --args="debug bisect --good build/l11/a --bad build/l11/b"
 gradlew.bat :athenacl-cli:agentCli --args="diff themes/fantasy-dungeon.yaml themes/scifi-space.yaml"
+gradlew.bat :athenacl-cli:agentCli --args="compat random --seed 7 --n 5"
+gradlew.bat :athenacl-cli:agentCli --args="conformance list"
 gradlew.bat :athenacl-cli:agentCli --args="debug inspect build/l0/events.jsonl --where pitch=E4"
 gradlew.bat :athenacl-cli:agentCli --args="soundbank install generaluser --dry-run"
 gradlew.bat :athenacl-cli:agentCli --args="describe instruments --soundbank generaluser"
@@ -75,6 +77,8 @@ gradlew.bat :athenacl-cli:agentCli --args="melody generate --key E-minor --candi
 | describe-music | You want one `bar=` line per bar from an event log, a piano roll (`--roll`), or the chord and key estimate. |
 | debug | You want `debug determinism` (same event-log hash twice, optionally `--fork-jvm`), `debug bisect` (first bar where two renders split), `debug inspect` (filter notes with `--where`), `debug check --loudness`, `debug check --stuck-notes`, `debug bar`, `debug trace --transitions`, `debug replay`, `debug fuzz-transitions`, or `debug overhead`. |
 | diff | You want a semantic diff of two themes, or the first bar where two render directories split. `--fail-on-diff` exits 6 when they differ. |
+| compat | You want CPython `random()` draws. `compat random --seed 7 --n 5` prints the five values the port must match. |
+| conformance | You want `conformance list` to count the 31 pregui MIDI demo scripts, or `conformance run` to check that each script has commands. |
 | soundbank | You want to install, list, or show GeneralUser GS or MuseScore_General. An `.sf3` file is rejected. |
 | describe | You want `describe scale`, `describe chord`, or `describe instruments` (287 presets and 13 drum kits in GeneralUser GS). |
 | analyze | You want EBU R128 integrated loudness and true peak for a WAV or a render directory. A swung render also prints `swing.measured=`. `analyze <dir> --by state` prints each state's offset from the contour. A motif render also prints `motif.reuse.per8bars=`. |
@@ -130,6 +134,9 @@ Published schema ids:
 - `athenacl.result.instrument/1`
 - `athenacl.result.kit/1`
 - `athenacl.result.credits/1`
+- `athenacl.result.compat/1`
+- `athenacl.result.conformance/1`
+- `athenacl.result.conformance-run/1`
 
 When you add a command, add it to `CommandCatalog`, add a row to the table above, and add a block to the layer's `checks/L*.check`. `LayerCheckTest` fails if the table is missing a catalog command.
 
@@ -323,6 +330,10 @@ A named `from` beats a wildcard, so entering combat or danger still waits for th
 
 `debug bisect --good build/l11/a --bad build/l11/b` prints `firstDivergentBar=` for the first bar whose notes differ, and `firstControl=` when the bad control log's shortest prefix is what makes that bar match the bad render. `diff themes/fantasy-dungeon.yaml themes/scifi-space.yaml` prints one `changed=` line per resolved leaf, including `changed=/states/combat/key`. Combat tempo is 100 in both presets, so that leaf is the key, not the tempo. `diff` of two render directories prints `firstDivergentBar=` as well. `debug overhead` prints `identical=` and `ratio=` for one encode with debug off and one with a provenance observer. The times are wall-clock and are not part of a hash.
 
-## Not in L11
+## Port foundation
 
-The effects stage and SFZ kits. Do not add them in a drive-by change.
+`compat random --seed 7 --n 5` prints `values=` as five CPython `random()` draws. The same seed also matches `randint`, `choice`, and `shuffle`. `gauss`, `expovariate`, and `betavariate` stay within 1e-15 of CPython. `Py.round` is half-to-even. `//` and `%` round toward negative infinity. Argument strings such as `pt,(c,2)` are quoted and then read as a Python row. `conformance/demos` holds the 31 MIDI demos, each seeded with `tpsd 7` and `tmsd 7` and closed with `eln`. `conformance list` prints `scripts=31`. `conformance run` prints `missing=0` when every file has commands. MIDI byte comparison waits until a script can be played.
+
+## Not in L12
+
+The effects stage, SFZ kits, and the athenaCL engine (paths, textures, and byte-exact MIDI). Do not add them in a drive-by change.

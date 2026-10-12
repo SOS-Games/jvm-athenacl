@@ -1,0 +1,14 @@
+# Feedback System as Path Index Values
+tpsd 7
+tmsd 7
+emo m
+pin a 5@1|7@4,c2,c7
+tmo ha
+tin a 107
+tie r pt,(c,4),(c,1),(c,1)
+tie d0 c,0
+tie d2 c,1
+tie d3 c,1
+tie d1 fml,t,(bg,rc,(1,1.5,2)),(c,.7),0,18
+tie d1 fml,cc,(bg,rc,(.5,1,1.5)),(c,.7),0,18
+eln

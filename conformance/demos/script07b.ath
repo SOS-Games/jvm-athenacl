@@ -1,0 +1,8 @@
+# The CA as a Generator of Rhythms
+tpsd 7
+tmsd 7
+emo mp
+tin a 47
+tie r pt,(c,4),(cl,f{s}k{2}r{1}x{81}y{120}w{6}c{0}s{0},109,.05,sumRowActive,oc),(c,1)
+tie a cv,f{s}k{2}r{1}x{81}y{120}w{6}c{8}s{0},109,.05,sumRowActive,.2,1
+eln

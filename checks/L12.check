@@ -1,0 +1,23 @@
+# L12 port foundation. Directive list: AGENTS.md, section "Layer checks".
+
+name: cpython random seed 7
+args: compat random --seed 7 --n 5
+exit: 0
+stdout-contains: seed=7
+stdout-contains: n=5
+stdout-contains: values=0.32383276483316237,0.15084917392450192,0.6509344730398537,0.07243628666754276,0.5358820043066892
+
+---
+name: thirty-one demo scripts
+args: conformance list
+exit: 0
+stdout-contains: scripts=31
+stdout-count: 31 script=
+
+---
+name: every demo script has commands
+args: conformance run
+exit: 0
+stdout-contains: scripts=31
+stdout-contains: missing=0
+stdout-contains: fail=0

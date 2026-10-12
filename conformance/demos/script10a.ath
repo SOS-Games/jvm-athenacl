@@ -1,0 +1,11 @@
+# Feedback System as Dynamic Contour
+tpsd 7
+tmsd 7
+emo mp
+tmo lg
+tin a 66
+tie r pt,(c,8),(c,1),(c,1)
+tie a fml,t,(bg,rc,(1,1.5,2))
+tie r cs,(fml,t,(c,1),(c,.7),.001,.400)
+tie a fml,cc,(bg,rc,(.5,1,1.5)),(c,.7),0,1
+eln

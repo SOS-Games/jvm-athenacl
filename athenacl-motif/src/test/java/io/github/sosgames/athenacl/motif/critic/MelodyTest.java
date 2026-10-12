@@ -3,11 +3,14 @@ package io.github.sosgames.athenacl.motif.critic;
 
 import io.github.sosgames.athenacl.events.DefaultRandom;
 import io.github.sosgames.athenacl.events.TimeBase;
+import io.github.sosgames.athenacl.events.RandomSource;
 import io.github.sosgames.athenacl.motif.hook.HookGenerator;
 import io.github.sosgames.athenacl.motif.hook.HookSettings;
+import io.github.sosgames.athenacl.motif.hook.MelodyPitches;
 import io.github.sosgames.athenacl.theory.Key;
 import org.junit.jupiter.api.Test;
 
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -138,6 +141,35 @@ class MelodyTest {
     }
 
     @Test
+    void phraseModeRanksFolkAboveTheOldLeadAndTheWalk() throws Exception {
+        MelodyCritic.Scored folk = phrase(Path.of("samples/melodies/folk-pd-01.mid"), "G major");
+        MelodyCritic.Scored oldLead = oldScaleLead();
+        MelodyCritic.Scored walk = phrase(Path.of("samples/melodies/random-walk.mid"), "C major");
+        double folkScore = value(folk);
+        double leadScore = value(oldLead);
+        double walkScore = value(walk);
+        assertTrue(folkScore > leadScore, "folk " + folkScore + " " + folk.rejected()
+                + " lead " + leadScore + " " + oldLead.rejected());
+        assertTrue(leadScore > walkScore, "lead " + leadScore + " " + oldLead.rejected()
+                + " walk " + walkScore + " " + walk.rejected());
+    }
+
+    @Test
+    void phraseModeUsesTheBarChordAndWaitsForThePhraseEnd() {
+        Key key = Key.parse("C major");
+        int[] midi = {60, 71, 62};
+        String[] durations = {"1/1", "1/4", "1/4"};
+        List<int[]> chords = MelodyCritic.chords(key, "I V");
+        MelodyCritic.Scored phrase = MelodyCritic.scorePitches(midi, durations, key, HookSettings.defaults(),
+                chords, List.of(), MelodyCritic.Mode.PHRASE);
+        assertNull(phrase.rejected());
+        assertEquals(1.0, phrase.features().get("chordTone"), 1e-9);
+        MelodyCritic.Scored hook = MelodyCritic.scorePitches(midi, durations, key, HookSettings.defaults(),
+                chords, List.of(), MelodyCritic.Mode.HOOK);
+        assertEquals("cadenceStable", hook.rejected());
+    }
+
+    @Test
     void fitRecoversClosureAsThePlantedWeight() {
         double[] defaults = MelodyCritic.defaultWeights();
         WeightFit.Model model = WeightFit.fit(new WeightFit.ListView() {
@@ -168,6 +200,37 @@ class MelodyTest {
 
     private static MelodyCritic.Scored score(Key key, int... midi) {
         return MelodyCritic.scorePitches(midi, quarters(midi.length), key, HookSettings.defaults(), List.of(), List.of());
+    }
+
+    private static double value(MelodyCritic.Scored scored) {
+        return scored.rejected() == null ? scored.score() : 0;
+    }
+
+    private static MelodyCritic.Scored phrase(Path path, String key) throws Exception {
+        List<MelodyPitches.Note> notes = MelodyPitches.read(path);
+        return MelodyCritic.scorePitches(MelodyPitches.midis(notes), MelodyPitches.durations(notes),
+                Key.parse(key), HookSettings.defaults(), List.of(), List.of(), MelodyCritic.Mode.PHRASE);
+    }
+
+    /** The lead before the phrase engine: scale steps of a quarter, four to a bar. */
+    private static MelodyCritic.Scored oldScaleLead() {
+        Key key = Key.parse("C major");
+        int steps = key.pitchClassNames().size();
+        int degree = -1;
+        int[] midi = new int[32];
+        String[] durations = new String[32];
+        for (int i = 0; i < midi.length; i++) {
+            RandomSource rng = DefaultRandom.of(1).fork("peaceful".hashCode(), "lead".hashCode(), i / 4 + 1, i % 4);
+            if (degree < 0) {
+                degree = rng.nextInt(steps);
+            } else {
+                degree = Math.floorMod(degree + rng.nextInt(3) - 1, steps);
+            }
+            midi[i] = key.degreeMidi(degree, 5);
+            durations[i] = "1/4";
+        }
+        return MelodyCritic.scorePitches(midi, durations, key, HookSettings.defaults(),
+                List.of(), List.of(), MelodyCritic.Mode.PHRASE);
     }
 
     private static double folkScore(String key, int... midi) {

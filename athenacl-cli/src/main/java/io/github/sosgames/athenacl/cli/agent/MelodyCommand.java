@@ -144,6 +144,10 @@ public class MelodyCommand implements Callable<Integer> {
         Path file;
         @CommandLine.Option(names = "--key", paramLabel = "<key>")
         String key;
+        @CommandLine.Option(names = "--mode", paramLabel = "<hook|phrase>")
+        String mode;
+        @CommandLine.Option(names = "--chords", paramLabel = "<romans>")
+        String chords;
 
         @Override
         public Integer call() {
@@ -165,16 +169,31 @@ public class MelodyCommand implements Callable<Integer> {
                 return parent.fail(ExitCode.INVALID_INPUT, "INVALID_INPUT", "--key", e.getMessage(),
                         "Use a key such as \"G major\".");
             }
+            MelodyCritic.Mode parsedMode;
+            try {
+                parsedMode = MelodyCritic.Mode.parse(mode);
+            } catch (IllegalArgumentException e) {
+                return parent.fail(ExitCode.INVALID_INPUT, "INVALID_INPUT", "--mode", e.getMessage(),
+                        "Use hook or phrase.");
+            }
+            List<int[]> harmony;
+            try {
+                harmony = MelodyCritic.chords(parsed, chords);
+            } catch (IllegalArgumentException e) {
+                return parent.fail(ExitCode.INVALID_INPUT, "INVALID_INPUT", "--chords", e.getMessage(),
+                        "Use roman numerals such as \"i VI iv V\".");
+            }
             MelodyCritic.Scored scored;
             try {
                 List<MelodyPitches.Note> notes = MelodyPitches.read(file);
                 scored = MelodyCritic.scorePitches(MelodyPitches.midis(notes), MelodyPitches.durations(notes),
-                        parsed, HookSettings.defaults(), List.of(), List.of());
+                        parsed, HookSettings.defaults(), harmony, List.of(), parsedMode);
             } catch (IOException e) {
                 return parent.fail(ExitCode.RUNTIME, "IO_ERROR", "argv[2]", e.getMessage(),
                         "Check that the MIDI file is readable.");
             }
             Map<String, String> fields = new LinkedHashMap<>();
+            fields.put("mode", parsedMode == MelodyCritic.Mode.PHRASE ? "phrase" : "hook");
             fields.put("score", MelodyCritic.format(scored.score()));
             fields.put("rejected", scored.rejected() == null ? "-" : scored.rejected());
             if (scored.rejected() == null) {

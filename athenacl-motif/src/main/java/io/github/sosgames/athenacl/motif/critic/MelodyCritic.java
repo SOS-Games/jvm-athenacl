@@ -21,15 +21,38 @@ import java.util.Map;
 import java.util.Set;
 
 /**
- * Ranks hook candidates. Hard rules reject a line, then a weighted sum of features in
- * {@code [0,1]} picks the winner. Ties keep the lowest candidate number. The same seed
- * always ranks the same way: features are added in a fixed order and nothing here reads
- * the clock. The score is a ranking of those proxies. It is not a measure of beauty.
+ * Ranks hook candidates and can score a longer phrase. Hard rules reject a line, then a
+ * weighted sum of features in {@code [0,1]} picks the winner. Ties keep the lowest
+ * candidate number. The same seed always ranks the same way: features are added in a
+ * fixed order and nothing here reads the clock. {@code hook} is the short-line rules.
+ * {@code phrase} allows a span of a twelfth. Its cadence score looks only at a note that
+ * ends a four-bar phrase, and it reads each bar's chord from the progression you passed in.
+ * The score is a ranking of those proxies. It is not a measure of beauty.
  */
 public final class MelodyCritic {
+    public enum Mode {
+        HOOK, PHRASE;
+
+        public static Mode parse(String text) {
+            if (text == null || text.isBlank() || "hook".equalsIgnoreCase(text)) {
+                return HOOK;
+            }
+            if ("phrase".equalsIgnoreCase(text)) {
+                return PHRASE;
+            }
+            throw new IllegalArgumentException("mode must be hook or phrase");
+        }
+    }
+
+    /** A twelfth is nineteen semitones. Phrase mode allows that span and no more. */
+    static final int TWELFTH = 19;
+    private static final long BAR_TICKS = 4L * TimeBase.PPQ;
+    private static final long PHRASE_TICKS = 4L * BAR_TICKS;
+
     public static final String[] FEATURES = {
             "chordTone", "tonalStability", "implication", "leapRecovery", "range",
-            "novelty", "rhythm", "contour", "closure", "distinctiveness"
+            "novelty", "rhythm", "contour", "closure", "distinctiveness",
+            "rhythmVariety", "barPattern"
     };
     private static final double[] PROFILE = {1.0, 0.20, 0.75, 0.30, 0.90, 0.40, 0.45};
 
@@ -50,7 +73,7 @@ public final class MelodyCritic {
     }
 
     public static double[] defaultWeights() {
-        return new double[] {0.18, 0.14, 0.12, 0.10, 0.10, 0.12, 0.10, 0.08, 0.12, 0.04};
+        return new double[] {0.18, 0.14, 0.12, 0.10, 0.10, 0.12, 0.10, 0.08, 0.12, 0.04, 0.08, 0.08};
     }
 
     public static Ranked rank(Key key, long seed, String state, HookSettings settings,
@@ -81,10 +104,16 @@ public final class MelodyCritic {
 
     public static Scored scorePitches(int[] midi, String[] durations, Key key, HookSettings settings,
                                       List<int[]> chords, List<int[]> references) {
+        return scorePitches(midi, durations, key, settings, chords, references, Mode.HOOK);
+    }
+
+    public static Scored scorePitches(int[] midi, String[] durations, Key key, HookSettings settings,
+                                      List<int[]> chords, List<int[]> references, Mode mode) {
         HookSettings resolved = settings == null ? HookSettings.defaults() : settings;
         List<int[]> harmony = chords == null || chords.isEmpty() ? List.of(triad(key)) : chords;
         Set<String> banned = grams(references == null ? List.of() : references);
-        return judge(midi, durations, key, harmony, resolved, banned, 1, motifFrom(midi, key), "scored", "sentence");
+        return judge(midi, durations, key, harmony, resolved, banned, 1, motifFrom(midi, key), "scored", "sentence",
+                mode == null ? Mode.HOOK : mode);
     }
 
     public static List<int[]> chords(Key key, String text) {
@@ -115,7 +144,7 @@ public final class MelodyCritic {
             durations[i] = note.duration();
         }
         return judge(midi, durations, key, chords, settings, banned, index + 1,
-                grown.motif(), grown.contour(), grown.form());
+                grown.motif(), grown.contour(), grown.form(), Mode.HOOK);
     }
 
     private static Scored copyCandidate(Key key, int[] reference, HookSettings settings, Set<String> banned) {
@@ -124,60 +153,85 @@ public final class MelodyCritic {
             durations[i] = "1/4";
         }
         return judge(reference, durations, key, List.of(triad(key)), settings, banned, 1,
-                motifFrom(reference, key), "reference", "sentence");
+                motifFrom(reference, key), "reference", "sentence", Mode.HOOK);
     }
 
     private static Scored judge(int[] midi, String[] durations, Key key, List<int[]> chords,
                                 HookSettings settings, Set<String> banned, int cand,
-                                Motif motif, String contour, String form) {
+                                Motif motif, String contour, String form, Mode mode) {
         int count = midi.length;
         int[] steps = key.mode().steps();
         int tonic = key.tonicPc();
         int[] degree = new int[count];
         boolean[] strong = new boolean[count];
         boolean[] chordTone = new boolean[count];
+        boolean[] phraseEnd = new boolean[count];
         int[] interval = new int[count];
+        String[] played = new String[count];
         long tick = 0;
         for (int i = 0; i < count; i++) {
             degree[i] = nearestDegree(steps, tonic, midi[i]);
             String duration = i < durations.length && durations[i] != null ? durations[i] : "1/4";
+            played[i] = duration;
+            long length = TimeBase.durationTicks(duration);
             strong[i] = tick % TimeBase.PPQ == 0
                     && ((tick / TimeBase.PPQ) % 4 == 0 || (tick / TimeBase.PPQ) % 4 == 2);
-            int chordIndex = chords.size() == 1 ? 0 : Math.min(chords.size() - 1, i * chords.size() / Math.max(1, count));
+            phraseEnd[i] = mode == Mode.PHRASE && length > 0 && (tick + length) % PHRASE_TICKS == 0;
+            int chordIndex = chordIndex(mode, chords, tick, i, count);
             chordTone[i] = contains(chords.get(chordIndex), Math.floorMod(midi[i], 12));
             interval[i] = i == 0 ? 0 : midi[i] - midi[i - 1];
-            tick += TimeBase.durationTicks(duration);
+            tick += length;
         }
-        String rejected = reject(midi, degree, interval, durations, settings, banned);
-        Map<String, Double> features = features(degree, strong, chordTone, interval, durations, contour, settings);
+        String rejected = reject(midi, degree, interval, played, phraseEnd, settings, banned, mode);
+        Map<String, Double> features = features(degree, strong, chordTone, phraseEnd, interval, played, midi,
+                contour, settings, mode);
         double score = rejected == null ? weighted(features, settings.weights()) : 0;
         return new Scored(cand, motif, contour, form, score, features, rejected);
     }
 
+    /** Hook mode spreads chords across notes. Phrase mode uses the chord of the bar. */
+    private static int chordIndex(Mode mode, List<int[]> chords, long tick, int index, int count) {
+        if (chords.size() == 1) {
+            return 0;
+        }
+        if (mode == Mode.PHRASE) {
+            int bar = (int) (tick / BAR_TICKS);
+            return Math.floorMod(bar, chords.size());
+        }
+        return Math.min(chords.size() - 1, index * chords.size() / Math.max(1, count));
+    }
+
     private static String reject(int[] midi, int[] degree, int[] interval, String[] durations,
-                                 HookSettings settings, Set<String> banned) {
+                                 boolean[] phraseEnd, HookSettings settings, Set<String> banned, Mode mode) {
         if (copyGuard(interval, durations, banned)) {
             return "copyGuard";
         }
-        for (int pitch : midi) {
-            if (pitch < 48 || pitch > 84) {
+        if (mode == Mode.PHRASE) {
+            if (span(midi) > TWELFTH) {
                 return "inRange";
             }
+        } else {
+            for (int pitch : midi) {
+                if (pitch < 48 || pitch > 84) {
+                    return "inRange";
+                }
+            }
+            int last = degree.length == 0 ? -1 : degree[degree.length - 1];
+            if (last != 0 && last != 2 && last != 4) {
+                return "cadenceStable";
+            }
         }
-        int last = degree.length == 0 ? -1 : degree[degree.length - 1];
-        if (last != 0 && last != 2 && last != 4) {
-            return "cadenceStable";
-        }
-        int limit = settings.maxLeap();
+        int limit = mode == Mode.PHRASE ? Math.max(settings.maxLeap(), TWELFTH) : settings.maxLeap();
         for (int i = 1; i < interval.length; i++) {
             if (Math.abs(interval[i]) > limit) {
                 return "maxLeap";
             }
         }
+        int sameLimit = mode == Mode.PHRASE ? Math.max(settings.maxSame(), 8) : settings.maxSame();
         int run = 1;
         for (int i = 1; i < midi.length; i++) {
             run = midi[i] == midi[i - 1] ? run + 1 : 1;
-            if (run > settings.maxSame()) {
+            if (run > sameLimit) {
                 return "maxSamePitchRun";
             }
         }
@@ -246,20 +300,35 @@ public final class MelodyCritic {
     }
 
     private static Map<String, Double> features(int[] degree, boolean[] strong, boolean[] chordTone,
-                                                int[] interval, String[] durations, String contour,
-                                                HookSettings settings) {
+                                                boolean[] phraseEnd, int[] interval, String[] durations,
+                                                int[] midi, String contour, HookSettings settings, Mode mode) {
         Map<String, Double> features = new LinkedHashMap<>();
         features.put("chordTone", chordTone(strong, chordTone));
         features.put("tonalStability", meanProfile(degree));
         features.put("implication", leapFollow(interval, false));
         features.put("leapRecovery", leapFollow(interval, true));
-        features.put("range", range(degree));
+        features.put("range", range(degree, midi, mode));
         features.put("novelty", novelty(interval, settings.noveltyLo(), settings.noveltyHi()));
         features.put("rhythm", rhythm(durations));
         features.put("contour", contourScore(contour, degree));
-        features.put("closure", closure(degree));
+        features.put("closure", closure(degree, phraseEnd, mode));
         features.put("distinctiveness", noveltyRatio(interval));
+        features.put("rhythmVariety", rhythmVariety(durations));
+        features.put("barPattern", barPattern(durations));
         return features;
+    }
+
+    private static int span(int[] midi) {
+        if (midi.length == 0) {
+            return 0;
+        }
+        int low = midi[0];
+        int high = midi[0];
+        for (int pitch : midi) {
+            low = Math.min(low, pitch);
+            high = Math.max(high, pitch);
+        }
+        return high - low;
     }
 
     private static double weighted(Map<String, Double> features, double[] weights) {
@@ -327,7 +396,14 @@ public final class MelodyCritic {
         return leaps == 0 ? 1 : recovered / (double) leaps;
     }
 
-    private static double range(int[] degree) {
+    private static double range(int[] degree, int[] midi, Mode mode) {
+        if (mode == Mode.PHRASE) {
+            int width = span(midi);
+            if (width <= TWELFTH) {
+                return 1;
+            }
+            return Math.max(0, 1 - (width - TWELFTH) / 12.0);
+        }
         if (degree.length == 0) {
             return 1;
         }
@@ -337,11 +413,11 @@ public final class MelodyCritic {
             low = Math.min(low, step);
             high = Math.max(high, step);
         }
-        int span = high - low;
-        if (span <= 6) {
+        int width = high - low;
+        if (width <= 6) {
             return 1;
         }
-        return Math.max(0, 1 - (span - 6) / 6.0);
+        return Math.max(0, 1 - (width - 6) / 6.0);
     }
 
     private static double novelty(int[] interval, double low, double high) {
@@ -376,6 +452,54 @@ public final class MelodyCritic {
         return 0.55;
     }
 
+    /** Distinct duration values, and how many of them are not a plain quarter. */
+    private static double rhythmVariety(String[] durations) {
+        if (durations.length == 0) {
+            return 0;
+        }
+        Set<String> unique = new LinkedHashSet<>();
+        int offQuarter = 0;
+        for (String duration : durations) {
+            String value = duration == null ? "1/4" : duration;
+            unique.add(value);
+            if (!"1/4".equals(value)) {
+                offQuarter++;
+            }
+        }
+        double distinct = unique.size() <= 1 ? 0 : Math.min(1, (unique.size() - 1) / 3.0);
+        double share = offQuarter / (double) durations.length;
+        return 0.5 * distinct + 0.5 * share;
+    }
+
+    /**
+     * A bar's pattern is its rhythm. All bars the same is too still. All bars different
+     * never comes back. A mix of the two scores higher.
+     */
+    private static double barPattern(String[] durations) {
+        Map<Integer, StringBuilder> bars = new LinkedHashMap<>();
+        long tick = 0;
+        for (String duration : durations) {
+            String value = duration == null ? "1/4" : duration;
+            int bar = (int) (tick / BAR_TICKS);
+            bars.computeIfAbsent(bar, key -> new StringBuilder()).append(value).append(',');
+            tick += TimeBase.durationTicks(value);
+        }
+        if (bars.size() <= 1) {
+            return 0.55;
+        }
+        Set<String> unique = new LinkedHashSet<>();
+        for (StringBuilder pattern : bars.values()) {
+            unique.add(pattern.toString());
+        }
+        if (unique.size() == 1) {
+            return 0.25;
+        }
+        if (unique.size() == bars.size()) {
+            return 0.45;
+        }
+        return 1;
+    }
+
     private static double contourScore(String name, int[] degree) {
         if (degree.length < 2) {
             return 0.35;
@@ -397,15 +521,30 @@ public final class MelodyCritic {
         return match ? 1 : 0.35;
     }
 
-    private static double closure(int[] degree) {
-        if (degree.length == 0) {
-            return 0;
+    private static double closure(int[] degree, boolean[] phraseEnd, Mode mode) {
+        if (mode != Mode.PHRASE) {
+            return oneClosure(degree.length == 0 ? -1 : degree[degree.length - 1]);
         }
-        int last = degree[degree.length - 1];
-        if (last == 0) {
+        int ends = 0;
+        double sum = 0;
+        for (int i = 0; i < degree.length && i < phraseEnd.length; i++) {
+            if (!phraseEnd[i]) {
+                continue;
+            }
+            ends++;
+            sum += oneClosure(degree[i]);
+        }
+        if (ends == 0) {
+            return oneClosure(degree.length == 0 ? -1 : degree[degree.length - 1]);
+        }
+        return sum / ends;
+    }
+
+    private static double oneClosure(int degree) {
+        if (degree == 0) {
             return 1;
         }
-        if (last == 2 || last == 4) {
+        if (degree == 2 || degree == 4) {
             return 0.7;
         }
         return 0;

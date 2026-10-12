@@ -61,3 +61,12 @@ args: theme resolve --genre reggae --state peaceful
 exit: 0
 stdout-contains: hooks.enabled=true
 stdout-contains: hooks.candidates=64
+
+---
+name: phrase mode scores a folk line
+args: melody score samples/melodies/folk-pd-01.mid --key "G major" --mode phrase
+exit: 0
+stdout-contains: mode=phrase
+stdout-contains: rejected=-
+stdout-contains: rhythmVariety=
+stdout-contains: barPattern=

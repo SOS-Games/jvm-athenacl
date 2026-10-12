@@ -71,6 +71,8 @@ public class RenderCommand implements Callable<Integer> {
     String barWindow;
     @CommandLine.Option(names = "--at", paramLabel = "<bar state name intensity>")
     List<String> at = new ArrayList<>();
+    @CommandLine.Option(names = "--debug", paramLabel = "<off|provenance|trace>", defaultValue = "off")
+    String debugMode;
 
     @Override
     public Integer call() {
@@ -84,8 +86,13 @@ public class RenderCommand implements Callable<Integer> {
                     "note list not found",
                     "Pass a YAML note list such as samples/notes/c-major-scale.yaml.");
         }
+        Integer debug = DebugMode.reject(parent, debugMode);
+        if (debug != null) {
+            return debug;
+        }
         if (Themes.looksLike(notes)) {
-            return ThemeCli.render(parent, notes, timeline, barWindow, at, seed, outDir, formats, soundbank, cache);
+            return ThemeCli.render(parent, notes, timeline, barWindow, at, seed, outDir, formats, soundbank, cache,
+                    debugMode);
         }
         Groove parsedGroove = null;
         if (groove != null) {
@@ -155,6 +162,10 @@ public class RenderCommand implements Callable<Integer> {
                         "Use a JDK that includes com.sun.media.sound and keep --add-exports java.desktop/com.sun.media.sound=ALL-UNNAMED.");
             }
         }
+        Integer observer = DebugMode.observer(parent, debugMode, score);
+        if (observer != null) {
+            return observer;
+        }
         Map<String, byte[]> bodies = new LinkedHashMap<>();
         try {
             for (String format : requested) {
@@ -168,6 +179,7 @@ public class RenderCommand implements Callable<Integer> {
             return parent.fail(ExitCode.RUNTIME, "IO_ERROR", "--formats", e.getMessage(),
                     "Rendering the WAV or MIDI file failed. Try again, or drop wav from --formats.");
         }
+        DebugMode.sidecars(bodies, debugMode, score);
         boolean changed = false;
         try {
             for (Map.Entry<String, byte[]> entry : bodies.entrySet()) {
@@ -212,6 +224,7 @@ public class RenderCommand implements Callable<Integer> {
         if (parsedGroove != null) {
             Swing.measure(score).ifPresent(measured -> data.put("swingMeasured", measured));
         }
+        DebugMode.fields(fields, data, debugMode, score.notes().size());
         return parent.finish(ExitCode.OK, KeyValue.line(fields), "athenacl.result.render/1",
                 data, warnings(selection), List.of());
     }
@@ -266,6 +279,8 @@ public class RenderCommand implements Callable<Integer> {
             case "wav" -> "score.wav";
             case "events" -> "events.jsonl";
             case "txt" -> "score.txt";
+            case "provenance" -> "provenance.jsonl";
+            case "trace" -> "trace.jsonl";
             default -> throw new IllegalArgumentException(format);
         };
     }

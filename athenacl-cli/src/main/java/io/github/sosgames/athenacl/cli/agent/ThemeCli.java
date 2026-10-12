@@ -42,7 +42,7 @@ final class ThemeCli {
     }
 
     static int render(AgentCli parent, Path themePath, Path timeline, String barWindow, List<String> at,
-                      long seed, Path outDir, String formats, String soundbank, Path cache) {
+                      long seed, Path outDir, String formats, String soundbank, Path cache, String debugMode) {
         parent.commandName = "render";
         Loaded loaded = load(parent, themePath, timeline, at);
         if (loaded == null) {
@@ -59,6 +59,10 @@ final class ThemeCli {
         }
         Director.Performance full = Director.perform(loaded.theme, loaded.controls, seed, loaded.alternates());
         Director.Performance shown = range == null ? full : Director.slice(full, range.from, range.to);
+        Integer observer = DebugMode.observer(parent, debugMode, full.score());
+        if (observer != null) {
+            return observer;
+        }
         if (outDir == null) {
             String text = new String(EventLog.encode(shown.score()), StandardCharsets.UTF_8);
             if (!text.isEmpty() && !text.endsWith("\n")) {
@@ -116,6 +120,7 @@ final class ThemeCli {
             return parent.fail(ExitCode.RUNTIME, "IO_ERROR", "--formats", e.getMessage(),
                     "Rendering the WAV or MIDI file failed. Try again, or drop wav from --formats.");
         }
+        DebugMode.sidecars(bodies, debugMode, score);
         Double reference = loaded.theme.loudness() == null ? null : loaded.theme.loudness().reference();
         bodies.put("control", ControlLog.encode(TextPaths.portable(themePath), seed, loaded.theme.bars(),
                 loaded.controls, reference));
@@ -147,6 +152,7 @@ final class ThemeCli {
         }
         fields.put("dryRun", Boolean.toString(parent.dryRun));
         fields.put("changed", Boolean.toString(changed));
+        DebugMode.fields(fields, null, debugMode, score.notes().size());
         Map<String, Object> payload = data(full, hash, changed, parent.dryRun, seed);
         payload.put("files", requested.size() + 1);
         payload.put("states", full.stateList());

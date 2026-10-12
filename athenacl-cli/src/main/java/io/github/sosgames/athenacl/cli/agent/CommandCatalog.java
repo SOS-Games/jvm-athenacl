@@ -64,13 +64,21 @@ public final class CommandCatalog {
                     "athenacl.result.describe-music/1"),
             new CommandInfo(
                     "debug",
-                    "debug determinism hashes a note list twice. debug inspect filters notes with --where pitch=E4. debug check --stuck-notes counts notes that never turn off. debug bar explains one bar. debug trace --transitions lists state changes. debug replay hashes a control log. debug fuzz-transitions tries seeded state changes.",
+                    "debug determinism hashes a note list or theme twice. --fork-jvm uses a fresh process for each run. debug bisect finds the first bar where two renders split. debug inspect filters notes with --where pitch=E4. debug check --stuck-notes counts notes that never turn off. debug bar explains one bar. debug trace --transitions lists state changes. debug replay hashes a control log. debug fuzz-transitions tries seeded state changes. debug overhead times provenance against debug off.",
                     List.of(
                             gradle("debug determinism samples/notes/c-major-scale.yaml --runs 2"),
+                            gradle("debug determinism themes/fantasy-dungeon.yaml --runs 2 --fork-jvm"),
+                            gradle("debug bisect --good build/l11/a --bad build/l11/b"),
                             gradle("debug inspect build/l0/events.jsonl --where pitch=E4"),
                             gradle("debug bar samples/themes/poc.yaml --seed 42 --bar 9")),
                     false,
                     "athenacl.result.determinism/1"),
+            new CommandInfo(
+                    "diff",
+                    "diff of two themes prints the resolved leaves that differ. diff of two render directories prints the first bar that split. --fail-on-diff exits 6 when anything differs.",
+                    List.of(gradle("diff themes/fantasy-dungeon.yaml themes/scifi-space.yaml")),
+                    false,
+                    "athenacl.result.diff/1"),
             new CommandInfo(
                     "soundbank",
                     "soundbank install downloads GeneralUser GS and checks the pinned SHA-256. list and show report the cache.",

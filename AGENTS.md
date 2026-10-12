@@ -4,7 +4,7 @@ Instructions for AI coding agents working in **jvm-athenacl**.
 
 ## Project
 
-GPL-3.0-or-later Java 21 rewrite of athenaCL as an adaptive game-music engine for libGDX desktop. Package `io.github.sosgames.athenacl`. Layer plan: [docs/research/05-project-plan.md](docs/research/05-project-plan.md). L0a–L10, L1b (instrument kits), and L7b (hook generator and melody critic) are in the tree. Do not start L6b or L9b until the user asks.
+GPL-3.0-or-later Java 21 rewrite of athenaCL as an adaptive game-music engine for libGDX desktop. Package `io.github.sosgames.athenacl`. Layer plan: [docs/research/05-project-plan.md](docs/research/05-project-plan.md). L0a–L11, L1b (instrument kits), and L7b (hook generator and melody critic) are in the tree. Do not start L6b or L9b until the user asks.
 
 - Java 21 (`options.release = 21`). Versions live in `gradle.properties`.
 - Groovy Gradle, same shape as SOS-Games/jvm-mw. Root `gradlew layerCheck`. CLI: `gradlew :athenacl-cli:agentCli --args="help"`.
@@ -40,6 +40,9 @@ gradlew.bat :athenacl-cli:agentCli --args="render samples/notes/c-major-scale.ya
 gradlew.bat :athenacl-cli:agentCli --args="play samples/notes/c-major-scale.yaml --dry-run"
 gradlew.bat :athenacl-cli:agentCli --args="describe-music build/l0/events.jsonl --roll"
 gradlew.bat :athenacl-cli:agentCli --args="debug determinism samples/notes/c-major-scale.yaml --runs 2"
+gradlew.bat :athenacl-cli:agentCli --args="debug determinism themes/fantasy-dungeon.yaml --runs 2 --fork-jvm"
+gradlew.bat :athenacl-cli:agentCli --args="debug bisect --good build/l11/a --bad build/l11/b"
+gradlew.bat :athenacl-cli:agentCli --args="diff themes/fantasy-dungeon.yaml themes/scifi-space.yaml"
 gradlew.bat :athenacl-cli:agentCli --args="debug inspect build/l0/events.jsonl --where pitch=E4"
 gradlew.bat :athenacl-cli:agentCli --args="soundbank install generaluser --dry-run"
 gradlew.bat :athenacl-cli:agentCli --args="describe instruments --soundbank generaluser"
@@ -70,7 +73,8 @@ gradlew.bat :athenacl-cli:agentCli --args="melody generate --key E-minor --candi
 | render | You have a note-list YAML file and want `score.mid`, `score.wav`, `events.jsonl`, and `score.txt` under `--out`. |
 | play | You want to hear a note list, an event log, or a WAV on the speakers. `--dry-run` does not open the device. |
 | describe-music | You want one `bar=` line per bar from an event log, a piano roll (`--roll`), or the chord and key estimate. |
-| debug | You want `debug determinism` (same event-log hash twice), `debug inspect` (filter notes with `--where`), `debug check --loudness`, `debug check --stuck-notes`, `debug bar`, `debug trace --transitions`, `debug replay`, or `debug fuzz-transitions`. |
+| debug | You want `debug determinism` (same event-log hash twice, optionally `--fork-jvm`), `debug bisect` (first bar where two renders split), `debug inspect` (filter notes with `--where`), `debug check --loudness`, `debug check --stuck-notes`, `debug bar`, `debug trace --transitions`, `debug replay`, `debug fuzz-transitions`, or `debug overhead`. |
+| diff | You want a semantic diff of two themes, or the first bar where two render directories split. `--fail-on-diff` exits 6 when they differ. |
 | soundbank | You want to install, list, or show GeneralUser GS or MuseScore_General. An `.sf3` file is rejected. |
 | describe | You want `describe scale`, `describe chord`, or `describe instruments` (287 presets and 13 drum kits in GeneralUser GS). |
 | analyze | You want EBU R128 integrated loudness and true peak for a WAV or a render directory. A swung render also prints `swing.measured=`. `analyze <dir> --by state` prints each state's offset from the contour. A motif render also prints `motif.reuse.per8bars=`. |
@@ -99,6 +103,9 @@ Published schema ids:
 - `athenacl.result.play/1`
 - `athenacl.result.describe-music/1`
 - `athenacl.result.determinism/1`
+- `athenacl.result.bisect/1`
+- `athenacl.result.diff/1`
+- `athenacl.result.overhead/1`
 - `athenacl.result.inspect/1`
 - `athenacl.result.soundbank/1`
 - `athenacl.result.instruments/1`
@@ -144,9 +151,9 @@ A warning still exits 0. `--strict` turns any warning into exit 3 and sets `ok` 
 | 1 | Unexpected error. Stack trace on stderr. |
 | 2 | Usage. Unknown command or bad flag. Message on stderr, help on stdout. |
 | 3 | Invalid input. Also `--strict` when a warning was present. |
-| 4 | Not found. A missing schema id, note list, or event log. `render` reports that on `argv[1]`. `debug determinism` and `debug inspect` report it on `argv[2]`. |
+| 4 | Not found. A missing schema id, note list, or event log. `render` reports that on `argv[1]`. `debug determinism` and `debug inspect` report it on `argv[2]`. `debug bisect` and `diff` report a missing directory or theme the same way. |
 | 5 | Runtime failure. A note list or `--out` directory that cannot be read or written, or a MIDI/WAV render that threw. |
-| 6 | Check failed. `debug determinism` returns this when two runs do not share a hash. |
+| 6 | Check failed. `debug determinism` returns this when two runs do not share a hash. `diff --fail-on-diff` returns this when the two sides differ. `render --debug provenance` returns this when the observer changes the event log. |
 | 7 | Environment. `render` with `wav` returns this when Gervill's offline stream cannot be opened. `version` still reports a missing Gervill as `gervill=absent` and a warning, so that command can still answer. |
 
 Unknown command stderr starts with `unknown command: <what you typed>`. A close name adds `Did you mean ...?` in the fix hint.
@@ -216,7 +223,7 @@ The summary line is `files= notes= bars= changed= hash=` plus `dryRun=`. `change
 
 `describe-music <events.jsonl> --roll` prints `bar= notes= range=` and a roll where one column is a 16th note: `●` starts a note, `─` holds it, `·` is empty. A quarter note on beat 1 starts `C4 |●`. Channel 9 is a drum grid under that roll. When the notes form a chord, the summary also ends with `chord=`, `key=`, and `conf=` (cosine similarity of the whole piece against a mode profile).
 
-`debug determinism <notes.yaml> --runs 2` hashes the event log that many times and does not write audio. `debug inspect <events.jsonl> --where pitch=E4` prints only the matching `note id=` lines.
+`debug determinism <notes.yaml> --runs 2` hashes the event log that many times and does not write audio. `--fork-jvm` does each run in a new process. `debug inspect <events.jsonl> --where pitch=E4` prints only the matching `note id=` lines. `render --debug provenance` writes `provenance.jsonl` beside the event log and prints the same `hash=` as `--debug off`. `--debug trace` writes `trace.jsonl` the same way.
 
 The summary line also ends with `soundbank=`. A missing `--soundbank` file still exits 0 and adds `warning=SOUNDBANK_FALLBACK`. The WAV then uses the JDK default bank, so a second render of the same notes stays byte-for-byte the same.
 
@@ -312,6 +319,10 @@ A named `from` beats a wildcard, so entering combat or danger still waits for th
 
 `render themes/fantasy-dungeon.yaml --at "8 theme themes/scifi-space.yaml" --bars 1-16` prints `themeSwitch.bar=9`. A theme change asked for on a bar line still waits until the next bar. The window still preloads the combat kit and swaps that at a bar until a track button is pressed. Ambush, Dungeon, Combat, Party, Trading, Space, and Space combat each start that piece from the beginning, and the window shows how far through the current track you are.
 
-## Not in L10
+## Debug depth
+
+`debug bisect --good build/l11/a --bad build/l11/b` prints `firstDivergentBar=` for the first bar whose notes differ, and `firstControl=` when the bad control log's shortest prefix is what makes that bar match the bad render. `diff themes/fantasy-dungeon.yaml themes/scifi-space.yaml` prints one `changed=` line per resolved leaf, including `changed=/states/combat/key`. Combat tempo is 100 in both presets, so that leaf is the key, not the tempo. `diff` of two render directories prints `firstDivergentBar=` as well. `debug overhead` prints `identical=` and `ratio=` for one encode with debug off and one with a provenance observer. The times are wall-clock and are not part of a hash.
+
+## Not in L11
 
 The effects stage and SFZ kits. Do not add them in a drive-by change.

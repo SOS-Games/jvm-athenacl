@@ -1,0 +1,78 @@
+# L11 debug depth. Directive list: AGENTS.md, section "Layer checks".
+
+name: debug off hash
+args: render samples/notes/c-major-scale.yaml --seed 0 --formats events --out build/l11/off --debug off
+exit: 0
+delete-before: build/l11/off
+stdout-contains: hash=
+capture: hash hash=([0-9a-f]+)
+file-absent: build/l11/off/provenance.jsonl
+
+---
+name: provenance keeps the hash
+args: render samples/notes/c-major-scale.yaml --seed 0 --formats events --out build/l11/prov --debug provenance
+exit: 0
+delete-before: build/l11/prov
+stdout-contains: debug=provenance
+stdout-contains: provenance=8
+stdout-contains-capture: hash
+file-exists: build/l11/prov/provenance.jsonl
+file-exists: build/l11/prov/events.jsonl
+
+---
+name: trace keeps the hash
+args: render samples/notes/c-major-scale.yaml --seed 0 --formats events --out build/l11/trace --debug trace
+exit: 0
+delete-before: build/l11/trace
+stdout-contains: debug=trace
+stdout-contains: trace=8
+stdout-contains-capture: hash
+file-exists: build/l11/trace/trace.jsonl
+
+---
+name: good poc render
+args: render samples/themes/poc.yaml --seed 42 --formats events --out build/l11/a
+exit: 0
+delete-before: build/l11/a
+file-exists: build/l11/a/events.jsonl
+file-exists: build/l11/a/control.jsonl
+
+---
+name: combat injected at bar 7
+args: render samples/themes/poc.yaml --seed 42 --at "7 state combat 0.6" --formats events --out build/l11/b
+exit: 0
+delete-before: build/l11/b
+file-exists: build/l11/b/events.jsonl
+
+---
+name: bisect finds the injected bar
+args: debug bisect --good build/l11/a --bad build/l11/b
+exit: 0
+stdout-contains: firstDivergentBar=7
+stdout-contains: firstControl=7
+
+---
+name: theme diff names the combat key
+args: diff themes/fantasy-dungeon.yaml themes/scifi-space.yaml
+exit: 0
+stdout-contains: changed=/states/combat/key from=D-aeolian to=F-lydian
+
+---
+name: render diff names the same bar
+args: diff build/l11/a build/l11/b
+exit: 0
+stdout-contains: firstDivergentBar=7
+
+---
+name: forked determinism
+args: debug determinism themes/fantasy-dungeon.yaml --runs 2 --fork-jvm --seed 1
+exit: 0
+stdout-contains: identical=true
+stdout-contains: fork=true
+
+---
+name: provenance overhead still matches
+args: debug overhead samples/notes/c-major-scale.yaml
+exit: 0
+stdout-contains: identical=true
+stdout-contains: ratio=

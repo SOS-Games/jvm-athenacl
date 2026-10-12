@@ -76,6 +76,12 @@ A note list such as `samples/notes/c-major-scale.yaml` renders to `score.mid`, `
 
 ## L10 — Harmony and meter
 
-`gradlew layerCheck -Player=L10` passes (4 checks). The full `gradlew layerCheck` passes (99 checks).
+`gradlew layerCheck -Player=L10` passes (4 checks).
 
 `theory modulate` plans a pivot, a direct jump, or a chord borrowed from the parallel key. A transition can keep the current key, move to the relative key, or use the state's own key. `samples/themes/modulation.yaml` stays in D dorian until bar 9, which is F lydian, and bar 12 is in 7/8. Chord phrases cadence on the tonic, and a Lydian tonic includes the raised fourth. The check render writes MIDI and the event log, not a WAV.
+
+## L11 — Debug depth
+
+`gradlew layerCheck -Player=L11` passes (10 checks). The full `gradlew layerCheck` passes (109 checks).
+
+`debug bisect` names the first bar where two renders split, and the control call that caused it. `diff` compares two themes after the preset is merged, or two render directories. `debug determinism --fork-jvm` hashes a theme in a fresh process for each run. `render --debug provenance` and `--debug trace` write a sidecar and keep the same event-log hash as `--debug off`.

@@ -1,5 +1,6 @@
-scale: {tonic: A, mode: aeolian}
-tempo: {bpm: 100}
-layers: [harp, pad, bass, lead]
-programs: {pad: 48, harp: 46, bass: 43, lead: 73}
-instruments: {harp: harp, pad: strings, bass: cello, lead: flute}
+scale: {tonic: A, mode: ionian, leadingTone: true}
+tempo: {bpm: 84}
+harmony: {progression: [I, vi, IV, V]}
+layers: [pad, chords, brass, lead, bass]
+programs: {pad: 48, chords: 0, brass: 60, lead: 73, bass: 43}
+instruments: {pad: strings, chords: piano, brass: horn, lead: flute, bass: cello}

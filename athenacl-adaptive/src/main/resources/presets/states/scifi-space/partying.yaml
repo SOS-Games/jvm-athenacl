@@ -1,5 +1,6 @@
 scale: {tonic: D, mode: lydian, leadingTone: false}
-tempo: {bpm: 100}
+tempo: {bpm: 112}
+lead: {density: 1}
 layers: [pad, arp, bass, lead, drums]
 programs: {pad: 89, arp: 80, bass: 38, lead: 81, drums: 25}
 instruments: {pad: pad.warm, arp: lead.square, bass: bass.synth, lead: lead.saw, drums: drums.808}

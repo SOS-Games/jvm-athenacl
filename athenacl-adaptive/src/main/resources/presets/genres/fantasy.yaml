@@ -1,8 +1,8 @@
 genre: fantasy
 character: "modal,taiko"
 meter: "4/4"
-palette: "harp,choir,strings,horn,flute,fiddle,taiko"
-limits: "GM choir, harp, horn, flute, fiddle, and taiko. No sung lyrics."
+palette: "strings,horn,piano,flute,clarinet,harp,fiddle,taiko"
+limits: "Strings, horn, piano, flute, and clarinet. Harp and fiddle are colour. No sung lyrics."
 loudness:
   reference: -23
   maxSpread: 6
@@ -20,8 +20,8 @@ voicing: {style: close, voiceLead: true, maxLeap: 4}
 lead: {enabled: true, phrase: period, rhythmCells: [lsS, sslL, dotted], register: [A4, E6]}
 hooks: {enabled: true, candidates: 64}
 tempo: {bpm: 96}
-instruments: {lead: flute, pad: strings, bass: cello, arp: harp, brass: horn, perc: taiko}
-layers: [harp, pad, bass, lead]
+instruments: {lead: flute, pad: strings, bass: cello, chords: piano, brass: horn, arp: harp, perc: taiko}
+layers: [pad, chords, bass, lead]
 programs: {pad: 48, harp: 46, bass: 43, lead: 73}
 density:
   pad: {degrees: [0, 2, 4]}

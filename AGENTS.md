@@ -339,7 +339,7 @@ A preset turns hooks on unless the theme file has its own `hooks:` block, which 
 
 `instruments/gm-lite.yaml` is the default kit (GeneralUser GS). `instruments/gm-full.yaml` extends it and plays every named instrument from MuseScore_General, falling back to GeneralUser when a patch is missing. `soundbank install musescore-general` downloads that SF2. An SF3 file is rejected with `SOUNDBANK_SF3_UNSUPPORTED` before Gervill opens it. `kit validate` checks the checksum, the license, and that two instruments did not receive the same slot. `instruments compare` prints `loudness.probe=` after each instrument is brought to about -20 LUFS, and `raw.deltaLu=` for the gap before that. `render --kit gm-full` puts each named instrument on its own slot.
 
-`themes/fantasy-dungeon.yaml` names `instruments.kits: [gm-lite]` and the preset maps each layer to a kit instrument (`harp`, `strings`, `cello`, `flute`, and the rest). A render of that theme normalizes those instruments, then trims each state onto the loudness contour. The event-log hash stays the program-change log, not the trim.
+`themes/fantasy-dungeon.yaml` names `instruments.kits: [gm-lite]` and the preset maps each layer to a kit instrument (`strings`, `piano`, `horn`, `flute`, `cello`, and the rest). A render of that theme normalizes those instruments, then trims each state onto the loudness contour. The event-log hash stays the program-change log, not the trim.
 
 ## Beat switches
 

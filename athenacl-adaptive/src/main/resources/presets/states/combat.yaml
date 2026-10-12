@@ -1,4 +1,5 @@
 state: combat
+tempo: {relative: 1.2}
 density:
   bass: {step: 1}
   taiko: {step: 1, minVelocity: 114}

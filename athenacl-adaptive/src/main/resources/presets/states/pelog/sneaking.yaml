@@ -1,0 +1,2 @@
+scale: {tonic: C, mode: phrygian, leadingTone: false}
+tempo: {bpm: 60}

@@ -51,4 +51,4 @@ stdout-contains: bar=
 stdout-contains: sched.lookaheadMs=150
 stdout-contains: cpu.msPerBar=
 stdout-contains: kit=gm-lite
-stdout-contains: instruments=harp,strings,cello,flute
+stdout-contains: instruments=strings,piano,horn,flute,cello

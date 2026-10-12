@@ -1,0 +1,2 @@
+scale: {tonic: C, mode: lydian, leadingTone: false}
+tempo: {bpm: 52}

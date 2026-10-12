@@ -29,8 +29,8 @@ class PhraseLeadTest {
         assertMonophonic(lead);
         assertEquals(pitches(lead, 1), pitches(lead, 5));
         assertChordTones(performance, lead);
-        assertTrue(longCadence(lead, 4, 11, 4, 7), "half cadence " + pitches(lead, 4));
-        assertTrue(longCadence(lead, 8, 9, 0), "authentic cadence " + pitches(lead, 8));
+        assertTrue(longCadence(lead, 4, 11, 4, 8), "half cadence " + pitches(lead, 4));
+        assertTrue(longCadence(lead, 8, 9, 1), "authentic cadence " + pitches(lead, 8));
         assertTrue(leapThenStep(lead), "no recovered leap");
     }
 

@@ -1,3 +1,5 @@
+tempo: {bpm: 76}
+harmony: {progression: [i, IV, VII, i]}
 layers: [drone, pad, bass, harp]
 programs: {drone: 49, pad: 52, bass: 43, harp: 46}
 instruments: {drone: strings.slow, pad: choir, bass: cello, harp: harp}

@@ -15,7 +15,7 @@ class ResolveTest {
         assertEquals("dorian", resolved.text("scale.mode", ""));
         assertEquals("false", resolved.text("scale.leadingTone", ""));
         assertEquals("pedal", resolved.text("harmony.style", ""));
-        assertEquals(77, resolved.number("tempo.bpm", 0));
+        assertEquals(76, resolved.number("tempo.bpm", 0));
         assertTrue(resolved.flag("drone.enabled", false));
         assertEquals("genre:fantasy|state:sneaking|state:fantasy/sneaking", resolved.chainText());
     }

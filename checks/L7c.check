@@ -7,7 +7,7 @@ stdout-contains: scale.mode=dorian
 stdout-contains: scale.leadingTone=false
 stdout-contains: harmony.style=pedal
 stdout-contains: drone.enabled=true
-stdout-contains: tempo.bpm=77
+stdout-contains: tempo.bpm=76
 stdout-contains: lead.phrase=sentence
 stdout-contains: hooks.enabled=true
 stdout-contains: instruments.lead=flute
@@ -45,7 +45,7 @@ stdout-contains: did you mean harmony
 name: fantasy phrase marks its cadences
 args: theme resolve --genre fantasy --state peaceful
 exit: 0
-stdout-contains: harmony.progression=i,VI,iv,V,i,VI,V,i
+stdout-contains: harmony.progression=I,vi,IV,V
 stdout-contains: harmony.cadences.4=half
 stdout-contains: harmony.cadences.8=authentic
 stdout-contains: scale.leadingTone=true

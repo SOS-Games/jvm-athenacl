@@ -17,6 +17,7 @@ import java.util.List;
  * Canonical JSONL for a score. Key order is fixed, lines end with {@code \n}, and the hash is
  * SHA-256 of those bytes. Wall-clock fields are not written, so two runs of the same notes match.
  * The score's meter is the first meter event. A later meter event changes one bar, not the whole piece.
+ * The score's bpm is the opening tempo, the same way. Later tempo events stay in the log.
  */
 public final class EventLog {
     private static final ObjectMapper JSON = new ObjectMapper();
@@ -80,8 +81,11 @@ public final class EventLog {
             String type = text(node, "type");
             switch (type) {
                 case "tempo" -> {
-                    bpm = node.path("bpm").asInt(120);
-                    controls.add(new ControlEvent.Tempo(node.path("startTick").asLong(), bpm));
+                    int next = node.path("bpm").asInt(120);
+                    if (controls.stream().noneMatch(event -> event instanceof ControlEvent.Tempo)) {
+                        bpm = next;
+                    }
+                    controls.add(new ControlEvent.Tempo(node.path("startTick").asLong(), next));
                 }
                 case "meter" -> {
                     int nextNumerator = node.path("numerator").asInt(4);

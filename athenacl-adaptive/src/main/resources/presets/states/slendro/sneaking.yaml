@@ -1,0 +1,2 @@
+scale: {tonic: C, mode: mixolydian, leadingTone: false}
+tempo: {bpm: 66}

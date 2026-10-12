@@ -1,7 +1,8 @@
-scale: {tonic: D, mode: dorian}
-tempo: {bpm: 100}
-layers: [harp, pad, bass, lead]
-programs: {harp: 46, pad: 52, bass: 43, lead: 73}
-instruments: {harp: harp, pad: choir, bass: cello, lead: flute}
+scale: {tonic: D, mode: aeolian, leadingTone: true}
+tempo: {bpm: 96}
+harmony: {style: functional, progression: [i, VI, iv, V]}
+layers: [pad, chords, bass, lead]
+programs: {pad: 48, chords: 0, bass: 43, lead: 71}
+instruments: {pad: strings, chords: piano, bass: cello, lead: clarinet}
 density:
   pad: {degrees: [0, 2, 4, 5]}

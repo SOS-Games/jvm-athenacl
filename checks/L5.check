@@ -12,7 +12,7 @@ args: theme explain themes/fantasy-dungeon.yaml
 exit: 0
 stdout-contains: preset=fantasy
 stdout-contains: kit=gm-lite
-stdout-contains: instruments=harp,strings,cello,flute
+stdout-contains: instruments=strings,piano,horn,flute,cello
 stdout-contains: motif.every=4
 stdout-contains: loudness.combat=+4.0
 

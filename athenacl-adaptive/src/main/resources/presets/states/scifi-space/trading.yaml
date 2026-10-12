@@ -1,5 +1,5 @@
 scale: {tonic: G, mode: lydian, leadingTone: false}
-tempo: {bpm: 100}
-layers: [bell, pad, arp, bass]
-programs: {bell: 8, pad: 88, arp: 80, bass: 38}
-instruments: {bell: celesta, pad: pad.newage, arp: lead.square, bass: bass.synth}
+tempo: {bpm: 96}
+layers: [bell, pad, arp, bass, lead]
+programs: {bell: 8, pad: 88, arp: 80, bass: 38, lead: 80}
+instruments: {bell: celesta, pad: pad.newage, arp: lead.square, bass: bass.synth, lead: lead.square}

@@ -13,6 +13,9 @@ cadence: {strength: weak, every: 8}
 drone: {enabled: false}
 voicing: {style: close, voiceLead: true, maxLeap: 4}
 lead: {enabled: true, phrase: period, rhythmCells: [lsS, sslL], register: [A4, E6], density: 0.35}
+source:
+  lead: {po: "markovPulse,(2,1,0.5),(3,4,2)", texture: LineGroove}
+  arp: {po: "sieve,5@0|5@1|5@3", texture: LineGroove}
 hooks: {enabled: true, candidates: 64}
 tempo: {bpm: 100}
 layers: [pad, arp, bass, lead]

@@ -26,7 +26,8 @@ import java.util.Map;
  * When the theme has {@code hooks:}, the lead's idea is the critic's pick. That pick is
  * made once per state, before the bar loop. A theme without the block still calls
  * {@code MotifGenerator}, so L7's notes stay the same.
- * {@code arp} is an even grid: eighths, or sixteenths in combat. {@code bell} is a slow celesta.
+ * {@code arp} is an even grid: eighths, or sixteenths when the state asks for sixteen steps.
+ * A {@code source.arp.po} sieve keeps some of those steps and drops the rest. {@code bell} is a slow celesta.
  */
 public final class StockLayers {
     private StockLayers() {
@@ -299,6 +300,18 @@ public final class StockLayers {
         boolean sixteenths = steps >= 16;
         String duration = sixteenths ? "1/16" : "1/8";
         long cell = TimeBase.PPQ / (sixteenths ? 4 : 2);
+        List<Integer> hits = LayerPo.arpHits(state, steps);
+        if (!hits.isEmpty()) {
+            int n = 0;
+            for (int hit : hits) {
+                long id = ids.take();
+                int midi = harmony(state, info.bar()).midi(degrees[n % degrees.length], 5);
+                notes.add(played(id, start + hit * cell, duration, midi, PitchName.name(midi),
+                        velocity(info.intensity()), 10, "arp", info, seed, state.id(), "sieve"));
+                n++;
+            }
+            return;
+        }
         for (int i = 0; i < steps; i++) {
             long id = ids.take();
             int midi = harmony(state, info.bar()).midi(degrees[i % degrees.length], 5);

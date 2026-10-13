@@ -23,6 +23,7 @@ import java.util.Map;
  * chord of this bar. Weak beats step. One leap in the phrase steps back. A cadence note is
  * long. {@code motif.every} counts phrases between statements of the unturned idea.
  * Rhythm cells and the form plan are read from {@code presets/rhythms.yaml}.
+ * When the state names {@code source.lead.po}, those draws replace the named cells.
  */
 public final class PhraseLead {
     private static final Library LIBRARY = Library.load();
@@ -58,7 +59,11 @@ public final class PhraseLead {
         boolean half = "half".equals(token) || (chord.cadence() && chord.numeral().startsWith("V"));
         boolean authentic = "authentic".equals(token)
                 || (chord.cadence() && ("i".equals(chord.numeral()) || "I".equals(chord.numeral())));
-        List<Slot> rhythm = fit(cells.get(Math.floorMod("idea".equals(token) ? 0 : slot, cells.size())), barTicks);
+        int cellIndex = "idea".equals(token) ? 0 : slot;
+        List<String> sourced = LayerPo.rhythmTokens(state, seed, cellIndex);
+        List<Slot> rhythm = sourced.isEmpty()
+                ? fit(cells.get(Math.floorMod(cellIndex, cells.size())), barTicks)
+                : fit(sourced, barTicks);
         int[] degrees = place(state.key(), chord, shaped, rhythm, seed, state.id(), held, form.phrase, half,
                 authentic, density(state));
         int low = register(state, 0);
@@ -353,6 +358,10 @@ public final class PhraseLead {
 
     private static List<Slot> fit(String cellName, long barTicks) {
         List<String> tokens = LIBRARY.cells.getOrDefault(cellName, LIBRARY.cells.get(LIBRARY.defaults.get(0)));
+        return fit(tokens, barTicks);
+    }
+
+    private static List<Slot> fit(List<String> tokens, long barTicks) {
         List<Slot> slots = new ArrayList<>();
         long cursor = 0;
         int index = 0;

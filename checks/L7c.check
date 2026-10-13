@@ -63,6 +63,22 @@ stdout-contains: hooks.enabled=true
 stdout-contains: hooks.candidates=64
 
 ---
+name: sci-fi names a markov lead and a sieve arp
+args: theme resolve --genre scifi-space --state sneaking
+exit: 0
+stdout-contains: source.lead.po=markovPulse,(2,1,0.5),(3,4,2)
+stdout-contains: source.lead.texture=LineGroove
+stdout-contains: source.arp.po=sieve,5@0|5@1|5@3
+stdout-contains: source.arp.texture=LineGroove
+
+---
+name: the arp sieve is what plays
+args: debug bar themes/scifi-space.yaml --seed 1 --bar 1
+exit: 0
+stdout-contains: why=sieve
+stdout-contains: layer=arp
+
+---
 name: phrase mode scores a folk line
 args: melody score samples/melodies/folk-pd-01.mid --key "G major" --mode phrase
 exit: 0

@@ -357,7 +357,7 @@ A named `from` beats a wildcard, so entering combat or danger still waits for th
 
 ## Sci-fi
 
-`preset show scifi-space` prints `preset=scifi-space` and the synth set (pad, square, saw, bass, celesta, 808). `themes/scifi-space.yaml` is that preset at 100 bpm in Lydian. There is no whole-tone scale, so the raised fourth stands in for it. Combat stays at 100; the drive is a sixteenth-note arp, not a tempo jump. Other states arpeggiate in eighths. `describe-music` prints `arp.grid=` and `programs=` for the bars you asked about.
+`preset show scifi-space` prints `preset=scifi-space` and the synth set (pad, square, saw, bass, celesta, 808). `themes/scifi-space.yaml` is that preset at 100 bpm in Lydian. There is no whole-tone scale, so the raised fourth stands in for it. Combat stays at 100; the drive is a sixteenth-note arp, not a tempo jump. Other states arpeggiate in eighths. The lead rhythm is a Markov pulse and the arp keeps the steps a sieve allows. Both name the texture `LineGroove`. `describe-music` prints `arp.grid=` and `programs=` for the bars you asked about.
 
 `render themes/fantasy-dungeon.yaml --at "8 theme themes/scifi-space.yaml" --bars 1-16` prints `themeSwitch.bar=9`. A theme change asked for on a bar line still waits until the next bar. The window still preloads the combat kit and swaps that at a bar until a track button is pressed. Ambush, Dungeon, Combat, Party, Trading, Space, and Space combat each start that piece from the beginning, and the window shows how far through the current track you are.
 

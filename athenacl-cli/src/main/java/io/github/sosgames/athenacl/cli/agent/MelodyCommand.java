@@ -148,6 +148,8 @@ public class MelodyCommand implements Callable<Integer> {
         String mode;
         @CommandLine.Option(names = "--chords", paramLabel = "<romans>")
         String chords;
+        @CommandLine.Option(names = "--progression", paramLabel = "<harmony.json>")
+        Path progression;
 
         @Override
         public Integer call() {
@@ -162,9 +164,30 @@ public class MelodyCommand implements Callable<Integer> {
                 return parent.fail(ExitCode.NOT_FOUND, "NOT_FOUND", "argv[2]", "melody not found",
                         "Pass a MIDI file such as samples/melodies/folk-pd-01.mid.");
             }
+            String keyText = key;
+            String chordText = chords;
+            if (progression != null) {
+                if (!Files.isRegularFile(progression)) {
+                    return parent.fail(ExitCode.NOT_FOUND, "NOT_FOUND", "--progression",
+                            "harmony file not found",
+                            "Pass the harmony.json written beside a genre render.");
+                }
+                try {
+                    JsonNode node = JSON.readTree(Files.readString(progression));
+                    if (keyText == null || keyText.isBlank()) {
+                        keyText = node.path("key").asText("");
+                    }
+                    if (chordText == null || chordText.isBlank()) {
+                        chordText = node.path("progression").asText("");
+                    }
+                } catch (IOException e) {
+                    return parent.fail(ExitCode.RUNTIME, "IO_ERROR", "--progression", e.getMessage(),
+                            "Check that harmony.json is readable.");
+                }
+            }
             Key parsed;
             try {
-                parsed = Key.parse(key == null || key.isBlank() ? "C major" : key);
+                parsed = Key.parse(keyText == null || keyText.isBlank() ? "C major" : keyText);
             } catch (IllegalArgumentException e) {
                 return parent.fail(ExitCode.INVALID_INPUT, "INVALID_INPUT", "--key", e.getMessage(),
                         "Use a key such as \"G major\".");
@@ -178,7 +201,7 @@ public class MelodyCommand implements Callable<Integer> {
             }
             List<int[]> harmony;
             try {
-                harmony = MelodyCritic.chords(parsed, chords);
+                harmony = MelodyCritic.chords(parsed, chordText);
             } catch (IllegalArgumentException e) {
                 return parent.fail(ExitCode.INVALID_INPUT, "INVALID_INPUT", "--chords", e.getMessage(),
                         "Use roman numerals such as \"i VI iv V\".");

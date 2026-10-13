@@ -3,6 +3,7 @@ package io.github.sosgames.athenacl.cli.agent;
 
 import io.github.sosgames.athenacl.adaptive.ControlLog;
 import io.github.sosgames.athenacl.adaptive.Director;
+import io.github.sosgames.athenacl.adaptive.HarmonyNote;
 import io.github.sosgames.athenacl.adaptive.Theme;
 import io.github.sosgames.athenacl.adaptive.ThemeException;
 import io.github.sosgames.athenacl.adaptive.ThemeIssue;
@@ -12,10 +13,13 @@ import io.github.sosgames.athenacl.cli.model.Config;
 import io.github.sosgames.athenacl.cli.model.ExitCode;
 import io.github.sosgames.athenacl.cli.model.KeyValue;
 import io.github.sosgames.athenacl.cli.model.TextPaths;
+import io.github.sosgames.athenacl.events.ControlEvent;
 import io.github.sosgames.athenacl.events.EventLog;
+import io.github.sosgames.athenacl.events.NoteEvent;
 import io.github.sosgames.athenacl.events.Score;
 import io.github.sosgames.athenacl.instruments.KitException;
 import io.github.sosgames.athenacl.instruments.ThemeMix;
+import io.github.sosgames.athenacl.render.SmfWriter;
 import io.github.sosgames.athenacl.render.loudness.StateLoudness;
 import io.github.sosgames.athenacl.render.soundbank.SoundbankPaths;
 import io.github.sosgames.athenacl.render.soundbank.SoundbankRejected;
@@ -34,6 +38,7 @@ import java.util.Map;
  * Renders a theme offline. {@code --timeline} replaces the theme's demo script.
  * {@code --at} adds one control, such as {@code 9 state combat 0.6}. {@code --bars 9-10}
  * prints only that window. The same seed and the same controls always hash the same.
+ * The directory also receives {@code harmony.json} and, when a lead played, {@code lead.mid}.
  */
 final class ThemeCli {
     private static int parentCode;
@@ -135,6 +140,14 @@ final class ThemeCli {
             return parent.fail(ExitCode.RUNTIME, "IO_ERROR", "--out", e.getMessage(),
                     "Check that --out is a writable directory and try again.");
         }
+        if (!parent.dryRun) {
+            try {
+                phraseFiles(outDir, loaded.theme, full);
+            } catch (IOException e) {
+                return parent.fail(ExitCode.RUNTIME, "IO_ERROR", "--out", e.getMessage(),
+                        "Check that --out is a writable directory and try again.");
+            }
+        }
         String hash = EventLog.hash(score);
         Map<String, String> fields = new LinkedHashMap<>();
         fields.put("bars", Integer.toString(loaded.theme.bars()));
@@ -159,6 +172,29 @@ final class ThemeCli {
         payload.put("transitions", full.transitions().size());
         return parent.finish(ExitCode.OK, KeyValue.line(fields), "athenacl.result.render/1",
                 payload, RenderCommand.warnings(selection), List.of());
+    }
+
+    private static void phraseFiles(Path outDir, Theme theme, Director.Performance performance) throws IOException {
+        AtomicFiles.write(outDir.resolve("harmony.json"),
+                HarmonyNote.json(theme, performance.bars()).getBytes(StandardCharsets.UTF_8), false);
+        List<NoteEvent> lead = new ArrayList<>();
+        for (NoteEvent note : performance.score().notes()) {
+            if ("lead".equals(note.layer())) {
+                lead.add(note);
+            }
+        }
+        if (lead.isEmpty()) {
+            return;
+        }
+        Score score = performance.score();
+        Score leadScore = new Score(
+                List.of(new ControlEvent.Tempo(0, score.bpm())),
+                lead,
+                score.bpm(),
+                score.numerator(),
+                score.denominator(),
+                score.bars());
+        AtomicFiles.write(outDir.resolve("lead.mid"), SmfWriter.write(leadScore), false);
     }
 
     static Director.Performance perform(AgentCli parent, Path themePath, Path timeline, List<String> at, long seed) {

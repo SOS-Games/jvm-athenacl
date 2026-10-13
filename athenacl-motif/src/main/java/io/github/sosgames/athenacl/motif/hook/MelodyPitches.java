@@ -16,8 +16,8 @@ import java.util.List;
 
 /**
  * Reads a one-line melody from a MIDI file. The critic scores these pitches directly,
- * so a chromatic leap stays a leap. {@code MotifImport} instead folds everything into
- * scale degrees, and that would hide the leap this check is looking for.
+ * so a chromatic leap stays a leap. An eighth or a sixteenth stays that length.
+ * Rounding those up to a quarter would move the cadence off the end of the phrase.
  */
 public final class MelodyPitches {
     private MelodyPitches() {
@@ -85,17 +85,24 @@ public final class MelodyPitches {
     }
 
     private static String duration(long ticks) {
-        long quarters = Math.max(1, Math.round(ticks / (double) TimeBase.PPQ));
-        if (quarters >= 4) {
-            return "1/1";
+        long whole = (long) TimeBase.PPQ * 4;
+        if (ticks > 0 && whole % ticks == 0) {
+            long denominator = whole / ticks;
+            if (denominator == 1 || denominator == 2 || denominator == 4 || denominator == 8
+                    || denominator == 16) {
+                return "1/" + denominator;
+            }
         }
-        if (quarters == 2) {
-            return "1/2";
+        if (ticks == whole * 3 / 2) {
+            return "3/2";
         }
-        if (quarters == 1) {
-            return "1/4";
+        if (ticks == whole * 3 / 4) {
+            return "3/4";
         }
-        return "1/" + (4 / quarters);
+        if (ticks == whole * 3 / 8) {
+            return "3/8";
+        }
+        return ticks + "/" + whole;
     }
 
     private record Held(int pitch, long tick) {

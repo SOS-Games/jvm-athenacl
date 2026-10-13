@@ -1,8 +1,11 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 package io.github.sosgames.athenacl.cli.agent;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import io.github.sosgames.athenacl.adaptive.ControlLog;
 import io.github.sosgames.athenacl.adaptive.LoudnessContour;
+import io.github.sosgames.athenacl.adaptive.PhraseAnalysis;
 import io.github.sosgames.athenacl.cli.model.ExitCode;
 import io.github.sosgames.athenacl.cli.model.KeyValue;
 import io.github.sosgames.athenacl.events.Score;
@@ -27,7 +30,9 @@ import java.util.concurrent.Callable;
  * {@code --by state} instead prints each state's offset from the contour reference,
  * plus {@code loudness.spread=}. When the directory also has {@code events.jsonl}
  * with swung eighths, the plain line adds {@code swing.measured=}. A render whose lead
- * carries a motif also adds {@code motif.reuse.per8bars=}.
+ * carries a motif also adds {@code motif.reuse.per8bars=}. A directory with {@code events.jsonl}
+ * also prints {@code harmony.distinctRoots=} and {@code lead.overlaps=}. {@code harmony.json}
+ * beside that log adds {@code harmony.style=}.
  */
 @CommandLine.Command(name = "analyze", description = "Measure loudness of a rendered WAV.")
 public class AnalyzeCommand implements Callable<Integer> {
@@ -45,9 +50,13 @@ public class AnalyzeCommand implements Callable<Integer> {
                     "Pass score.wav or the directory render wrote.");
         }
         Path wav = wav(input);
-        if (wav == null) {
+        Path events = eventsFile(input);
+        if (wav == null && events == null) {
             return parent.fail(ExitCode.NOT_FOUND, "NOT_FOUND", "argv[1]", "wav not found",
-                    "Render with --formats wav, then pass that directory or score.wav.");
+                    "Render with --formats wav, or pass a directory that contains events.jsonl.");
+        }
+        if (wav == null) {
+            return phraseOnly(events);
         }
         if ("state".equals(by)) {
             return byState(wav);
@@ -113,10 +122,40 @@ public class AnalyzeCommand implements Callable<Integer> {
         }
     }
 
+    private int phraseOnly(Path events) {
+        try {
+            Score score = NoteFiles.events(events);
+            String phrase = phraseSuffix(score);
+            String style = styleSuffix(events.getParent());
+            String line = phrase == null ? "harmony.distinctRoots=0" : phrase;
+            if (style != null) {
+                line = line + " " + style;
+            }
+            return parent.finish(ExitCode.OK, line, "athenacl.result.analyze/1",
+                    new LinkedHashMap<>(), List.of(), List.of());
+        } catch (ScoreException | IOException e) {
+            return parent.fail(ExitCode.RUNTIME, "IO_ERROR", "argv[1]", e.getMessage(),
+                    "Check that events.jsonl is readable.");
+        }
+    }
+
     private static String extras(Path input) {
         String swing = swingSuffix(input);
         String motif = motifSuffix(input);
         String overlay = overlaySuffix(input);
+        String phrase = null;
+        Path events = eventsFile(input);
+        if (events != null) {
+            try {
+                phrase = phraseSuffix(NoteFiles.events(events));
+                String style = styleSuffix(events.getParent());
+                if (style != null) {
+                    phrase = phrase == null ? style : phrase + " " + style;
+                }
+            } catch (ScoreException | IOException e) {
+                phrase = null;
+            }
+        }
         String line = swing;
         if (motif != null) {
             line = line == null ? motif : line + " " + motif;
@@ -124,7 +163,40 @@ public class AnalyzeCommand implements Callable<Integer> {
         if (overlay != null) {
             line = line == null ? overlay : line + " " + overlay;
         }
+        if (phrase != null) {
+            line = line == null ? phrase : line + " " + phrase;
+        }
         return line;
+    }
+
+    private static String phraseSuffix(Score score) {
+        boolean relevant = false;
+        for (var note : score.notes()) {
+            if ("bass".equals(note.layer()) || "lead".equals(note.layer()) || "drone".equals(note.layer())) {
+                relevant = true;
+                break;
+            }
+        }
+        if (!relevant) {
+            return null;
+        }
+        return PhraseAnalysis.of(score).line();
+    }
+
+    private static String styleSuffix(Path dir) throws IOException {
+        if (dir == null) {
+            return null;
+        }
+        Path file = dir.resolve("harmony.json");
+        if (!Files.isRegularFile(file)) {
+            return null;
+        }
+        JsonNode node = new ObjectMapper().readTree(Files.readString(file));
+        String style = node.path("style").asText("");
+        if (style.isBlank()) {
+            return null;
+        }
+        return "harmony.style=" + style;
     }
 
     private static String overlaySuffix(Path input) {
@@ -220,6 +292,18 @@ public class AnalyzeCommand implements Callable<Integer> {
         } catch (ScoreException | IOException e) {
             return null;
         }
+    }
+
+    static Path eventsFile(Path input) {
+        if (input == null) {
+            return null;
+        }
+        Path dir = Files.isDirectory(input) ? input : input.getParent();
+        if (dir == null) {
+            return null;
+        }
+        Path events = dir.resolve("events.jsonl");
+        return Files.isRegularFile(events) ? events : null;
     }
 
     static Path wav(Path input) {

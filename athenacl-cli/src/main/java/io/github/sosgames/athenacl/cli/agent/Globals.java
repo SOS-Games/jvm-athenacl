@@ -15,7 +15,8 @@ final class Globals {
     private static final Set<String> VALUE_FLAGS = Set.of(
             "--out", "--formats", "--where", "--runs", "--bars", "--seed", "--soundbank", "--cache", "--key",
             "--groove", "--meter", "--timeline", "--at", "--bar", "--by", "--kit", "--kits", "--notes", "--theme",
-            "--candidates", "--chords", "--references", "--choose", "--state", "--note");
+            "--candidates", "--chords", "--references", "--choose", "--state", "--note",
+            "--genre", "--progression");
     boolean json;
     boolean dryRun;
     boolean strict;

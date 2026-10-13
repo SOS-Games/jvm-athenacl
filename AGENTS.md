@@ -78,6 +78,8 @@ gradlew.bat :athenacl-cli:agentCli --args="preset list"
 gradlew.bat :athenacl-cli:agentCli --args="preset show fantasy"
 gradlew.bat :athenacl-cli:agentCli --args="preset show scifi-space"
 gradlew.bat :athenacl-cli:agentCli --args="preset audition reggae --bars 8 --seed 1"
+gradlew.bat :athenacl-cli:agentCli --args="preset audition fantasy --bars 8 --seed 1 --analyze"
+gradlew.bat :athenacl-cli:agentCli --args="render --genre fantasy --state sneaking --bars 16 --seed 1 --out build/l7c-s --formats events"
 gradlew.bat :athenacl-cli:agentCli --args="theme explain themes/fantasy-dungeon.yaml"
 gradlew.bat :athenacl-cli:agentCli --args="render themes/fantasy-dungeon.yaml --timeline samples/timelines/dungeon-tour.json --seed 1 --out build/l5 --formats mid,wav,events,txt"
 gradlew.bat :athenacl-cli:agentCli --args="analyze build/l5 --by state"
@@ -92,7 +94,7 @@ gradlew.bat :athenacl-cli:agentCli --args="melody generate --key E-minor --candi
 | help | You need the example invocations, or you are checking that the CLI starts. |
 | version | You need the tool version, the Java feature level, or whether Gervill is on this JDK. |
 | schema | You need a published result schema on stdout, or you want an atomic write and `--dry-run` without rendering music. |
-| render | You have a note-list YAML file and want `score.mid`, `score.wav`, `events.jsonl`, and `score.txt` under `--out`. |
+| render | You have a note-list YAML file and want `score.mid`, `score.wav`, `events.jsonl`, and `score.txt` under `--out`. `render --genre fantasy --state sneaking` plays that preset state; a single `--bars` number there is the bar count. |
 | play | You want to hear a note list, an event log, or a WAV on the speakers. `--dry-run` does not open the device. |
 | describe-music | You want one `bar=` line per bar from an event log, a piano roll (`--roll`), or the chord and key estimate. |
 | debug | You want `debug determinism` (same event-log hash twice, optionally `--fork-jvm`), `debug bisect` (first bar where two renders split), `debug inspect` (filter notes with `--where`), `debug check --loudness`, `debug check --stuck-notes`, `debug bar`, `debug trace --transitions`, `debug replay`, `debug fuzz-transitions`, or `debug overhead`. |
@@ -103,13 +105,13 @@ gradlew.bat :athenacl-cli:agentCli --args="melody generate --key E-minor --candi
 | athena | You want `athena run` to play a path or a LineGroove beat and check its MIDI against the golden file beside it, or `athena prompt --line` to resolve one command line. |
 | soundbank | You want to install, list, or show GeneralUser GS or MuseScore_General. An `.sf3` file is rejected. |
 | describe | You want `describe scale`, `describe chord`, `describe instruments` (287 presets and 13 drum kits in GeneralUser GS), `describe pos --group value` (45 value generators), `describe pos --group omde` (36 wave and breakpoint generators), `describe pos --group rhythm` (13 rhythm generators), `describe textures` (14 texture modules), `describe setclass 3-11` (a Forte set class), `describe commands` (the first 55 athenaCL commands), or `describe commands --group b` (the other 48). |
-| analyze | You want EBU R128 integrated loudness and true peak for a WAV or a render directory. A swung render also prints `swing.measured=`. `analyze <dir> --by state` prints each state's offset from the contour. A motif render also prints `motif.reuse.per8bars=`. |
+| analyze | You want EBU R128 integrated loudness and true peak for a WAV or a render directory. A swung render also prints `swing.measured=`. `analyze <dir> --by state` prints each state's offset from the contour. A motif render also prints `motif.reuse.per8bars=`. A directory with `events.jsonl` also prints `harmony.distinctRoots=`, `lead.overlaps=`, and the other phrase counts. `harmony.json` adds `harmony.style=`. |
 | theory | You want `theory progression` to voice-lead roman numerals, or `theory modulate` to plan a key change. |
 | rhythm | You want `rhythm pattern` to print a drum grid, or `rhythm poly` to write 3-against-2 into `events.jsonl`. |
 | theme | You want `theme validate` to check a theme file, `theme explain` to print its states, or `theme resolve --genre fantasy --state sneaking` to print one merged state. |
-| preset | You want `preset list` for the genre presets, `preset show fantasy` or `preset show scifi-space` for instruments and GM limits, or `preset audition reggae --bars 8 --seed 1` to play eight bars and print the character. |
+| preset | You want `preset list` for the genre presets, `preset show fantasy` or `preset show scifi-space` for instruments and GM limits, or `preset audition reggae --bars 8 --seed 1` to play eight bars and print the character. `preset audition --all --bars 16 --seed 1 --analyze` exits 6 when any preset stays on fewer than three bass notes or the lead overlaps. |
 | motif | You want `motif generate` to grow a short idea, `motif transform` to turn it over, or `motif import` to read a MIDI melody. |
-| melody | You want `melody generate` to rank hook candidates, `melody score` to rate a MIDI line, `melody rate` to write an A/B row, or `melody fit` to turn ratings into weights. |
+| melody | You want `melody generate` to rank hook candidates, `melody score` to rate a MIDI line, `melody rate` to write an A/B row, or `melody fit` to turn ratings into weights. `melody score --progression harmony.json` reads that file's key and roman numerals. |
 | adapt | You want the scheduler snapshot: `state=`, `intensity=`, `bar=`, `sched.lookaheadMs=`, and `cpu.msPerBar=`. |
 | instruments | You want `instruments list`, `show`, `audition`, or `compare` for a named instrument in a kit. |
 | kit | You want `kit validate` to check sources, licenses, and slots. |
@@ -277,7 +279,7 @@ The summary line also ends with `soundbank=`. A missing `--soundbank` file still
 
 `describe instruments --soundbank generaluser` prints `instruments=287 drumkits=13`.
 
-`analyze <dir>` reads `score.wav` and prints `loudness.integrated=` in LUFS, `truePeak=` in dBTP, and `shortTerm=`. `debug check <dir> --loudness` prints the same line. Integrated loudness stays within 0.2 LU of ffmpeg's `ebur128` filter.
+`analyze <dir>` reads `score.wav` and prints `loudness.integrated=` in LUFS, `truePeak=` in dBTP, and `shortTerm=`. `debug check <dir> --loudness` prints the same line. Integrated loudness stays within 0.2 LU of ffmpeg's `ebur128` filter. A directory that has `events.jsonl` and no WAV still prints the phrase counts. `harmony.distinctRoots` is the smallest set of bass pitch classes in any eight bars. `lead.overlaps` is how many lead notes start before the previous one ends.
 
 The download URL is a pinned commit until this project hosts its own copy. Do not point the installer at schristiancollins.com.
 
@@ -329,7 +331,7 @@ The lead is a four-bar phrase. The motif is that phrase's opening idea, fitted t
 
 ## Hooks
 
-`melody generate --key "E minor" --chords "i VI VII i" --candidates 64 --seed 3 --explain` prints one `cand=` line per candidate and then `chosen=`, `hook=h1`, `contour=` (arch, fall, rise-and-resolve, or call-response), and `form=` (`sentence` or `period`). The same seed prints the same text. `melody score` rates a MIDI file. `--mode phrase` allows a twelfth and checks the cadence only at the end of a four-bar phrase; the line then includes `rhythmVariety=` and `barPattern=`. `melody rate --choose a` writes one ratings line without asking. `melody fit` turns those rows into weights; the header date is `1970-01-01` and the hash covers the weight lines only.
+`melody generate --key "E minor" --chords "i VI VII i" --candidates 64 --seed 3 --explain` prints one `cand=` line per candidate and then `chosen=`, `hook=h1`, `contour=` (arch, fall, rise-and-resolve, or call-response), and `form=` (`sentence` or `period`). The same seed prints the same text. `melody score` rates a MIDI file. `--mode phrase` allows a twelfth and checks the cadence only at the end of a four-bar phrase; the line then includes `rhythmVariety=` and `barPattern=`. `--progression harmony.json` uses that file's key and the roman numeral of each bar. An eighth in the MIDI file stays an eighth. `melody rate --choose a` writes one ratings line without asking. `melody fit` turns those rows into weights; the header date is `1970-01-01` and the hash covers the weight lines only.
 
 A preset turns hooks on unless the theme file has its own `hooks:` block, which replaces that default. The picked hook is still motif `m1`, so `PhrasePlan` keeps building the sentence, and `debug explain` adds `hook.cand=` and `score=` on those lead notes. The choice is made once per state before the bar loop. `themes/fantasy-dungeon.yaml` sets the block and asks for 8 candidates. A preset theme with no block uses 64.
 
@@ -403,7 +405,7 @@ A named `from` beats a wildcard, so entering combat or danger still waits for th
 
 ## Genre presets
 
-`preset list` prints `presets=25`, the two starter presets plus fourteen genres and nine world packs. `preset audition reggae --bars 8 --seed 1` prints `character=skank` and `notes=` above 0. `hijaz` plays E phrygian dominant, a 12-tone stand-in for that maqam. Hirajoshi, yo, pentatonic, pelog, and slendro name the five-note set and play the seven-note scale that contains it. These packs are not a performance of that tradition.
+`preset list` prints `presets=25`, the two starter presets plus fourteen genres and nine world packs. `preset audition reggae --bars 8 --seed 1` prints `character=skank` and `notes=` above 0. `preset audition --all --bars 16 --seed 1 --analyze` prints `presets=25` and `fail=0` when every peaceful state moves to at least three bass notes and the lead does not overlap. `render --genre fantasy --state sneaking --bars 16` writes `events.jsonl` and `harmony.json`; `analyze` of that directory prints `drone.present=true` and `harmony.style=pedal`. Combat prints `drone.present=false` and at least one dominant cadence. `hijaz` plays E phrygian dominant, a 12-tone stand-in for that maqam. Hirajoshi, yo, pentatonic, pelog, and slendro name the five-note set and play the seven-note scale that contains it. These packs are not a performance of that tradition.
 
 ## Not in L21
 

@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 package io.github.sosgames.athenacl.cli.agent;
 
+import io.github.sosgames.athenacl.adaptive.Director;
+import io.github.sosgames.athenacl.adaptive.PhraseAnalysis;
 import io.github.sosgames.athenacl.adaptive.Presets;
 import io.github.sosgames.athenacl.cli.model.ExitCode;
 import io.github.sosgames.athenacl.cli.model.KeyValue;
@@ -14,8 +16,11 @@ import java.util.concurrent.Callable;
 /**
  * Shows a built-in genre preset. {@code preset show fantasy} names the instruments
  * and the GM limit: choir and taiko, no sung lyrics. {@code preset list} counts them.
- * {@code preset audition} plays eight bars and prints the genre character. The director
- * never sees the preset itself; {@code theme explain} shows the theme after the merge.
+ * {@code preset audition} plays eight bars and prints the genre character.
+ * {@code --analyze} adds the harmony and lead counts and exits 6 when a preset
+ * stays on fewer than three bass notes or the lead overlaps. {@code --all} does
+ * that for every preset. The director never sees the preset itself;
+ * {@code theme explain} shows the theme after the merge.
  */
 @CommandLine.Command(name = "preset", description = "Show a built-in genre preset.",
         subcommands = {PresetCommand.Show.class, PresetCommand.ListPresets.class, PresetCommand.Audition.class})
@@ -107,11 +112,18 @@ public class PresetCommand implements Callable<Integer> {
         int bars;
         @CommandLine.Option(names = "--seed", paramLabel = "<n>", defaultValue = "1")
         long seed;
+        @CommandLine.Option(names = "--analyze", description = "Print harmony and lead counts. Exit 6 when a preset stays on one chord or the lead overlaps.")
+        boolean analyze;
+        @CommandLine.Option(names = "--all", description = "Audition every preset.")
+        boolean all;
 
         @Override
         public Integer call() {
             AgentCli parent = presetCommand.cli();
             parent.commandName = "preset audition";
+            if (all) {
+                return every(parent);
+            }
             if (id == null || id.isBlank()) {
                 return parent.fail(ExitCode.USAGE, "USAGE", "argv[2]",
                         "usage: preset audition <id> --bars 8 --seed 1",
@@ -151,8 +163,56 @@ public class PresetCommand implements Callable<Integer> {
             data.put("meter", played.meter());
             data.put("character", played.character());
             data.put("notes", played.notes());
+            String text = KeyValue.line(fields);
             ExitCode code = played.notes() > 0 ? ExitCode.OK : ExitCode.CHECK_FAILED;
-            return parent.finish(code, KeyValue.line(fields), "athenacl.result.preset-audition/1",
+            if (analyze) {
+                try {
+                    PhraseAnalysis.Report report = PhraseAnalysis.of(Presets.play(id, bars, seed).score());
+                    text = text + " " + report.line();
+                    if (!report.passes()) {
+                        code = ExitCode.CHECK_FAILED;
+                    }
+                } catch (io.github.sosgames.athenacl.adaptive.ThemeException e) {
+                    return parent.fail(ExitCode.INVALID_INPUT, "INVALID_INPUT", "preset", e.getMessage(),
+                            "The preset could not be played.");
+                }
+            }
+            return parent.finish(code, text, "athenacl.result.preset-audition/1",
+                    data, List.of(), List.of());
+        }
+
+        private Integer every(AgentCli parent) {
+            StringBuilder text = new StringBuilder();
+            int fail = 0;
+            List<String> ids = Presets.ids();
+            for (String presetId : ids) {
+                Director.Performance performance;
+                try {
+                    performance = Presets.play(presetId, bars, seed);
+                } catch (IllegalArgumentException e) {
+                    return parent.fail(ExitCode.INVALID_INPUT, "INVALID_INPUT", "--bars", e.getMessage(),
+                            "Use --bars 8 or another positive count.");
+                } catch (io.github.sosgames.athenacl.adaptive.ThemeException e) {
+                    return parent.fail(ExitCode.INVALID_INPUT, "INVALID_INPUT", "preset", e.getMessage(),
+                            "The preset could not be played.");
+                }
+                PhraseAnalysis.Report report = PhraseAnalysis.of(performance.score());
+                if (!report.passes() || performance.notes().isEmpty()) {
+                    fail++;
+                }
+                Map<String, String> fields = new LinkedHashMap<>();
+                fields.put("preset", presetId);
+                text.append(KeyValue.line(fields)).append(' ').append(report.line()).append('\n');
+            }
+            Map<String, String> summary = new LinkedHashMap<>();
+            summary.put("presets", Integer.toString(ids.size()));
+            summary.put("fail", Integer.toString(fail));
+            text.append(KeyValue.line(summary));
+            ExitCode code = fail == 0 ? ExitCode.OK : ExitCode.CHECK_FAILED;
+            Map<String, Object> data = new LinkedHashMap<>();
+            data.put("presets", ids.size());
+            data.put("fail", fail);
+            return parent.finish(code, text.toString(), "athenacl.result.preset-audition/1",
                     data, List.of(), List.of());
         }
     }

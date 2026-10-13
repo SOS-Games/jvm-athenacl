@@ -65,12 +65,23 @@ public final class Presets {
         if (bars < 1) {
             throw new IllegalArgumentException("bars must be 1 or more");
         }
-        String yaml = "id: " + id + "\npreset: " + id + "\nbars: " + bars + "\nmeter: \"" + preset.meter() + "\"\n";
-        Theme theme = Themes.parse(id + ".yaml", yaml);
-        Director.Performance performance = Director.perform(theme, List.of(), seed);
+        Director.Performance performance = play(id, bars, seed);
         Theme.StateDef peaceful = preset.states().get("peaceful");
         return new Audition(id, bars, seed, peaceful.key().name(), peaceful.tempo(), preset.meter(),
                 preset.character(), preset.instruments(), performance.notes().size());
+    }
+
+    /** Plays the preset's first state for {@code bars}. The same seed plays the same notes. */
+    public static Director.Performance play(String id, int bars, long seed) throws ThemeException {
+        Preset preset = get(id);
+        if (preset == null) {
+            throw new IllegalArgumentException("unknown preset " + id);
+        }
+        if (bars < 1) {
+            throw new IllegalArgumentException("bars must be 1 or more");
+        }
+        String yaml = "id: " + id + "\npreset: " + id + "\nbars: " + bars + "\nmeter: \"" + preset.meter() + "\"\n";
+        return Director.perform(Themes.parse(id + ".yaml", yaml), List.of(), seed);
     }
 
     /** Genre defaults, then the generic state, then {@code presets/states/<genre>/<state>.yaml}. */

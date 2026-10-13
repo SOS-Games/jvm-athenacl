@@ -7,6 +7,7 @@ import io.github.sosgames.athenacl.cli.model.ExitCode;
 import io.github.sosgames.athenacl.cli.model.Issue;
 import io.github.sosgames.athenacl.cli.model.KeyValue;
 import io.github.sosgames.athenacl.cli.model.Severity;
+import io.github.sosgames.athenacl.adaptive.Presets;
 import io.github.sosgames.athenacl.events.EventLog;
 import io.github.sosgames.athenacl.events.Score;
 import io.github.sosgames.athenacl.events.ScoreException;
@@ -73,10 +74,17 @@ public class RenderCommand implements Callable<Integer> {
     List<String> at = new ArrayList<>();
     @CommandLine.Option(names = "--debug", paramLabel = "<off|provenance|trace>", defaultValue = "off")
     String debugMode;
+    @CommandLine.Option(names = "--genre", paramLabel = "<id>")
+    String genre;
+    @CommandLine.Option(names = "--state", paramLabel = "<id>")
+    String state;
 
     @Override
     public Integer call() {
         parent.commandName = "render";
+        if (genre != null && !genre.isBlank()) {
+            return renderGenre();
+        }
         if (notes == null) {
             return parent.fail(ExitCode.USAGE, "USAGE", "argv[1]", "usage: render <notes.yaml> --out <dir>",
                     "See samples/notes/c-major-scale.yaml.");
@@ -253,6 +261,52 @@ public class RenderCommand implements Callable<Integer> {
                 "soundbank fell back to the emergency bank",
                 "Install generaluser, or pass a path to an .sf2 file that exists.",
                 "AGENTS.md#cli"));
+    }
+
+    /**
+     * Plays one preset state. A single {@code --bars} number is how many bars to grow.
+     * On a theme file that same number is still one bar. The directory also receives
+     * {@code harmony.json} and, when the state has a lead, {@code lead.mid}.
+     */
+    private int renderGenre() {
+        if (Presets.get(genre) == null) {
+            return parent.fail(ExitCode.NOT_FOUND, "NOT_FOUND", "--genre",
+                    "unknown preset " + genre,
+                    "Known ids: " + String.join(", ", Presets.ids()) + ".");
+        }
+        String stateName = state == null || state.isBlank() ? "peaceful" : state;
+        int bars = 16;
+        String window = barWindow;
+        if (barWindow != null) {
+            if (barWindow.matches("\\d+")) {
+                bars = Integer.parseInt(barWindow);
+                window = null;
+            } else {
+                try {
+                    ThemeCli.BarRange range = ThemeCli.BarRange.parse(barWindow);
+                    bars = range.to();
+                } catch (IllegalArgumentException e) {
+                    return parent.fail(ExitCode.INVALID_INPUT, "INVALID_INPUT", "--bars", e.getMessage(),
+                            "Use a count such as 16, or a window such as 9-10.");
+                }
+            }
+        }
+        if (bars < 1) {
+            return parent.fail(ExitCode.INVALID_INPUT, "INVALID_INPUT", "--bars", "bars must be 1 or more",
+                    "Use a count such as 16.");
+        }
+        String yaml = "id: " + genre + "\npreset: " + genre + "\nbars: " + bars
+                + "\nhold:\n  state: " + stateName + "\n  intensity: 0.5\n";
+        Path scratch = Path.of("build", "genre-" + genre + "-" + stateName + ".yaml");
+        try {
+            Files.createDirectories(scratch.getParent());
+            Files.writeString(scratch, yaml);
+        } catch (IOException e) {
+            return parent.fail(ExitCode.RUNTIME, "IO_ERROR", "--genre", e.getMessage(),
+                    "Check that build/ can be written.");
+        }
+        return ThemeCli.render(parent, scratch, timeline, window, at, seed, outDir, formats, soundbank, cache,
+                debugMode);
     }
 
     static byte[] body(String format, Score score, Path soundbank)

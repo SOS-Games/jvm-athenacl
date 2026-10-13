@@ -86,3 +86,65 @@ stdout-contains: mode=phrase
 stdout-contains: rejected=-
 stdout-contains: rhythmVariety=
 stdout-contains: barPattern=
+
+---
+name: every preset moves and the lead does not overlap
+args: preset audition --all --bars 16 --seed 1 --analyze
+exit: 0
+stdout-contains: presets=25
+stdout-contains: fail=0
+
+---
+name: fantasy sneaking keeps the pedal drone
+args: render --genre fantasy --state sneaking --bars 16 --seed 1 --out build/l7c-s --formats events
+exit: 0
+delete-before: build/l7c-s
+file-exists: build/l7c-s/events.jsonl
+file-exists: build/l7c-s/harmony.json
+
+---
+name: analyze reads the pedal
+args: analyze build/l7c-s
+exit: 0
+stdout-contains: drone.present=true
+stdout-contains: harmony.style=pedal
+
+---
+name: fantasy combat leaves the drone
+args: render --genre fantasy --state combat --bars 16 --seed 1 --out build/l7c-c --formats events
+exit: 0
+delete-before: build/l7c-c
+file-exists: build/l7c-c/events.jsonl
+
+---
+name: analyze reads the combat cadence
+args: analyze build/l7c-c
+exit: 0
+stdout-contains: drone.present=false
+stdout-regex: harmony\.dominantCadences=[1-9]
+
+---
+name: the dungeon theme renders its events
+args: render themes/fantasy-dungeon.yaml --seed 1 --out build/l7c --formats events
+exit: 0
+delete-before: build/l7c
+file-exists: build/l7c/events.jsonl
+file-exists: build/l7c/harmony.json
+file-exists: build/l7c/lead.mid
+
+---
+name: analyze the dungeon phrase
+args: analyze build/l7c
+exit: 0
+stdout-regex: harmony\.distinctRoots=([4-9]|[1-9][0-9])
+stdout-regex: harmony\.dominantCadences=[1-9]
+stdout-contains: lead.overlaps=0
+stdout-regex: lead\.rhythmValues=([3-9]|[1-9][0-9])
+
+---
+name: the dungeon lead scores as a phrase
+args: melody score build/l7c/lead.mid --mode phrase --progression build/l7c/harmony.json
+exit: 0
+stdout-contains: mode=phrase
+stdout-contains: rejected=-
+stdout-regex: score=(0\.(7[5-9][0-9]|[89][0-9][0-9])|1\.000)

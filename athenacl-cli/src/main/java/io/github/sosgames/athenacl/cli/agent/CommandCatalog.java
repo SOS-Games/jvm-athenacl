@@ -43,9 +43,10 @@ public final class CommandCatalog {
                     "athenacl.result.schema/1"),
             new CommandInfo(
                     "render",
-                    "Write MIDI, WAV, events.jsonl, and a text dump from a note-list YAML file. The hash is the event log.",
-                    List.of(gradle(
-                            "render samples/notes/c-major-scale.yaml --out build/l0 --formats mid,wav,events,txt")),
+                    "Write MIDI, WAV, events.jsonl, and a text dump from a note-list YAML file. The hash is the event log. --genre plays one preset state and writes harmony.json.",
+                    List.of(
+                            gradle("render samples/notes/c-major-scale.yaml --out build/l0 --formats mid,wav,events,txt"),
+                            gradle("render --genre fantasy --state sneaking --bars 16 --seed 1 --out build/l7c-s --formats events")),
                     true,
                     "athenacl.result.render/1"),
             new CommandInfo(
@@ -135,12 +136,13 @@ public final class CommandCatalog {
                     "athenacl.result.validate/1"),
             new CommandInfo(
                     "preset",
-                    "preset list counts the genre presets. preset show prints instruments and the GM limits. preset audition plays eight bars and prints the character.",
+                    "preset list counts the genre presets. preset show prints instruments and the GM limits. preset audition plays eight bars and prints the character. --analyze adds harmony and lead counts.",
                     List.of(
                             gradle("preset list"),
                             gradle("preset show fantasy"),
                             gradle("preset show scifi-space"),
-                            gradle("preset audition reggae --bars 8 --seed 1")),
+                            gradle("preset audition reggae --bars 8 --seed 1"),
+                            gradle("preset audition fantasy --bars 8 --seed 1 --analyze")),
                     false,
                     "athenacl.result.preset/1"),
             new CommandInfo(
@@ -153,7 +155,7 @@ public final class CommandCatalog {
                     "athenacl.result.motif/1"),
             new CommandInfo(
                     "melody",
-                    "melody generate ranks hook candidates. melody score rates a MIDI line. melody rate writes an A/B row. melody fit turns ratings into weights.",
+                    "melody generate ranks hook candidates. melody score rates a MIDI line. --progression reads harmony.json. melody rate writes an A/B row. melody fit turns ratings into weights.",
                     List.of(
                             gradle("melody generate --key E-minor --candidates 64 --seed 3 --explain"),
                             gradle("melody score samples/melodies/folk-pd-01.mid --key G-major")),

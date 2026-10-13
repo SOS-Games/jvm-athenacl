@@ -219,7 +219,13 @@ public final class CommandCatalog {
                             gradle("athena run conformance/paths/c-major.ath --out build/l13"),
                             gradle("athena prompt --line \"tpsd 7\"")),
                     true,
-                    "athenacl.result.athena/1"));
+                    "athenacl.result.athena/1"),
+            new CommandInfo(
+                    "batch",
+                    "batch runs a JSONL list of commands in one process. Each command's text matches running it alone. --stop-on-error returns at the first failure.",
+                    List.of(gradle("batch checks/batch.jsonl")),
+                    false,
+                    "athenacl.result.batch/1"));
 
     private CommandCatalog() {
     }

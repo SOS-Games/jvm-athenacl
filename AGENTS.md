@@ -4,7 +4,7 @@ Instructions for AI coding agents working in **jvm-athenacl**.
 
 ## Project
 
-GPL-3.0-or-later Java 21 rewrite of athenaCL as an adaptive game-music engine for libGDX desktop. Package `io.github.sosgames.athenacl`. Layer plan: [docs/research/05-project-plan.md](docs/research/05-project-plan.md). L0a–L21, L1b (instrument kits), L7b (hook generator and melody critic), and L7c step 0 (genre and state resolution) are in the tree. Do not start L6b or L9b until the user asks.
+GPL-3.0-or-later Java 21 rewrite of athenaCL as an adaptive game-music engine for libGDX desktop. Package `io.github.sosgames.athenacl`. Layer plan: [docs/research/05-project-plan.md](docs/research/05-project-plan.md). L0a–L21, L1b (instrument kits), L7b (hook generator and melody critic), and L7c (melodic engine) are in the tree. Do not start L6b or L9b until the user asks.
 
 - Java 21 (`options.release = 21`). Versions live in `gradle.properties`.
 - Groovy Gradle, same shape as SOS-Games/jvm-mw. Root `gradlew layerCheck`. CLI: `gradlew :athenacl-cli:agentCli --args="help"`.
@@ -33,6 +33,7 @@ gradlew.bat :athenacl-cli:agentCli --args="help version"
 gradlew.bat :athenacl-cli:agentCli --args="version"
 gradlew.bat :athenacl-cli:agentCli --args="version -vv"
 gradlew.bat :athenacl-cli:agentCli --args="version --json"
+gradlew.bat :athenacl-cli:agentCli --args="batch checks/batch.jsonl"
 gradlew.bat :athenacl-cli:agentCli --args="schema athenacl.result.version/1"
 gradlew.bat :athenacl-cli:agentCli --args="schema athenacl.result.version/1 --out build/schema --dry-run"
 gradlew.bat :athenacl-cli:agentCli --args="schema athenacl.result.version/1 --out build/schema"
@@ -103,6 +104,7 @@ gradlew.bat :athenacl-cli:agentCli --args="melody generate --key E-minor --candi
 | conformance | You want `conformance list` to count the 31 pregui MIDI demo scripts, `conformance run` to check that each script has commands, `conformance run --subset slice` to compare the LineGroove beats to their golden MIDI, `conformance run --subset po.value` to sample the value generators, `conformance run --subset po.omde,po.rhythm` to sample the wave, breakpoint, and rhythm generators, `conformance run --subset texture,clone` to check the texture modules and the clone filters, `conformance run --subset sieve,generators` to check sieves, tunings, and generator fixtures, `conformance run --subset commands.a,xml` to check the first 55 commands and one project file, or `conformance run --subset commands.b` to check the other 48 command names. |
 | po | You want `po sample basketGen "oc,(1,2,3)" --n 6` to walk a basket and print `values=1,2,3,1,2,3`. |
 | athena | You want `athena run` to play a path or a LineGroove beat and check its MIDI against the golden file beside it, or `athena prompt --line` to resolve one command line. |
+| batch | You want `batch checks/batch.jsonl` to run each JSONL command in one process. `--stop-on-error` returns at the first failure. `--json` prints one object per command. |
 | soundbank | You want to install, list, or show GeneralUser GS or MuseScore_General. An `.sf3` file is rejected. |
 | describe | You want `describe scale`, `describe chord`, `describe instruments` (287 presets and 13 drum kits in GeneralUser GS), `describe pos --group value` (45 value generators), `describe pos --group omde` (36 wave and breakpoint generators), `describe pos --group rhythm` (13 rhythm generators), `describe textures` (14 texture modules), `describe setclass 3-11` (a Forte set class), `describe commands` (the first 55 athenaCL commands), or `describe commands --group b` (the other 48). |
 | analyze | You want EBU R128 integrated loudness and true peak for a WAV or a render directory. A swung render also prints `swing.measured=`. `analyze <dir> --by state` prints each state's offset from the contour. A motif render also prints `motif.reuse.per8bars=`. A directory with `events.jsonl` also prints `harmony.distinctRoots=`, `lead.overlaps=`, and the other phrase counts. `harmony.json` adds `harmony.style=`. |
@@ -174,6 +176,7 @@ Published schema ids:
 - `athenacl.result.commands/1`
 - `athenacl.result.prompt/1`
 - `athenacl.result.athena/1`
+- `athenacl.result.batch/1`
 
 When you add a command, add it to `CommandCatalog`, add a row to the table above, and add a block to the layer's `checks/L*.check`. `LayerCheckTest` fails if the table is missing a catalog command.
 
@@ -213,6 +216,10 @@ Lines look like `TRACE athenacl.cli start command=version`. Categories reserved 
 `--dry-run` is for commands that write. `schema --out <dir> --dry-run` prints `action=write`, `path=`, `bytes=`, `changed=`, and `dryRun=true`, and does not create the directory. A real write fills a temp file in the destination folder and renames it into place. A second write of the same bytes prints `changed=false` and leaves the modified time alone.
 
 `--out` is a directory the command owns. Inputs are not modified. Do not point it at the repo root.
+
+## Batch
+
+`batch checks/batch.jsonl` reads one command per line: `{"id":1,"cmd":"version"}` or `{"id":2,"cmd":"describe","args":["scale","D-dorian"]}`. `cmd` may include spaces. `args` is a list of strings, or an object of flags (`{"seed":1}` becomes `--seed 1`). Each command starts clean. The text is `id=` `exit=` and then that command's own stdout, then `commands=` `failed=`. `--json` prints one object per command (`id`, `exit`, `ok`, `stdout`) and skips the summary. `--stop-on-error` does not run the rest. A missing file is exit 4. A line that is not JSON is exit 3. The batch exit code is the first command that failed, or 0.
 
 ## Layer checks
 

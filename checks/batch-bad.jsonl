@@ -1,0 +1,2 @@
+{"id":1,"cmd":"schema","args":["no-such-schema"]}
+{"id":2,"cmd":"version"}

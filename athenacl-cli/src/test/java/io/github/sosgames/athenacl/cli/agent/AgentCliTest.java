@@ -100,6 +100,22 @@ class AgentCliTest {
     }
 
     @Test
+    void batchPrintsWhatEachCommandPrintsAlone(@TempDir Path dir) throws Exception {
+        Run version = run("version");
+        Run scale = run("describe", "scale", "D-dorian");
+        Path file = dir.resolve("batch.jsonl");
+        Files.writeString(file, """
+                {"id":1,"cmd":"version"}
+                {"id":2,"cmd":"describe","args":["scale","D-dorian"]}
+                """, StandardCharsets.UTF_8);
+        Run batch = run("batch", file.toString());
+        assertEquals(0, batch.exit);
+        assertTrue(batch.out.contains(version.out.trim()), batch.out);
+        assertTrue(batch.out.contains(scale.out.trim()), batch.out);
+        assertTrue(batch.err.isBlank(), batch.err);
+    }
+
+    @Test
     void missingSchemaIsNotFound() {
         Run run = run("schema", "athenacl.missing/1");
         assertEquals(4, run.exit);

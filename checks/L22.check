@@ -1,0 +1,32 @@
+# L22 batch mode. Directive list: AGENTS.md, section "Layer checks".
+
+name: batch matches the commands run alone
+args: batch checks/batch.jsonl
+exit: 0
+stdout-contains: id=1 exit=0
+stdout-contains: scale=D-dorian pcs=D,E,F,G,A,B,C
+stdout-contains: commands=2 failed=0
+
+---
+name: batch json is one object per command
+args: batch checks/batch.jsonl --json
+exit: 0
+stdout-contains: "id":1
+stdout-contains: "ok":true
+stdout-contains: scale=D-dorian
+
+---
+name: a failure still runs the next command
+args: batch checks/batch-bad.jsonl
+exit: 4
+stdout-contains: id=1 exit=4
+stdout-contains: id=2 exit=0
+stdout-contains: commands=2 failed=1
+
+---
+name: stop on error skips the rest
+args: batch checks/batch-bad.jsonl --stop-on-error
+exit: 4
+stdout-contains: id=1 exit=4
+stdout-not-contains: id=2
+stdout-contains: commands=1 failed=1

@@ -1,0 +1,13 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "athenacl.result.batch/1",
+  "type": "object",
+  "description": "One JSONL line from batch --json. The child's own text is in stdout.",
+  "required": ["id", "exit", "ok", "stdout"],
+  "properties": {
+    "id": { "type": ["string", "integer"] },
+    "exit": { "type": "integer" },
+    "ok": { "type": "boolean" },
+    "stdout": { "type": "string" }
+  }
+}

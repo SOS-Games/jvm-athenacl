@@ -36,12 +36,13 @@ stdout-contains: ensemble.fallback=fixed
 
 ---
 name: resolve names the automatic source
-args: theme resolve --genre fantasy --state sneaking --seed 1 --explain
+args: theme resolve --genre fantasy --state sneaking --seed 1 --kit analysis --explain
 exit: 0
 stdout-contains: source=ensemble:auto
 
 ---
-name: the automatic ensemble passes lint
-args: kit lint --genre fantasy --all-states --seed 1
-exit: 0
-stdout-contains: errors=0
+name: lint lists every instrument in the kit
+args: kit lint --genre fantasy --all-states --seed 1 --kit analysis
+exit: 3
+stdout-contains: instruments=7
+stdout-contains: finding=INSTR_BAD

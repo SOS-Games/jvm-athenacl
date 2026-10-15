@@ -115,10 +115,31 @@ public final class Ensemble {
         return new Result(toRoles(picked), roughness(picked), roughLimit, false, path(seed, state));
     }
 
-    public static Compatibility.Lint lintGenre(String genre, long seed) throws IOException, KitException {
+    public static Compatibility.Lint lintGenre(String genre, long seed, String kitOverride)
+            throws IOException, KitException {
+        Composition composition = Resolver.resolve(genre, GENRE_STATES.get(0), "", null);
+        if (composition == null) {
+            throw new KitException(new KitException.Issue(
+                    "NOT_FOUND", "--genre", "unknown genre " + genre,
+                    "Use a genre such as fantasy."));
+        }
+        String kitId = kitOverride == null || kitOverride.isBlank() ? firstKit(composition) : kitOverride;
+        InstrumentProfile.Report profile = open(kitId);
+        List<String> catalog = new ArrayList<>();
         List<Compatibility.Finding> findings = new ArrayList<>();
+        if (profile != null) {
+            for (InstrumentProfile.Row row : profile.rows()) {
+                catalog.add(InstrumentProfile.rowLine(row, null));
+                if ("bad".equals(row.verdict())) {
+                    findings.add(new Compatibility.Finding(
+                            "INSTR_BAD", "error", "", "", row.name(),
+                            "/instruments/" + row.name(), "kit:" + kitId,
+                            "", row.reasons().isEmpty() ? "" : "reasons=" + String.join(",", row.reasons())));
+                }
+            }
+        }
         for (String state : GENRE_STATES) {
-            Result result = select(genre, state, null, null, seed);
+            Result result = select(genre, state, null, kitId, seed);
             for (Role role : result.roles) {
                 if ("bad".equals(role.verdict()) || role.instrument.isBlank()) {
                     findings.add(new Compatibility.Finding(
@@ -128,7 +149,7 @@ public final class Ensemble {
                 }
             }
         }
-        return new Compatibility.Lint(findings, false);
+        return new Compatibility.Lint(findings, profile == null, catalog);
     }
 
     static Result fallback(Composition composition, String state, long seed) {
@@ -287,10 +308,7 @@ public final class Ensemble {
         if (!Files.isRegularFile(file)) {
             return null;
         }
-        if ("analysis".equals(kitId) || file.toString().replace('\\', '/').contains("samples/kits/")) {
-            return InstrumentProfile.analyze(file, null);
-        }
-        return InstrumentProfile.openCached(file, null);
+        return InstrumentProfile.analyze(file, null);
     }
 
     private static List<String> roles(Composition composition) {

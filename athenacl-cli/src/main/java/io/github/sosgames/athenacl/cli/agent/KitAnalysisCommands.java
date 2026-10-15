@@ -42,6 +42,8 @@ public final class KitAnalysisCommands {
         String genre;
         @CommandLine.Option(names = "--seed", paramLabel = "<n>")
         Integer seed;
+        @CommandLine.Option(names = "--kit", paramLabel = "<id>")
+        String kitId;
 
         @Override
         public Integer call() {
@@ -49,7 +51,7 @@ public final class KitAnalysisCommands {
             parent.commandName = "kit lint";
             if (file == null && genre != null && !genre.isBlank()) {
                 try {
-                    Compatibility.Lint lint = Ensemble.lintGenre(genre, seed == null ? 1 : seed);
+                    Compatibility.Lint lint = Ensemble.lintGenre(genre, seed == null ? 1 : seed, kitId);
                     return finish(parent, lint);
                 } catch (KitException e) {
                     return fail(parent, e);
@@ -198,16 +200,12 @@ public final class KitAnalysisCommands {
 
     private static InstrumentProfile.Report profile(String kitId) throws IOException, KitException {
         Path file = Kits.find(kitId);
-        if ("analysis".equals(kitId) || file.toString().replace('\\', '/').contains("samples/kits/")) {
-            return InstrumentProfile.analyze(file, null);
-        }
-        InstrumentProfile.Report cached = InstrumentProfile.openCached(file, null);
-        if (cached == null) {
+        if (!java.nio.file.Files.isRegularFile(file)) {
             throw new KitException(new KitException.Issue(
-                    "NOT_FOUND", "--kit", "profile not found",
-                    "Run kit analyze on this kit first."));
+                    "NOT_FOUND", "--kit", "kit not found",
+                    "Pass a kit such as gm-lite or analysis."));
         }
-        return cached;
+        return InstrumentProfile.analyze(file, null);
     }
 
     private static InstrumentProfile.Row row(InstrumentProfile.Report profile, String name) {

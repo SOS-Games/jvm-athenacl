@@ -23,7 +23,7 @@ programs: {pad: 89, arp: 80, bass: 38, lead: 80}
 instruments: {pad: pad.warm, arp: lead.square, bass: bass.synth, lead: lead.square}
 ensemble:
   select: auto
-  kits: [analysis]
+  kits: [gm-lite]
   topK: 3
   roles:
     lead: {fit: ">=0.5", tags: {none: [noisy]}}

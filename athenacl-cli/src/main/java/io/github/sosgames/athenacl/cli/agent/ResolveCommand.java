@@ -35,6 +35,8 @@ public class ResolveCommand implements Callable<Integer> {
     boolean withLint;
     @CommandLine.Option(names = "--seed")
     Integer seed;
+    @CommandLine.Option(names = "--kit", paramLabel = "<id>")
+    String kit;
 
     @Override
     public Integer call() {
@@ -69,7 +71,7 @@ public class ResolveCommand implements Callable<Integer> {
         String text = resolved.lines(explain);
         if (seed != null) {
             try {
-                Ensemble.Result picked = Ensemble.select(genre, state, theme, null, seed);
+                Ensemble.Result picked = Ensemble.select(genre, state, theme, kit, seed);
                 text = text + "\n" + picked.instrumentLines();
             } catch (KitException e) {
                 KitException.Issue issue = e.issues().get(0);

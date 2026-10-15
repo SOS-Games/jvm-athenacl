@@ -23,7 +23,7 @@ tempo: {bpm: 96}
 instruments: {lead: flute, pad: strings, bass: cello, chords: piano, brass: horn, arp: harp, perc: taiko}
 ensemble:
   select: auto
-  kits: [analysis]
+  kits: [gm-lite]
   topK: 3
   roles:
     lead: {fit: ">=0.5", tags: {none: [noisy]}}

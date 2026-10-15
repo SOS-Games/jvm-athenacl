@@ -77,8 +77,8 @@ public final class InstrumentProfile {
     }
 
     /**
-     * Reads a profile that is already on disk. A missing or stale file returns null
-     * so a large kit is not rendered during lint.
+     * Reads a profile that is already on disk. A missing or stale file returns null.
+     * Lint calls {@link #analyze} in that case and writes one row per instrument.
      */
     public static Report openCached(Path kitFile, Path outDir) throws IOException, KitException {
         Kit kit = Kits.load(kitFile);

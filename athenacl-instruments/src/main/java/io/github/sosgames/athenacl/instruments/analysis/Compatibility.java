@@ -71,9 +71,14 @@ public final class Compatibility {
         }
     }
 
-    public record Lint(List<Finding> findings, boolean skipped) {
+    public record Lint(List<Finding> findings, boolean skipped, List<String> catalog) {
+        public Lint(List<Finding> findings, boolean skipped) {
+            this(findings, skipped, List.of());
+        }
+
         public Lint {
             findings = List.copyOf(findings);
+            catalog = List.copyOf(catalog);
         }
 
         public int errors() {
@@ -92,16 +97,19 @@ public final class Compatibility {
 
         public String text() {
             StringBuilder sb = new StringBuilder();
+            for (String line : catalog) {
+                sb.append(line).append('\n');
+            }
             for (Finding finding : findings) {
-                if (!sb.isEmpty()) {
+                if (!sb.isEmpty() && sb.charAt(sb.length() - 1) != '\n') {
                     sb.append('\n');
                 }
-                sb.append(finding.line());
-            }
-            if (!sb.isEmpty()) {
-                sb.append('\n');
+                sb.append(finding.line()).append('\n');
             }
             sb.append("errors=").append(errors()).append(" warnings=").append(warnings());
+            if (!catalog.isEmpty()) {
+                sb.append(" instruments=").append(catalog.size());
+            }
             if (skipped) {
                 sb.append(" lint.skipped=no-profile");
             }
@@ -162,14 +170,12 @@ public final class Compatibility {
                     "Use a state declared in the theme."));
         }
         String kitId = kitId(root);
-        Kit kit = Kits.load(Kits.find(kitId));
-        boolean fixture = "analysis".equals(kit.id());
-        InstrumentProfile.Report profile = fixture
-                ? InstrumentProfile.analyze(Kits.find(kitId), null)
-                : InstrumentProfile.openCached(Kits.find(kitId), null);
-        if (profile == null) {
+        Path kitFile = Kits.find(kitId);
+        if (!java.nio.file.Files.isRegularFile(kitFile)) {
             return new Lint(List.of(), true);
         }
+        Kit kit = Kits.load(kitFile);
+        InstrumentProfile.Report profile = InstrumentProfile.analyze(kitFile, null);
         List<String> stateIds = new ArrayList<>();
         if (onlyState != null && !onlyState.isBlank()) {
             stateIds.add(onlyState);

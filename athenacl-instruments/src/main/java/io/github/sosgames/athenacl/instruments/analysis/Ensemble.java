@@ -61,6 +61,19 @@ public final class Ensemble {
             return sb.toString();
         }
 
+        /** The instrument this layer plays. A role the search did not fill keeps the YAML name. */
+        public String playing(String layer, String yaml) {
+            if (fallback) {
+                return yaml;
+            }
+            for (Role role : roles) {
+                if (role.role.equals(layer)) {
+                    return role.instrument;
+                }
+            }
+            return yaml;
+        }
+
         public String instrumentLines() {
             StringBuilder sb = new StringBuilder();
             for (Role role : roles) {
@@ -91,6 +104,18 @@ public final class Ensemble {
         }
         Result chosen = choose(profile, composition, state, seed);
         return chosen.roles.isEmpty() ? fallback(composition, state, seed) : chosen;
+    }
+
+    /**
+     * The ensemble a render should play. A genre that does not ask for auto, or a kit with no
+     * profile on disk, returns null so the YAML names stay. This does not probe the soundfont.
+     */
+    public static Result forPlayback(Composition composition, String state, InstrumentProfile.Report profile, long seed) {
+        if (composition == null || profile == null || !"auto".equals(composition.text("ensemble.select", "fixed"))) {
+            return null;
+        }
+        Result chosen = choose(profile, composition, state, seed);
+        return chosen.roles.isEmpty() ? null : chosen;
     }
 
     public static Result choose(InstrumentProfile.Report profile, Composition composition, String state, long seed) {

@@ -3,6 +3,7 @@ package io.github.sosgames.athenacl.cli.agent;
 
 import io.github.sosgames.athenacl.adaptive.Composition;
 import io.github.sosgames.athenacl.adaptive.Resolver;
+import io.github.sosgames.athenacl.adaptive.Sampler;
 import io.github.sosgames.athenacl.cli.model.ExitCode;
 import io.github.sosgames.athenacl.instruments.KitException;
 import io.github.sosgames.athenacl.instruments.analysis.Compatibility;
@@ -18,7 +19,8 @@ import java.util.concurrent.Callable;
 
 /**
  * Prints one resolved state. Genre defaults, then the state theme, then the game file.
- * {@code --explain} names every layer in the merge, not only the one that won.
+ * {@code --seed} draws each distribution and prints where the value came from.
+ * {@code --explain} names every layer in the merge, and the distribution when there is one.
  */
 @CommandLine.Command(name = "resolve", description = "Print the modules for one genre and state.")
 public class ResolveCommand implements Callable<Integer> {
@@ -42,11 +44,6 @@ public class ResolveCommand implements Callable<Integer> {
     public Integer call() {
         AgentCli parent = themeCommand.cli();
         parent.commandName = "theme resolve";
-        if (state == null || state.isBlank()) {
-            return parent.fail(ExitCode.USAGE, "USAGE", "argv[2]",
-                    "usage: theme resolve --genre <id> --state <id>",
-                    "Try theme resolve --genre fantasy --state sneaking.");
-        }
         if (theme != null && !Files.isRegularFile(theme)) {
             return parent.fail(ExitCode.NOT_FOUND, "NOT_FOUND", "argv[2]", "theme not found",
                     "Pass a theme YAML file.");
@@ -68,8 +65,11 @@ public class ResolveCommand implements Callable<Integer> {
                     "unknown genre " + genre,
                     "Use a genre such as fantasy.");
         }
-        String text = resolved.lines(explain);
         if (seed != null) {
+            resolved = Sampler.sample(resolved, seed, Sampler.SECTION);
+        }
+        String text = resolved.lines(explain);
+        if (seed != null && state != null && !state.isBlank()) {
             try {
                 Ensemble.Result picked = Ensemble.select(genre, state, theme, kit, seed);
                 text = text + "\n" + picked.instrumentLines();

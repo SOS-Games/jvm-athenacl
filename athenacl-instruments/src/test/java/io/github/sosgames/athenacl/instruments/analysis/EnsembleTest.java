@@ -56,6 +56,20 @@ class EnsembleTest {
     }
 
     @Test
+    void playbackUsesThePickAndKeepsUnlistedLayers() throws Exception {
+        Ensemble.Result result = Ensemble.forPlayback(composition(), "sneaking", profile(), 1);
+        assertEquals(result.roles().get(0).instrument(), result.playing("lead", "flute"));
+        assertEquals("strings", result.playing("chords", "strings"));
+        assertEquals(null, Ensemble.forPlayback(composition(), "sneaking", null, 1));
+        String fixed = """
+                ensemble:
+                  select: fixed
+                instruments: {lead: flute}
+                """;
+        assertEquals(null, Ensemble.forPlayback(composition(fixed), "sneaking", profile(), 1));
+    }
+
+    @Test
     void aMissingProfileKeepsTheFixedInstruments() throws Exception {
         Ensemble.Result result = Ensemble.fallback(composition(), "sneaking", 1);
         assertTrue(result.fallback());

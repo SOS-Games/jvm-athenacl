@@ -12,6 +12,7 @@ import com.badlogic.gdx.graphics.g2d.BitmapFont;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 import com.badlogic.gdx.scenes.scene2d.Stage;
+import com.badlogic.gdx.scenes.scene2d.ui.Label;
 import com.badlogic.gdx.scenes.scene2d.ui.Skin;
 import com.badlogic.gdx.scenes.scene2d.ui.TextButton;
 import com.badlogic.gdx.scenes.scene2d.utils.ChangeListener;
@@ -37,6 +38,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ThreadLocalRandom;
 
 /**
  * Plays each track through the MuseScore kit ({@code gm-full}).
@@ -47,7 +49,8 @@ import java.util.concurrent.ConcurrentHashMap;
  * track. The line under the scheduler is where you are in the current pass.
  * The window opens on a silent menu. Sounds lists the soundpack and hides the genres.
  * A sound click repeats until another sound or Back. Genres lists the tracks and
- * starts the ambush piece. Back returns to the menu and stops the speakers.
+ * starts the ambush piece. Randomize picks a new seed and plays the current track again.
+ * The seed is shown beside that button. Back returns to the menu and stops the speakers.
  * The analysis shows when the kit profile has a row for the same program.
  * F3 writes {@code build/athenacl-snapshot.txt}. F4 hides the scheduler line.
  */
@@ -128,6 +131,10 @@ public class MusicDemo extends ApplicationAdapter {
     private TextButton menuSounds;
     private TextButton menuGenres;
     private TextButton back;
+    private TextButton randomize;
+    private Label seedLabel;
+    /** The ensemble and the performance both use this. Randomize replaces it. */
+    private volatile long seed = 1;
 
     @Override
     public void create() {
@@ -164,16 +171,27 @@ public class MusicDemo extends ApplicationAdapter {
                 show(Page.MENU);
             }
         });
+        randomize = new TextButton("Randomize", skin);
+        randomize.setSize(160, 36);
+        randomize.addListener(new ChangeListener() {
+            @Override
+            public void changed(ChangeEvent event, com.badlogic.gdx.scenes.scene2d.Actor actor) {
+                randomizeSeed();
+            }
+        });
+        seedLabel = new Label("Seed 1", new Label.LabelStyle(font, Color.WHITE));
         stage.addActor(menuSounds);
         stage.addActor(menuGenres);
         stage.addActor(back);
+        stage.addActor(randomize);
+        stage.addActor(seedLabel);
         sounds = new SoundBrowser(skin, font, this::preview);
         stage.addActor(sounds.root());
         show(Page.MENU);
         Gdx.input.setInputProcessor(stage);
         try {
             Theme theme = load(TRACKS[0]);
-            clock = LiveClock.start(theme, ControlLog.readTimeline(Path.of(TRACKS[0].timeline)), 1);
+            clock = LiveClock.start(theme, ControlLog.readTimeline(Path.of(TRACKS[0].timeline)), seed);
             clocks.put(TRACKS[0].name, clock);
             device = Gdx.audio.newAudioDevice(44100, false);
             swap.arm("fantasy-combat");
@@ -209,7 +227,7 @@ public class MusicDemo extends ApplicationAdapter {
             if (!playStandby && standbyWav != null && "fantasy-combat".equals(swap.poll(clock.bar()))) {
                 try {
                     Theme combat = load(track("Combat"));
-                    clock = LiveClock.start(combat, combat.timeline(), 1);
+                    clock = LiveClock.start(combat, combat.timeline(), seed);
                     playStandby = true;
                 } catch (Exception e) {
                     error = e.getMessage();
@@ -259,6 +277,8 @@ public class MusicDemo extends ApplicationAdapter {
         menuSounds.setVisible(menu);
         menuGenres.setVisible(menu);
         back.setVisible(!menu);
+        randomize.setVisible(genres);
+        seedLabel.setVisible(genres);
         for (TextButton button : buttons.values()) {
             button.setVisible(genres);
         }
@@ -293,6 +313,8 @@ public class MusicDemo extends ApplicationAdapter {
         menuSounds.setPosition(x, y + 12f);
         menuGenres.setPosition(x, y - 52f);
         back.setPosition(16, height - 72f);
+        randomize.setPosition(168, height - 72f);
+        seedLabel.setPosition(340, height - 60f);
         if (page == Page.SOUNDS) {
             sounds.root().setPosition(16, 88);
             sounds.root().setSize(width - 32f, Math.max(120f, height - 172f));
@@ -364,14 +386,23 @@ public class MusicDemo extends ApplicationAdapter {
                 if (track == null) {
                     return;
                 }
+                long used = seed;
                 byte[] wav = cache.get(track.name);
                 LiveClock next = clocks.get(track.name);
                 if (wav == null) {
                     Gdx.app.postRunnable(() -> showRendering(track.name));
-                    next = open(track);
-                    wav = ThemeMix.wav(load(track), next.performance().score(), states(next));
+                    next = open(track, used);
+                    wav = ThemeMix.wav(load(track), next.performance().score(), states(next), used);
+                    if (used != seed) {
+                        continue;
+                    }
                     cache.put(track.name, wav);
                     clocks.put(track.name, next);
+                    if (used != seed) {
+                        cache.remove(track.name);
+                        clocks.remove(track.name);
+                        continue;
+                    }
                     Gdx.app.postRunnable(this::showLabels);
                 }
                 if (wanted == track) {
@@ -387,12 +418,28 @@ public class MusicDemo extends ApplicationAdapter {
         }
     }
 
-    private static LiveClock open(Track track) throws Exception {
+    private static LiveClock open(Track track, long seed) throws Exception {
         Theme theme = load(track);
         List<Theme.Control> controls = track.timeline == null
                 ? theme.timeline()
                 : ControlLog.readTimeline(Path.of(track.timeline));
-        return LiveClock.start(theme, controls, 1);
+        return LiveClock.start(theme, controls, seed);
+    }
+
+    /** Picks a new seed, drops the recordings made with the old one, and plays the current track again. */
+    private void randomizeSeed() {
+        long next = seed;
+        while (next == seed) {
+            next = 1 + ThreadLocalRandom.current().nextInt(9999);
+        }
+        seed = next;
+        seedLabel.setText("Seed " + seed);
+        cache.clear();
+        clocks.clear();
+        standbyWav = null;
+        playStandby = false;
+        String name = genreChoice != null ? genreChoice : "Ambush";
+        request(track(name));
     }
 
     /** Theme file, or a short tour of a preset. Playback always uses {@link #KIT}. */
@@ -455,9 +502,13 @@ public class MusicDemo extends ApplicationAdapter {
 
     private void preloadCombat() {
         try {
+            long used = seed;
             Theme combat = load(track("Combat"));
-            LiveClock next = LiveClock.start(combat, combat.timeline(), 1);
-            byte[] wav = ThemeMix.wav(combat, next.performance().score(), states(next));
+            LiveClock next = LiveClock.start(combat, combat.timeline(), used);
+            byte[] wav = ThemeMix.wav(combat, next.performance().score(), states(next), used);
+            if (used != seed) {
+                return;
+            }
             standbyWav = wav;
             cache.put("Combat", wav);
             clocks.put("Combat", next);
@@ -476,8 +527,11 @@ public class MusicDemo extends ApplicationAdapter {
     private void playScore() {
         try {
             Theme theme = load(TRACKS[0]);
-            byte[] wav = ThemeMix.wav(theme, clock.performance().score(), states(clock));
-            cache.put("Ambush", wav);
+            long used = seed;
+            byte[] wav = ThemeMix.wav(theme, clock.performance().score(), states(clock), used);
+            if (used == seed) {
+                cache.put("Ambush", wav);
+            }
             preload = new Thread(this::preloadCombat, "athenacl-kit");
             preload.setDaemon(true);
             preload.start();

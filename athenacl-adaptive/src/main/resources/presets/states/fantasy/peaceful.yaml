@@ -1,6 +1,8 @@
 scale: {tonic: A, mode: ionian, leadingTone: true}
 tempo: {bpm: 84}
-harmony: {progression: [I, vi, IV, V]}
+harmony: {progression: [I, vi, IV, V], harmonicRhythm: 1}
+voicing: {style: close}
+lead: {rhythmCells: [lsS, sslL, dotted]}
 layers: [pad, chords, brass, lead, bass]
 programs: {pad: 48, chords: 0, brass: 60, lead: 73, bass: 43}
 instruments: {pad: strings, chords: piano, brass: horn, lead: flute, bass: cello}

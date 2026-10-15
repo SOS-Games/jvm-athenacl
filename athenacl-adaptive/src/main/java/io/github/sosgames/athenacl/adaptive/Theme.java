@@ -60,6 +60,12 @@ public record Theme(
                 timeline, preset, loudness, warnings, motifEvery, hold, kits, hooks, overlays, frameMs, phraseBars);
     }
 
+    /** Same theme, with each state replaced. Sampling uses this so the key follows the seed. */
+    public Theme withStates(Map<String, StateDef> states) {
+        return new Theme(id, bars, bpm, numerator, denominator, states, stingers, defaultQuantize, rules,
+                timeline, preset, loudness, warnings, motifEvery, hold, kits, hooks, overlays, frameMs, phraseBars);
+    }
+
     /** Same theme, played through these kits. The window uses this to prefer the fuller soundfont. */
     public Theme withKits(List<String> kits) {
         return new Theme(id, bars, bpm, numerator, denominator, states, stingers, defaultQuantize, rules,

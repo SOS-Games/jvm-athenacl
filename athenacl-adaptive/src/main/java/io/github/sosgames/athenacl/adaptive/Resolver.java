@@ -39,7 +39,7 @@ public final class Resolver {
         if (node == null) {
             return null;
         }
-        return Composition.empty().merge(node, "genre:" + id);
+        return Sampler.materialize(Composition.empty().merge(node, "genre:" + id));
     }
 
     /**
@@ -66,23 +66,26 @@ public final class Resolver {
             return null;
         }
         Composition composition = Composition.empty().merge(genreNode, "genre:" + genreId);
-        JsonNode generic = Composition.readResource("/presets/states/" + stateId + ".yaml");
-        if (generic != null) {
-            composition = composition.merge(generic, "state:" + stateId);
-        }
-        JsonNode specific = Composition.readResource("/presets/states/" + genreId + "/" + stateId + ".yaml");
-        if (specific != null) {
-            composition = composition.merge(specific, "state:" + genreId + "/" + stateId);
+        if (stateId != null && !stateId.isBlank()) {
+            JsonNode generic = Composition.readResource("/presets/states/" + stateId + ".yaml");
+            if (generic != null) {
+                composition = composition.merge(generic, "state:" + stateId);
+            }
+            JsonNode specific = Composition.readResource("/presets/states/" + genreId + "/" + stateId + ".yaml");
+            if (specific != null) {
+                composition = composition.merge(specific, "state:" + genreId + "/" + stateId);
+            }
         }
         if (theme != null && theme.isObject()) {
             String source = "theme:" + themePath;
             composition = composition.merge(modulesOf(theme), source);
             JsonNode states = theme.get("states");
-            if (states != null && states.isObject() && states.get(stateId) != null) {
+            if (stateId != null && !stateId.isBlank() && states != null && states.isObject()
+                    && states.get(stateId) != null) {
                 composition = composition.merge(states.get(stateId), source);
             }
         }
-        return composition;
+        return Sampler.materialize(composition);
     }
 
     public static Theme.StateDef state(String id, Composition composition, String meterFallback) {

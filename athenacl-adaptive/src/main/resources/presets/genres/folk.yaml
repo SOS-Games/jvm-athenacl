@@ -7,17 +7,41 @@ loudness:
   reference: -23
   maxSpread: 6
   offsets: {sneaking: -1.5, peaceful: -1.0, trading: -1.0, partying: 1.5, danger: 2.0, combat: 4.0}
-scale: {tonic: D, mode: dorian, leadingTone: false}
-harmony: {style: modal, progression: [i, IV, VII, i], harmonicRhythm: 1, sevenths: none}
+scale:
+  tonic: {choose: [D, E, F], weights: [4, 1, 1], fallback: D}
+  mode: {choose: [dorian, aeolian, mixolydian], weights: [4, 1, 1], fallback: dorian}
+  leadingTone: {p: 0.2, fallback: false}
+harmony:
+  style: modal
+  progression:
+    generate: markov
+    model: minor-functional
+    length: 4
+    fallback: [i, IV, VII, i]
+    constraints: {startOn: i, endOn: [i]}
+  harmonicRhythm: {choose: [1, 2], weights: [3, 1], fallback: 1}
+  sevenths: none
 cadence: {strength: weak, every: 8}
 drone: {enabled: false}
-voicing: {style: close, voiceLead: true, maxLeap: 4}
-lead: {enabled: true, phrase: period, rhythmCells: [lsS, sslL], register: [A4, E6]}
+voicing: {style: {choose: [close, open], weights: [2, 1], fallback: close}, voiceLead: true, maxLeap: 4}
+lead: {enabled: true, phrase: period, rhythmCells: {generate: po, po: basketGen, symbols: [lsS, sslL], count: 2, fallback: [lsS, sslL]}, register: [A4, E6]}
 hooks: {enabled: true, candidates: 64}
-tempo: {bpm: 108}
+tempo: {bpm: {range: [96, 120], step: 2, fallback: 108}}
 layers: [lead, pad, harp, chords, bass, drums]
 programs: {lead: 73, pad: 110, harp: 46, chords: 21, bass: 32, drums: 0}
 instruments: {lead: flute, pad: fiddle, harp: harp, chords: accordion, bass: bass.acoustic, drums: drums.standard}
+ensemble:
+  select: auto
+  kits: [gm-lite]
+  topK: 3
+  roles:
+    lead: {fit: ">=0.5", tags: {none: [noisy]}}
+    pad: {tags: {any: [pad]}, fit: ">=0.5"}
+    bass: {fit: ">=0.5", tags: {none: [noisy]}}
+    chords: {fit: ">=0.5", tags: {none: [noisy]}}
+    drums: {fit: ">=0.5"}
+    harp: {tags: {any: [plucky]}, fit: ">=0.5"}
+  constraints: {maxPairRoughness: 2000, maxMask: {lead: 0.95}, verdict: [ok, caution]}
 density:
   pad: {degrees: [0, 2, 4, 5]}
   arp: {degrees: [0, 2, 4, 2], steps: 8}

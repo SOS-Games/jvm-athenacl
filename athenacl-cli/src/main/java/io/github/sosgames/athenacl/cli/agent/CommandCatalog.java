@@ -128,7 +128,7 @@ public final class CommandCatalog {
                     "athenacl.result.rhythm/1"),
             new CommandInfo(
                     "theme",
-                    "theme validate checks states and transitions. theme explain prints the states a theme will play. theme resolve prints one genre and state after the merge.",
+                    "theme validate checks states and transitions. theme explain prints the states a theme will play. theme resolve prints one genre and state after the merge. --seed draws each distribution and prints source= and the seed path.",
                     List.of(
                             gradle("theme validate samples/themes/poc.yaml"),
                             gradle("theme explain samples/themes/poc.yaml"),

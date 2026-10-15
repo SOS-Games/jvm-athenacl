@@ -7,17 +7,29 @@ loudness:
   reference: -23
   maxSpread: 6
   offsets: {sneaking: -1.5, peaceful: -1.0, trading: -1.0, partying: 1.5, danger: 2.0, combat: 4.0}
-scale: {tonic: C, mode: lydian, leadingTone: false}
-harmony: {style: modal, progression: [I, II, vi, V], harmonicRhythm: 1, sevenths: none}
+scale:
+  tonic: {choose: [C, D, E], weights: [4, 1, 1], fallback: C}
+  mode: {choose: [lydian, ionian, mixolydian], weights: [4, 1, 1], fallback: lydian}
+  leadingTone: {p: 0.2, fallback: false}
+harmony:
+  style: modal
+  progression:
+    generate: markov
+    model: major-functional
+    length: 4
+    fallback: [I, II, vi, V]
+    constraints: {startOn: I, endOn: [V]}
+  harmonicRhythm: {choose: [1, 2], weights: [3, 1], fallback: 1}
+  sevenths: none
 cadence: {strength: weak, every: 8}
 drone: {enabled: false}
-voicing: {style: close, voiceLead: true, maxLeap: 4}
-lead: {enabled: true, phrase: period, rhythmCells: [lsS, sslL], register: [A4, E6], density: 0.35}
+voicing: {style: {choose: [close, open], weights: [2, 1], fallback: close}, voiceLead: true, maxLeap: 4}
+lead: {enabled: true, phrase: period, rhythmCells: {generate: po, po: basketGen, symbols: [lsS, sslL], count: 2, fallback: [lsS, sslL]}, register: [A4, E6], density: 0.35}
 source:
   lead: {po: "markovPulse,(2,1,0.5),(3,4,2)", texture: LineGroove}
   arp: {po: "sieve,5@0|5@1|5@3", texture: LineGroove}
 hooks: {enabled: true, candidates: 64}
-tempo: {bpm: 100}
+tempo: {bpm: {range: [88, 112], step: 2, fallback: 100}}
 layers: [pad, arp, bass, lead]
 programs: {pad: 89, arp: 80, bass: 38, lead: 80}
 instruments: {pad: pad.warm, arp: lead.square, bass: bass.synth, lead: lead.square}

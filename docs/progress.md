@@ -178,6 +178,10 @@ L22 starts with `batch`. A JSONL file lists commands, and this process runs each
 
 `kit lint` reads that profile and checks a resolved theme. A bad lead exits 3 with `finding=INSTR_BAD` and a `fix=try` hint. A saw lead prints `errors=0 warnings=0`. `kit fit` scores a role. A pluck is a poor pad and a good arp. `kit compat` reports when two parts cover the same register. The finding names the theme file that chose the instrument. A missing GM profile is skipped so lint does not render the full bank.
 
+## L7h — Seeded parameter sampling
+
+A genre no longer has to name one key, one progression, and one tempo. `scale`, `tempo`, `harmony`, `voicing`, and `lead` can be a choice, a range, a probability, or a generator (Markov, grammar, sieve, or an athenaCL parameter object). `theme resolve --seed 1` draws them and prints `source=sampled`, `source=generated`, or `source=pin`, plus the seed path `1/s1/…`. The same seed draws the same values. A `pin:` on the game theme replaces any draw. With no seed, each field keeps the `fallback`, which is the value that genre used before. No golden MIDI file changed. Note hashes move where a render used to inherit a fixed genre tempo, key, or progression and now draws one.
+
 ## L7f — Ensemble selection
 
 `ensemble select` fills each role from a profile. Fantasy and sci-fi ask for that. The same seed always picks the same instruments, chosen from the top few that stay inside the pair limits. A pinned role stays pinned. A missing profile keeps the fixed instrument names. `theme resolve --seed` prints those choices with `source=ensemble:auto`.

@@ -67,6 +67,7 @@ public final class Director {
      */
     public static Performance perform(Theme theme, List<Theme.Control> controls, long seed,
                                       Map<String, Theme> alternates) {
+        theme = Sampler.apply(theme, seed);
         StockLayers.prepareHooks(theme, seed);
         long barTicks = theme.barTicks();
         List<Scheduled> scheduled = new ArrayList<>();
@@ -138,7 +139,7 @@ public final class Director {
                 if (nextTheme == null) {
                     continue;
                 }
-                current = nextTheme;
+                current = Sampler.apply(nextTheme, seed);
                 swapped = true;
                 if (themeSwitchBar == 0) {
                     themeSwitchBar = bar;

@@ -1,0 +1,43 @@
+# L7h seeded parameter sampling. Directive list: AGENTS.md, section "Layer checks".
+
+name: fantasy seed 1 names the draw
+args: theme resolve --genre fantasy --seed 1
+exit: 0
+stdout-contains: source=sampled
+stdout-contains: seed=1/s1/
+stdout-contains: source=generated:markov(minor-functional)
+stdout-regex: harmony\.progression=i(,[A-Za-z0-9]+){6},i
+
+---
+name: the same seed resolves the same way
+args: theme resolve --genre fantasy --seed 1
+exit: 0
+stdout-same-as: theme resolve --genre fantasy --seed 1
+
+---
+name: the progression is eight chords
+args: theme resolve --genre fantasy --seed 1 --json
+exit: 0
+json-document
+json-array-nonempty: data.harmony.progression
+
+---
+name: a pin beats the sample
+args: theme resolve samples/themes/pinned.yaml --seed 7
+exit: 0
+stdout-contains: scale.tonic=D source=pin:
+
+---
+name: fantasy still plays
+args: render --genre fantasy --bars 16 --seed 1 --out build/l7h --formats events
+exit: 0
+delete-before: build/l7h
+file-exists: build/l7h/events.jsonl
+file-exists: build/l7h/harmony.json
+
+---
+name: the lead still clears the harmony checks
+args: analyze build/l7h
+exit: 0
+stdout-contains: lead.overlaps=0
+stdout-regex: harmony\.distinctRoots=[3-9]

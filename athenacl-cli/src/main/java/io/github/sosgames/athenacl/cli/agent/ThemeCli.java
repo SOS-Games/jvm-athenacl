@@ -105,7 +105,7 @@ final class ThemeCli {
             for (String format : requested) {
                 byte[] body;
                 if ("wav".equals(format) && !loaded.theme.kits().isEmpty()) {
-                    body = ThemeMix.wav(loaded.theme, score, stateByBar);
+                    body = ThemeMix.wav(loaded.theme, score, stateByBar, seed);
                 } else {
                     body = RenderCommand.body(format, score, selection.file());
                     if ("wav".equals(format) && loaded.theme.loudness() != null) {

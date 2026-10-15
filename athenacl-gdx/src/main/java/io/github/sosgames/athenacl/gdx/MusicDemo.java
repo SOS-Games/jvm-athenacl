@@ -42,10 +42,10 @@ import java.util.concurrent.ConcurrentHashMap;
  * Plays each track through the MuseScore kit ({@code gm-full}).
  * The ambush can still swap to the combat theme at a bar line. That kit is rendered on a
  * background thread and becomes audible on the next bar after bar 8, until a track button
- * is pressed. Each button starts that piece from the beginning. Genre buttons are the
- * presets that do not already have a track. The line under the scheduler is how far
- * through the current track you are. F3 writes {@code build/athenacl-snapshot.txt}.
- * F4 hides the scheduler line.
+ * is pressed. Each button starts that piece from the beginning and repeats it until
+ * another button is pressed. Genre buttons are the presets that do not already have a
+ * track. The line under the scheduler is where you are in the current pass.
+ * F3 writes {@code build/athenacl-snapshot.txt}. F4 hides the scheduler line.
  */
 public class MusicDemo extends ApplicationAdapter {
     private static final int SWAP_BAR = 8;
@@ -205,11 +205,12 @@ public class MusicDemo extends ApplicationAdapter {
 
     private void drawProgress(float width) {
         float barWidth = Math.min(640f, width - 32f);
-        float fraction = trackSeconds <= 0 ? 0f : (float) Math.min(1.0, heardSeconds / trackSeconds);
+        double into = trackSeconds <= 0 ? 0 : heardSeconds % trackSeconds;
+        float fraction = trackSeconds <= 0 ? 0f : (float) (into / trackSeconds);
         float barY = 28 + ((TRACKS.length + COLUMNS - 1) / COLUMNS) * 44f;
         batch.begin();
         font.setColor(Color.WHITE);
-        font.draw(batch, nowPlaying + "  " + timestamp(heardSeconds) + " / " + timestamp(trackSeconds), 16, barY + 36);
+        font.draw(batch, nowPlaying + "  " + timestamp(heardSeconds), 16, barY + 36);
         batch.end();
         shapes.setProjectionMatrix(batch.getProjectionMatrix());
         shapes.begin(ShapeRenderer.ShapeType.Filled);
@@ -413,42 +414,52 @@ public class MusicDemo extends ApplicationAdapter {
     }
 
     private void play(byte[] wav, String name, int id) throws Exception {
-        try (AudioInputStream audio = AudioSystem.getAudioInputStream(new ByteArrayInputStream(wav))) {
-            AudioFormat format = audio.getFormat();
-            int channels = Math.max(1, format.getChannels());
-            float rate = format.getFrameRate();
-            long frames = audio.getFrameLength();
-            trackSeconds = frames > 0 && rate > 0 ? frames / rate : 0;
-            heardSeconds = 0;
-            nowPlaying = name;
-            long heardFrames = 0;
-            byte[] buffer = new byte[4096];
-            int read;
-            while (!stop && queuedId == id && (read = audio.read(buffer)) > 0) {
-                if (queuedWav != null && wav != queuedWav) {
-                    return;
-                }
-                if (!picked && wav != standbyWav && playStandby && standbyWav != null && queuedWav == null) {
-                    return;
-                }
-                int samples = read / 2;
-                if (samples == 0) {
-                    continue;
-                }
-                short[] pcm = new short[samples];
-                for (int i = 0; i < samples; i++) {
-                    int low = buffer[i * 2] & 0xff;
-                    int high = buffer[i * 2 + 1];
-                    pcm[i] = (short) ((high << 8) | low);
-                }
-                started = true;
-                device.writeSamples(pcm, 0, samples);
-                heardFrames += samples / channels;
-                if (rate > 0) {
-                    heardSeconds = heardFrames / rate;
+        nowPlaying = name;
+        heardSeconds = 0;
+        long heardFrames = 0;
+        while (!stop && queuedId == id) {
+            if (leaveFor(wav)) {
+                return;
+            }
+            try (AudioInputStream audio = AudioSystem.getAudioInputStream(new ByteArrayInputStream(wav))) {
+                AudioFormat format = audio.getFormat();
+                int channels = Math.max(1, format.getChannels());
+                float rate = format.getFrameRate();
+                long frames = audio.getFrameLength();
+                trackSeconds = frames > 0 && rate > 0 ? frames / rate : 0;
+                byte[] buffer = new byte[4096];
+                int read;
+                while (!stop && queuedId == id && (read = audio.read(buffer)) > 0) {
+                    if (leaveFor(wav)) {
+                        return;
+                    }
+                    int samples = read / 2;
+                    if (samples == 0) {
+                        continue;
+                    }
+                    short[] pcm = new short[samples];
+                    for (int i = 0; i < samples; i++) {
+                        int low = buffer[i * 2] & 0xff;
+                        int high = buffer[i * 2 + 1];
+                        pcm[i] = (short) ((high << 8) | low);
+                    }
+                    started = true;
+                    device.writeSamples(pcm, 0, samples);
+                    heardFrames += samples / channels;
+                    if (rate > 0) {
+                        heardSeconds = heardFrames / rate;
+                    }
                 }
             }
         }
+    }
+
+    /** Another button, or the ambush handing off to combat, replaces this recording. */
+    private boolean leaveFor(byte[] wav) {
+        if (queuedWav != null && wav != queuedWav) {
+            return true;
+        }
+        return !picked && wav != standbyWav && playStandby && standbyWav != null && queuedWav == null;
     }
 
     private static String timestamp(double seconds) {

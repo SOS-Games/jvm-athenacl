@@ -5,8 +5,9 @@ import java.util.List;
 
 /**
  * A playhead over a score the director already built. {@code poll} moves it forward.
- * The notes do not depend on the wall clock. {@code cpu.msPerBar} is how long that build took,
- * and it is not part of the event-log hash.
+ * Past the last bar it starts again at bar 1, so a window that repeats the recording
+ * stays on the same music. The notes do not depend on the wall clock.
+ * {@code cpu.msPerBar} is how long that build took, and it is not part of the event-log hash.
  */
 public final class LiveClock {
     private final Theme theme;
@@ -44,11 +45,11 @@ public final class LiveClock {
 
     public int bar() {
         int count = Math.max(1, performance.score().bars());
-        int number = (int) (seconds / barSeconds) + 1;
-        if (number < 1) {
+        long index = (long) (seconds / barSeconds);
+        if (index < 0) {
             return 1;
         }
-        return Math.min(number, count);
+        return (int) Math.floorMod(index, count) + 1;
     }
 
     public String snapshot() {

@@ -55,10 +55,13 @@ class DescriptorTest {
         for (int i = 0; i < samples.length; i++) {
             samples[i] = (float) (0.3 * Math.sin(2.0 * Math.PI * C4 * i / RATE));
         }
-        for (int i = RATE / 2; i < samples.length; i += 400) {
-            samples[i] = 0.95f;
-            if (i + 1 < samples.length) {
-                samples[i + 1] = -0.95f;
+        int loop = 400;
+        for (int i = 0; i < samples.length; i++) {
+            int at = i % loop;
+            if (at == 0) {
+                samples[i] = 0.95f;
+            } else if (at == loop - 1) {
+                samples[i] = -0.95f;
             }
         }
         Descriptors.Measurement measurement = Descriptors.measure(samples, RATE, C4, 8, -2, 50);

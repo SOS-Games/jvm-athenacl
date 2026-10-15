@@ -209,7 +209,8 @@ public class KitCommand implements Callable<Integer> {
             return switch (key) {
                 case "verdict" -> row.verdict().equals(value);
                 case "tag", "tags" -> row.tags().contains(value);
-                case "reason", "reasons" -> row.reasons().contains(value);
+                case "reason", "reasons" -> row.reasons().stream()
+                        .anyMatch(reason -> reason.equals(value) || reason.startsWith(value + "@"));
                 default -> false;
             };
         }
@@ -221,6 +222,8 @@ public class KitCommand implements Callable<Integer> {
             data.put("reasons", row.reasons());
             data.put("tags", row.tags());
             data.put("pitchErrorCents", row.pitchErrorCents());
+            data.put("class", row.soundClass());
+            data.put("octaveOffset", row.octaveOffset());
             if ("override".equals(row.source())) {
                 data.put("source", "override");
             }

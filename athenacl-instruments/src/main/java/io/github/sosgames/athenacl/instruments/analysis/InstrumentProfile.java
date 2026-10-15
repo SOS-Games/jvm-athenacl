@@ -49,7 +49,10 @@ public final class InstrumentProfile {
             double decayMs,
             boolean died,
             double roughness,
-            double loudnessLu) {
+            double loudnessLu,
+            String soundClass,
+            int octaveOffset,
+            String note) {
         public Row {
             reasons = List.copyOf(reasons);
             tags = List.copyOf(tags);
@@ -110,8 +113,9 @@ public final class InstrumentProfile {
             banks.add(resolved.bank);
             programs.add(resolved.program);
             if (instrument.analysisVerdict() != null) {
+                String cls = instrument.soundClass() == null ? SoundClass.SUSTAINED : instrument.soundClass();
                 rows.add(new Row(instrument.name(), instrument.analysisVerdict(), List.of(), List.of(),
-                        0, 0, "override", 0, 0, 0, false, 0, 0));
+                        0, 0, "override", 0, 0, 0, false, 0, 0, cls, 0, ""));
                 continue;
             }
             rows.add(measure(instrument, resolved, thresholds));
@@ -152,6 +156,12 @@ public final class InstrumentProfile {
     public static String text(Row row) {
         List<String> lines = new ArrayList<>();
         lines.add(row.name() + " is " + row.verdict() + ".");
+        if (row.soundClass() != null && !row.soundClass().isBlank()) {
+            lines.add("Class: " + row.soundClass() + ".");
+        }
+        if (row.octaveOffset() != 0) {
+            lines.add("Octave offset is " + row.octaveOffset() + ".");
+        }
         if (!row.reasons().isEmpty()) {
             lines.add("Reasons: " + String.join(", ", row.reasons()) + ".");
         }
@@ -170,14 +180,17 @@ public final class InstrumentProfile {
         if (row.tags().contains("noisy")) {
             lines.add("The sound is noisy.");
         }
-        if (row.reasons().contains("inharmonicity")) {
+        if (hasReason(row, "inharmonicity")) {
             lines.add("The partials do not line up.");
         }
-        if (row.reasons().contains("clipping")) {
+        if (hasReason(row, "clipping")) {
             lines.add("The waveform is clipped.");
         }
-        if (row.reasons().contains("loopClicks")) {
+        if (hasReason(row, "loopClicks")) {
             lines.add("The loop clicks.");
+        }
+        if (row.note() != null && row.note().startsWith("loud")) {
+            lines.add("The note is loud.");
         }
         if (lines.size() > 8) {
             lines = lines.subList(0, 8);
@@ -196,6 +209,17 @@ public final class InstrumentProfile {
             sb.append(" tags=").append(String.join(",", row.tags()));
         }
         sb.append(" pitch.errorCents=").append(num(row.pitchErrorCents(), 1));
+        if (row.soundClass() != null && !row.soundClass().isBlank()) {
+            sb.append(" class=").append(row.soundClass());
+        }
+        sb.append(" octave_offset=").append(row.octaveOffset());
+        if (row.note() != null && row.note().startsWith("loud")) {
+            sb.append(" note=loud");
+            int trim = row.note().indexOf("trim=");
+            if (trim >= 0) {
+                sb.append(' ').append(row.note().substring(trim));
+            }
+        }
         if ("override".equals(row.source())) {
             sb.append(" source=override");
         }
@@ -210,16 +234,18 @@ public final class InstrumentProfile {
         List<Integer> pitches = pitches(instrument);
         int mid = pitches.get(pitches.size() / 2);
         List<Double> pitchErrors = new ArrayList<>();
+        List<Double> octaves = new ArrayList<>();
         List<Double> centroids = new ArrayList<>();
         List<Double> attacks = new ArrayList<>();
         List<Double> decays = new ArrayList<>();
         int died = 0;
         int takes = 0;
-        double inharmonic = 0;
+        List<Double> inharmonics = new ArrayList<>();
         double flatness = 0;
         int clips = 0;
         int clicks = 0;
         double roughness = 0;
+        double peakDb = -120;
         Double quiet = null;
         Double loud = null;
         for (int pitch : pitches) {
@@ -227,6 +253,7 @@ public final class InstrumentProfile {
                 Descriptors.Measurement measurement = renderOne(instrument, resolved, thresholds,
                         new int[] {pitch}, velocity);
                 pitchErrors.add(measurement.pitchErrorCents());
+                octaves.add((double) measurement.octaveOffset());
                 centroids.add(measurement.centroidRatio());
                 attacks.add(measurement.attackMs());
                 decays.add(measurement.decayMs());
@@ -234,11 +261,12 @@ public final class InstrumentProfile {
                 if (measurement.died()) {
                     died++;
                 }
-                inharmonic = Math.max(inharmonic, measurement.inharmonicEnergy());
+                inharmonics.add(measurement.inharmonicEnergy());
                 flatness = Math.max(flatness, measurement.flatness());
                 clips = Math.max(clips, measurement.clipCount());
                 clicks = Math.max(clicks, measurement.loopClicks());
                 roughness = Math.max(roughness, measurement.roughness());
+                peakDb = Math.max(peakDb, measurement.peakDbfs());
                 if (pitch == mid && velocity == 40) {
                     quiet = measurement.loudnessLu();
                 }
@@ -255,33 +283,23 @@ public final class InstrumentProfile {
                 roughness = Math.max(roughness, measurement.roughness());
             }
         }
+        double inharmonic = median(inharmonics);
         double pitch = quantize(median(pitchErrors), 1);
+        int octave = (int) Math.round(median(octaves));
         double centroid = median(centroids);
         double attack = median(attacks);
         double decay = median(decays);
         boolean noisy = flatness >= thresholds.flatness();
-        boolean bell = instrument.name().toLowerCase(Locale.ROOT).contains("bell");
-        List<String> reasons = new ArrayList<>();
-        if (clips >= 8) {
-            reasons.add("clipping");
-        }
-        if (clicks >= thresholds.loopClickCount()) {
-            reasons.add("loopClicks");
-        }
-        if (!noisy && !bell && inharmonic >= thresholds.inharmonicEnergy()) {
-            reasons.add("inharmonicity");
-        }
-        if (!noisy && Math.abs(pitch) > thresholds.pitchHardCents()) {
-            reasons.add("pitch");
-        }
-        List<String> soft = new ArrayList<>();
-        if (!noisy && Math.abs(pitch) > thresholds.pitchSoftCents()
-                && Math.abs(pitch) <= thresholds.pitchHardCents()) {
-            soft.add("pitch");
-        }
+        boolean mostlyDied = takes > 0 && died * 2 >= takes;
+        String soundClass = SoundClass.classify(instrument.name(), instrument.program(),
+                instrument.percussion(), instrument.soundClass(), attack, decay, mostlyDied, flatness);
+        ClassVerdict.Decision decision = ClassVerdict.judge(soundClass, pitch, inharmonic, flatness,
+                clips, clicks, roughness, mostlyDied, peakDb, thresholds);
+        List<String> reasons = new ArrayList<>(decision.reasons());
+        List<String> soft = new ArrayList<>(decision.soft());
         if (quiet != null && loud != null && Double.isFinite(quiet) && Double.isFinite(loud)
                 && loud - quiet < thresholds.velocityMinLu()) {
-            soft.add("velocity");
+            soft.add(ClassVerdict.rule("velocity", soundClass));
         }
         List<String> tags = new ArrayList<>();
         if (centroid >= thresholds.brightRatio()) {
@@ -299,12 +317,14 @@ public final class InstrumentProfile {
         if (noisy) {
             tags.add("noisy");
         }
+        if (decision.note().startsWith("loud")) {
+            tags.add("loud");
+        }
         String verdict = !reasons.isEmpty() ? "bad" : !soft.isEmpty() ? "caution" : "ok";
-        boolean mostlyDied = takes > 0 && died * 2 >= takes;
         double level = loud != null && Double.isFinite(loud) ? loud : 0;
         return new Row(instrument.name(), verdict, reasons, tags, pitch, quantize(attack, 1), "measured",
                 quantize(centroid, 2), quantize(flatness, 2), quantize(decay, 1), mostlyDied,
-                quantize(roughness, 2), quantize(level, 1));
+                quantize(roughness, 2), quantize(level, 1), soundClass, octave, decision.note());
     }
 
     private static Descriptors.Measurement renderOne(Kit.Instrument instrument, Resolved resolved,
@@ -382,7 +402,10 @@ public final class InstrumentProfile {
                     row.path("decay.ms").asDouble(0),
                     row.path("died").asBoolean(false),
                     row.path("roughness").asDouble(0),
-                    row.path("loudness.lufs").asDouble(0)));
+                    row.path("loudness.lufs").asDouble(0),
+                    row.path("class").asText(SoundClass.SUSTAINED),
+                    row.path("octave_offset").asInt(0),
+                    row.path("note").asText("")));
         }
         int bad = 0;
         for (Row row : parsed) {
@@ -432,6 +455,9 @@ public final class InstrumentProfile {
             sb.append("      \"died\": ").append(row.died()).append(",\n");
             sb.append("      \"roughness\": ").append(num(row.roughness(), 2)).append(",\n");
             sb.append("      \"loudness.lufs\": ").append(num(row.loudnessLu(), 1)).append(",\n");
+            sb.append("      \"class\": \"").append(escape(row.soundClass() == null ? "" : row.soundClass())).append("\",\n");
+            sb.append("      \"octave_offset\": ").append(row.octaveOffset()).append(",\n");
+            sb.append("      \"note\": \"").append(escape(row.note() == null ? "" : row.note())).append("\",\n");
             sb.append("      \"source\": \"").append(escape(row.source())).append("\"\n");
             sb.append("    }");
             if (i + 1 < rows.size()) {
@@ -558,6 +584,15 @@ public final class InstrumentProfile {
 
     private static String num(double value, int places) {
         return String.format(Locale.US, "%." + places + "f", quantize(value, places));
+    }
+
+    private static boolean hasReason(Row row, String code) {
+        for (String reason : row.reasons()) {
+            if (reason.equals(code) || reason.startsWith(code + "@")) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private static int jdk() {

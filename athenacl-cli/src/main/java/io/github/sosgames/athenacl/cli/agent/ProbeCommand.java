@@ -61,6 +61,7 @@ public class ProbeCommand implements Callable<Integer> {
             fields.put("pitch", pitch);
             fields.put("velocity", Integer.toString(velocity));
             fields.put("pitch.errorCents", String.format(Locale.US, "%.1f", measurement.pitchErrorCents()));
+            fields.put("octave_offset", Integer.toString(measurement.octaveOffset()));
             fields.put("inharmonic.energy", String.format(Locale.US, "%.2f", measurement.inharmonicEnergy()));
             fields.put("spectral.centroidRatio", String.format(Locale.US, "%.2f", measurement.centroidRatio()));
             fields.put("spectral.flatness", String.format(Locale.US, "%.2f", measurement.flatness()));

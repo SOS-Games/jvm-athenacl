@@ -161,6 +161,7 @@ public final class Kits {
                 high,
                 body.path("outOfRange").asText(low == null ? "" : "fold"),
                 fallbacks,
+                text(body, "class"),
                 text(body.path("analysis"), "verdict"),
                 text(body.path("analysis"), "note"));
     }

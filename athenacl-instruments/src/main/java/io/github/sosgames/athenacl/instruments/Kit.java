@@ -64,6 +64,7 @@ public record Kit(String id, List<Source> sources, List<Instrument> instruments)
             String keyHigh,
             String outOfRange,
             List<String> fallbacks,
+            String soundClass,
             String analysisVerdict,
             String analysisNote) {
         public Instrument {

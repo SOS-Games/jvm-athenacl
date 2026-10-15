@@ -1,0 +1,22 @@
+# Stand-ins for the eighteen GeneralUser false positives.
+# Each tone is judged as that class. The verdict should be ok or caution.
+# octave_offset is written down and is not a failure. A hot tone is a loud note.
+cases:
+  - {name: organ, class: pitched-sustained, tone: octave-down, note: octave}
+  - {name: accordion, class: pitched-sustained, tone: octave-up, note: octave}
+  - {name: flute, class: pitched-sustained, tone: hot, note: loud}
+  - {name: fiddle, class: pitched-sustained, tone: hot, note: loud}
+  - {name: violin, class: pitched-sustained, tone: hot, note: loud}
+  - {name: bass.acoustic, class: pitched-sustained, tone: hot, note: loud}
+  - {name: shamisen, class: pitched-percussive, tone: attack-click, note: attack}
+  - {name: koto, class: pitched-percussive, tone: attack-click, note: attack}
+  - {name: choir, class: ensemble, tone: chorus, note: chorus}
+  - {name: lead.square, class: synth-raw, tone: square, note: edge}
+  - {name: lead.saw, class: synth-raw, tone: saw, note: edge}
+  - {name: kalimba, class: pitched-percussive, tone: attack-click, note: attack}
+  - {name: bass.synth, class: synth-raw, tone: saw, note: edge}
+  - {name: taiko, class: unpitched-percussion, tone: noise, note: unpitched}
+  - {name: timpani, class: tuned-percussion, tone: inharmonic, note: tuned}
+  - {name: drums.orchestral, class: unpitched-percussion, tone: noise, note: unpitched}
+  - {name: drums.808, class: unpitched-percussion, tone: noise, note: unpitched}
+  - {name: drums.standard, class: unpitched-percussion, tone: noise, note: unpitched}

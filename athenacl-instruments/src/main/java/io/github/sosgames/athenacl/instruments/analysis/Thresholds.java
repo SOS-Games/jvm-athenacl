@@ -57,7 +57,7 @@ public record Thresholds(
     }
 
     public static Thresholds defaults() {
-        return new Thresholds(2, 15, 30, 50, 0.25, 0.35, -6.0, 8, 8,
+        return new Thresholds(4, 15, 30, 50, 0.25, 0.35, -6.0, 8, 8,
                 2.0, 1.4, 80, 40, 400, 3);
     }
 }

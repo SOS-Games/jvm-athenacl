@@ -48,6 +48,8 @@ class FixtureAnalysisTest {
         assertEquals(List.of("inharmonic", "clipped", "loopclick"), bad, detail.toString());
         InstrumentProfile.Row saw = report.rows().get(0);
         assertEquals("ok", saw.verdict(), detail.toString());
+        assertEquals(SoundClass.SYNTH, saw.soundClass(), detail.toString());
+        assertTrue(detail.toString().contains("octave_offset="), detail.toString());
         assertTrue(saw.tags().contains("bright"), detail.toString());
         assertTrue(Math.abs(saw.pitchErrorCents()) <= 2, detail.toString());
         InstrumentProfile.Row pad = row(report, "pad");

@@ -34,6 +34,6 @@ class CompatibilityTest {
                                               double cents, double attack, double centroid, double flatness,
                                               double decay, boolean died) {
         return new InstrumentProfile.Row(name, verdict, List.of(), tags, cents, attack, "measured",
-                centroid, flatness, decay, died, 0.1, -20);
+                centroid, flatness, decay, died, 0.1, -20, SoundClass.SUSTAINED, 0, "");
     }
 }

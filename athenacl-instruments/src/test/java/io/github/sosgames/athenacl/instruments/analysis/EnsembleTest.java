@@ -90,6 +90,6 @@ class EnsembleTest {
 
     private static InstrumentProfile.Row row(String name, List<String> tags, double centroid) {
         return new InstrumentProfile.Row(name, "ok", List.of(), tags, 0.1, 20, "measured",
-                centroid, 0.02, 200, false, 0.1, -20);
+                centroid, 0.02, 200, false, 0.1, -20, SoundClass.SUSTAINED, 0, "");
     }
 }

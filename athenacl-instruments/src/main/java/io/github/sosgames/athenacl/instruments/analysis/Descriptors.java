@@ -4,9 +4,9 @@ package io.github.sosgames.athenacl.instruments.analysis;
 import io.github.sosgames.athenacl.render.loudness.LoudnessMeter;
 
 /**
- * Measurements on one dry probe. Pitch uses YIN on the loudest stretch.
- * Partials come from one Fourier transform of that same stretch.
- * A loop click is a sample-to-sample jump many times the local spread.
+ * Measurements on one dry probe. Pitch is the pitch class of the steady
+ * tone, after the attack, and an octave miss is recorded beside it.
+ * A loop click is a repeating spike at a loop boundary, not a bright edge.
  */
 public final class Descriptors {
     private Descriptors() {
@@ -25,80 +25,211 @@ public final class Descriptors {
             int clipCount,
             int loopClicks,
             double loudnessLu,
-            double roughness) {
+            double roughness,
+            int octaveOffset) {
     }
 
     public static Measurement measure(float[] samples, int rate, double nominalHz,
                                       double clickSigma, double clipDbfs, double inharmonicCents) {
+        double fullScale = Math.pow(10.0, -0.3 / 20.0);
         double peak = 0;
+        int run = 0;
         int clips = 0;
-        double clipLimit = Math.pow(10.0, clipDbfs / 20.0);
         for (float sample : samples) {
             double abs = Math.abs(sample);
             if (abs > peak) {
                 peak = abs;
             }
-            if (abs >= clipLimit) {
-                clips++;
+            if (abs >= fullScale) {
+                run++;
+                if (run >= 3) {
+                    clips++;
+                }
+            } else {
+                run = 0;
             }
         }
-        double peakDb = peak <= 1e-9 ? -120 : 20.0 * Math.log10(peak);
-        int win = 16384;
-        int at = loudest(samples, Math.min(win, samples.length));
-        int used = Math.min(win, samples.length - at);
-        double[] re = new double[nextPow2(Math.max(used, 16))];
-        double[] im = new double[re.length];
-        for (int i = 0; i < used; i++) {
-            double hann = 0.5 - 0.5 * Math.cos(2.0 * Math.PI * i / Math.max(1, used - 1));
-            re[i] = samples[at + i] * hann;
+        if (peak >= fullScale || truePeak(samples, fullScale) || flatTop(samples, peak)) {
+            clips = Math.max(clips, 8);
         }
-        fft(re, im);
-        double f0 = yin(samples, at, at + used, rate, nominalHz);
-        double cents = Double.isFinite(f0) && f0 > 0 && nominalHz > 0
-                ? 1200.0 * Math.log(f0 / nominalHz) / Math.log(2.0)
-                : 0;
-        Spectrum spectrum = spectrum(re, im, rate, nominalHz, inharmonicCents);
+        double peakDb = peak <= 1e-9 ? -120 : 20.0 * Math.log10(peak);
         Envelope envelope = envelope(samples, rate);
-        int clicks = clicks(samples, at, at + used, clickSigma);
+        int steady = steadyStart(samples.length, rate, envelope.attackMs);
+        int hold = Math.min(samples.length, Math.max(steady + rate / 5, (int) (1.85 * rate)));
+        float[] timbre = normalize(samples, rate, peak);
+        double target = harmonicF0(timbre, steady, hold, rate, nominalHz);
+        double f0 = yinNear(timbre, steady, Math.min(hold, steady + 16384), rate, target);
+        int octave = 0;
+        double cents = 0;
+        if (Double.isFinite(f0) && f0 > 0 && nominalHz > 0) {
+            double raw = 1200.0 * Math.log(f0 / nominalHz) / Math.log(2.0);
+            octave = (int) Math.round(raw / 1200.0);
+            cents = raw - octave * 1200.0;
+            if (cents > 600) {
+                cents -= 1200;
+                octave++;
+            } else if (cents < -600) {
+                cents += 1200;
+                octave--;
+            }
+        }
+        double fundamental = Double.isFinite(f0) && f0 > 0 ? f0 : nominalHz;
+        Spectrum spectrum = windowSpectrum(timbre, steady, hold, rate, fundamental, inharmonicCents);
+        if (nominalHz > 0 && fundamental > 0
+                && Math.abs(Math.log(fundamental / nominalHz) / Math.log(2.0)) > 0.08) {
+            Spectrum atNote = windowSpectrum(timbre, steady, hold, rate, nominalHz, inharmonicCents);
+            if (atNote.inharmonic < spectrum.inharmonic) {
+                spectrum = atNote;
+            }
+        }
+        int clicks = envelope.died ? 0 : clicks(samples, steady, hold, clickSigma);
         double loudness = loudness(samples, rate);
         return new Measurement(cents, spectrum.inharmonic, spectrum.centroidRatio, spectrum.flatness,
                 spectrum.oddEven, envelope.attackMs, envelope.decayMs, envelope.died, peakDb, clips, clicks,
-                loudness, spectrum.roughness);
+                loudness, spectrum.roughness, octave);
     }
 
-    private static int loudest(float[] samples, int win) {
-        if (samples.length <= win) {
-            return 0;
+    private static int steadyStart(int length, int rate, double attackMs) {
+        int steady = (int) Math.round(rate * (attackMs / 1000.0 + 0.04));
+        int latest = Math.max(0, length - rate / 5);
+        if (steady > latest) {
+            steady = latest / 2;
         }
-        int step = Math.max(1, win / 8);
-        int best = 0;
-        double bestEnergy = -1;
-        for (int i = 0; i + win <= samples.length; i += step) {
-            double energy = 0;
-            for (int n = 0; n < win; n += 8) {
-                float s = samples[i + n];
-                energy += s * (double) s;
+        return Math.max(0, Math.min(steady, length - 1));
+    }
+
+    /** Scale toward -23 LUFS without pushing the copy into clipping. Pitch does not move. */
+    private static float[] normalize(float[] samples, int rate, double peak) {
+        double lu = loudness(samples, rate);
+        if (!Double.isFinite(lu) || lu <= -50 || peak < 1e-6) {
+            return samples;
+        }
+        double gain = Math.pow(10.0, (-23.0 - lu) / 20.0);
+        gain = Math.min(gain, 0.95 / peak);
+        if (Math.abs(gain - 1.0) < 0.04) {
+            return samples;
+        }
+        float[] out = new float[samples.length];
+        for (int i = 0; i < samples.length; i++) {
+            out[i] = (float) (samples[i] * gain);
+        }
+        return out;
+    }
+
+    /**
+     * A hard clip stays at one value for a stretch. The synth may turn that
+     * stretch down, so it is not always near 0 dBFS. A sine peak is not flat.
+     */
+    private static boolean flatTop(float[] samples, double peak) {
+        if (peak < 0.05) {
+            return false;
+        }
+        double tol = Math.max(1.0e-4, peak * 5.0e-4);
+        int up = 0;
+        int down = 0;
+        int longest = 0;
+        for (float sample : samples) {
+            if (sample >= peak - tol) {
+                up++;
+                if (up > longest) {
+                    longest = up;
+                }
+            } else {
+                up = 0;
             }
-            if (energy > bestEnergy) {
-                bestEnergy = energy;
-                best = i;
+            if (sample <= -peak + tol) {
+                down++;
+                if (down > longest) {
+                    longest = down;
+                }
+            } else {
+                down = 0;
+            }
+        }
+        return longest >= 24;
+    }
+
+    private static boolean truePeak(float[] samples, double fullScale) {
+        for (int i = 1; i < samples.length - 2; i++) {
+            double p0 = samples[i - 1];
+            double p1 = samples[i];
+            double p2 = samples[i + 1];
+            double p3 = samples[i + 2];
+            for (int k = 1; k <= 3; k++) {
+                double t = k / 4.0;
+                double t2 = t * t;
+                double t3 = t2 * t;
+                double v = 0.5 * ((2 * p1)
+                        + (-p0 + p2) * t
+                        + (2 * p0 - 5 * p1 + 4 * p2 - p3) * t2
+                        + (-p0 + 3 * p1 - 3 * p2 + p3) * t3);
+                if (Math.abs(v) >= fullScale) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    /**
+     * Picks the octave whose first harmonics carry the energy, then stays there.
+     * A missing fundamental still loses to the octave that lines the partials up.
+     */
+    private static double harmonicF0(float[] samples, int start, int end, int rate, double nominalHz) {
+        int n = Math.min(8192, end - start);
+        if (n < 256 || nominalHz <= 0) {
+            return nominalHz;
+        }
+        double bestScore = -1;
+        double best = nominalHz;
+        for (int oct = -3; oct <= 3; oct++) {
+            double f = nominalHz * Math.pow(2.0, oct);
+            if (f < 30 || f > 4000) {
+                continue;
+            }
+            double score = harmonicScore(samples, start, n, rate, f);
+            score *= 1.0 - 0.02 * Math.abs(oct);
+            if (score > bestScore) {
+                bestScore = score;
+                best = f;
             }
         }
         return best;
     }
 
-    private static double yin(float[] samples, int start, int end, int rate, double nominalHz) {
-        int n = end - start;
-        if (n < 64 || nominalHz <= 0) {
-            return nominalHz;
+    private static double harmonicScore(float[] samples, int start, int n, int rate, double f0) {
+        double score = 0;
+        for (int k = 1; k <= 6; k++) {
+            double w = 2.0 * Math.PI * f0 * k / rate;
+            double sr = 0;
+            double si = 0;
+            for (int i = 0; i < n; i++) {
+                double x = samples[start + i];
+                sr += x * Math.cos(w * i);
+                si += x * Math.sin(w * i);
+            }
+            score += Math.hypot(sr, si) / k;
         }
-        int minLag = Math.max(2, (int) (rate / 2000.0));
-        int maxLag = Math.min(n / 2 - 1, (int) (rate / 40.0));
+        return score;
+    }
+
+    /** YIN inside a few percent of {@code targetHz}, so it cannot jump an octave. */
+    private static double yinNear(float[] samples, int start, int end, int rate, double targetHz) {
+        if (targetHz <= 0) {
+            return targetHz;
+        }
+        int n = end - start;
+        if (n < 64) {
+            return targetHz;
+        }
+        int center = (int) Math.round(rate / targetHz);
+        int minLag = Math.max(2, (int) Math.round(center * 0.94));
+        int maxLag = Math.min(n / 2 - 1, (int) Math.round(center * 1.06));
         if (maxLag <= minLag) {
-            return nominalHz;
+            return targetHz;
         }
         double[] diff = new double[maxLag + 1];
-        for (int tau = 1; tau <= maxLag; tau++) {
+        for (int tau = minLag; tau <= maxLag; tau++) {
             double sum = 0;
             int count = n - tau;
             for (int i = 0; i < count; i++) {
@@ -108,32 +239,19 @@ public final class Descriptors {
             diff[tau] = sum;
         }
         double[] cmnd = new double[maxLag + 1];
-        cmnd[0] = 1;
         double running = 0;
         for (int tau = 1; tau <= maxLag; tau++) {
             running += diff[tau];
             cmnd[tau] = running == 0 ? 1 : diff[tau] * tau / running;
         }
-        int best = -1;
-        for (int tau = minLag; tau <= maxLag; tau++) {
-            if (cmnd[tau] < 0.15) {
-                while (tau + 1 <= maxLag && cmnd[tau + 1] < cmnd[tau]) {
-                    tau++;
-                }
+        int best = minLag;
+        for (int tau = minLag + 1; tau <= maxLag; tau++) {
+            if (cmnd[tau] < cmnd[best]) {
                 best = tau;
-                break;
             }
         }
-        if (best < 0) {
-            best = minLag;
-            for (int tau = minLag + 1; tau <= maxLag; tau++) {
-                if (cmnd[tau] < cmnd[best]) {
-                    best = tau;
-                }
-            }
-            if (cmnd[best] > 0.5) {
-                return nominalHz;
-            }
+        if (cmnd[best] > 0.5) {
+            return targetHz;
         }
         double tau = best;
         if (best > minLag && best < maxLag) {
@@ -145,7 +263,23 @@ public final class Descriptors {
                 tau = best + (prev - next) / denom;
             }
         }
-        return tau <= 0 ? nominalHz : rate / tau;
+        return tau <= 0 ? targetHz : rate / tau;
+    }
+
+    private static Spectrum windowSpectrum(float[] samples, int start, int end, int rate,
+                                           double fundamental, double inharmonicCents) {
+        int used = Math.min(16384, Math.max(0, end - start));
+        if (used < 64) {
+            return new Spectrum(0, 0, 0, 0, 0);
+        }
+        double[] re = new double[nextPow2(used)];
+        double[] im = new double[re.length];
+        for (int i = 0; i < used; i++) {
+            double hann = 0.5 - 0.5 * Math.cos(2.0 * Math.PI * i / Math.max(1, used - 1));
+            re[i] = samples[start + i] * hann;
+        }
+        fft(re, im);
+        return spectrum(re, im, rate, fundamental, inharmonicCents);
     }
 
     private record Spectrum(double inharmonic, double centroidRatio, double flatness,
@@ -306,33 +440,123 @@ public final class Descriptors {
         return Math.sqrt(energy / (to - from));
     }
 
+    /**
+     * Counts spikes that repeat at one phase of a detected loop, after the attack.
+     * A saw edge or a square reset is steep on one side, so it is not a click.
+     * No stable loop means there is nothing to join.
+     */
     private static int clicks(float[] samples, int start, int end, double sigma) {
-        int count = end - start - 1;
-        if (count < 16) {
+        int from = Math.max(1, start);
+        int to = Math.min(samples.length - 1, Math.min(end, from + 16384));
+        if (to - from < 256) {
             return 0;
         }
-        double mean = 0;
-        for (int i = start; i < end - 1; i++) {
-            mean += samples[i + 1] - samples[i];
-        }
-        mean /= count;
-        double var = 0;
-        for (int i = start; i < end - 1; i++) {
-            double d = samples[i + 1] - samples[i] - mean;
-            var += d * d;
-        }
-        double std = Math.sqrt(var / count);
-        if (std < 1e-6) {
+        double level = rms(samples, from, to);
+        if (level < 0.02) {
             return 0;
         }
-        double limit = Math.max(0.2, sigma * std);
-        int clicks = 0;
-        for (int i = start; i < end - 1; i++) {
-            if (Math.abs(samples[i + 1] - samples[i]) > limit) {
-                clicks++;
+        double medianStep = medianStep(samples, from, to);
+        double limit = Math.max(0.05, Math.max(level * 1.1, sigma * medianStep));
+        int[] lags = loopLags(samples, from, to);
+        int best = 0;
+        for (int lag : lags) {
+            best = Math.max(best, phaseClicks(samples, from, to, lag, limit));
+        }
+        return best;
+    }
+
+    private static double medianStep(float[] samples, int from, int to) {
+        int span = to - from - 1;
+        if (span < 8) {
+            return 0;
+        }
+        int stride = Math.max(1, span / 512);
+        double[] steps = new double[(span + stride - 1) / stride];
+        int n = 0;
+        for (int i = from; i < to - 1 && n < steps.length; i += stride) {
+            steps[n++] = Math.abs(samples[i + 1] - samples[i]);
+        }
+        java.util.Arrays.sort(steps, 0, n);
+        return n == 0 ? 0 : steps[n / 2];
+    }
+
+    private static int[] loopLags(float[] samples, int from, int to) {
+        int n = to - from;
+        int maxLag = Math.min(n / 3, 2400);
+        int minLag = 16;
+        if (maxLag <= minLag) {
+            return new int[0];
+        }
+        int stride = 4;
+        double energy = 0;
+        int count0 = 0;
+        for (int i = 0; i < n; i += stride) {
+            double v = samples[from + i];
+            energy += v * v;
+            count0++;
+        }
+        if (energy < 1e-8 || count0 == 0) {
+            return new int[0];
+        }
+        double best = 0;
+        int bestLag = minLag;
+        double[] corr = new double[maxLag + 1];
+        for (int tau = minLag; tau <= maxLag; tau += 2) {
+            double sum = 0;
+            int c = 0;
+            for (int i = 0; i + tau < n; i += stride) {
+                double d = samples[from + i] - samples[from + i + tau];
+                sum += d * d;
+                c++;
+            }
+            double scale = c / (double) count0;
+            double r = 1.0 - sum / (2.0 * energy * Math.max(1e-9, scale));
+            corr[tau] = r;
+            if (r > best) {
+                best = r;
+                bestLag = tau;
             }
         }
-        return clicks;
+        if (best < 0.72) {
+            return new int[0];
+        }
+        java.util.ArrayList<Integer> lags = new java.util.ArrayList<>();
+        for (int tau = minLag + 2; tau <= maxLag - 2; tau += 2) {
+            if (corr[tau] >= 0.72 && corr[tau] >= best * 0.9
+                    && corr[tau] >= corr[tau - 2] && corr[tau] >= corr[tau + 2]) {
+                lags.add(tau);
+            }
+        }
+        if (lags.isEmpty()) {
+            lags.add(bestLag);
+        }
+        int[] out = new int[lags.size()];
+        for (int i = 0; i < lags.size(); i++) {
+            out[i] = lags.get(i);
+        }
+        return out;
+    }
+
+    private static int phaseClicks(float[] samples, int from, int to, int lag, double limit) {
+        if (lag < 2) {
+            return 0;
+        }
+        int[] hits = new int[lag];
+        for (int i = from; i + 1 < to; i++) {
+            double left = samples[i] - samples[i - 1];
+            double right = samples[i + 1] - samples[i];
+            // A spike pokes out of both neighbors. A saw reset keeps going the same way.
+            if (left * right < 0 && Math.abs(left) >= limit && Math.abs(right) >= limit) {
+                hits[(i - from) % lag]++;
+            }
+        }
+        int best = 0;
+        for (int hit : hits) {
+            if (hit > best) {
+                best = hit;
+            }
+        }
+        return best;
     }
 
     private static double loudness(float[] samples, int rate) {

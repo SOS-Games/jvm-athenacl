@@ -32,6 +32,8 @@ args: kit describe saw --kit analysis --out build/l7d
 exit: 0
 stdout-contains: verdict=ok
 stdout-contains: tags=bright
+stdout-contains: class=synth-raw
+stdout-contains: octave_offset=
 stdout-regex: pitch\.errorCents=(-?0(\.[0-9]+)?|-?1(\.[0-9]+)?|-?2(\.0+)?)(?![0-9.])
 
 ---

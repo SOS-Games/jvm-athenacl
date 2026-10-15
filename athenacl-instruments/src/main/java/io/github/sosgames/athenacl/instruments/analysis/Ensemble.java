@@ -176,7 +176,7 @@ public final class Ensemble {
             InstrumentProfile.Row row = find(profile, pin);
             if (row == null) {
                 row = new InstrumentProfile.Row(pin, "ok", List.of(), List.of(), 0, 0, "pin",
-                        0, 0, 0, false, 0, 0);
+                        0, 0, 0, false, 0, 0, SoundClass.SUSTAINED, 0, "");
             }
             return List.of(new Pick(role, row, 1, "pin"));
         }

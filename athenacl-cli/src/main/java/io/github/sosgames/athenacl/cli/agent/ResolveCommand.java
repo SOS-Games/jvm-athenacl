@@ -4,6 +4,9 @@ package io.github.sosgames.athenacl.cli.agent;
 import io.github.sosgames.athenacl.adaptive.Composition;
 import io.github.sosgames.athenacl.adaptive.Resolver;
 import io.github.sosgames.athenacl.cli.model.ExitCode;
+import io.github.sosgames.athenacl.instruments.KitException;
+import io.github.sosgames.athenacl.instruments.analysis.Compatibility;
+import io.github.sosgames.athenacl.instruments.analysis.Ensemble;
 import picocli.CommandLine;
 
 import java.io.IOException;
@@ -28,6 +31,10 @@ public class ResolveCommand implements Callable<Integer> {
     String state;
     @CommandLine.Option(names = "--explain")
     boolean explain;
+    @CommandLine.Option(names = "--with-lint")
+    boolean withLint;
+    @CommandLine.Option(names = "--seed")
+    Integer seed;
 
     @Override
     public Integer call() {
@@ -59,9 +66,40 @@ public class ResolveCommand implements Callable<Integer> {
                     "unknown genre " + genre,
                     "Use a genre such as fantasy.");
         }
+        String text = resolved.lines(explain);
+        if (seed != null) {
+            try {
+                Ensemble.Result picked = Ensemble.select(genre, state, theme, null, seed);
+                text = text + "\n" + picked.instrumentLines();
+            } catch (KitException e) {
+                KitException.Issue issue = e.issues().get(0);
+                return parent.fail(ExitCode.INVALID_INPUT, issue.code(), issue.path(), issue.message(), issue.fix());
+            } catch (IOException e) {
+                return parent.fail(ExitCode.RUNTIME, "IO_ERROR", "--seed",
+                        e.getMessage() == null ? "ensemble failed" : e.getMessage(),
+                        "Check that the kit profile can be read.");
+            }
+        }
         Map<String, Object> data = new LinkedHashMap<>(resolved.tree());
         data.put("from", resolved.chainText());
-        return parent.finish(ExitCode.OK, resolved.lines(explain), "athenacl.result.resolve/1",
-                data, java.util.List.of(), java.util.List.of());
+        if (!withLint || theme == null) {
+            return parent.finish(ExitCode.OK, text, "athenacl.result.resolve/1",
+                    data, java.util.List.of(), java.util.List.of());
+        }
+        try {
+            Compatibility.Lint lint = Compatibility.lintTheme(theme, state);
+            text = text + "\n" + lint.text();
+            data.put("errors", lint.errors());
+            data.put("warnings", lint.warnings());
+            ExitCode code = lint.errors() > 0 ? ExitCode.INVALID_INPUT : ExitCode.OK;
+            return parent.finish(code, text, "athenacl.result.resolve/1",
+                    data, java.util.List.of(), java.util.List.of());
+        } catch (KitException e) {
+            KitException.Issue issue = e.issues().get(0);
+            return parent.fail(ExitCode.INVALID_INPUT, issue.code(), issue.path(), issue.message(), issue.fix());
+        } catch (IOException e) {
+            return parent.fail(ExitCode.RUNTIME, "IO_ERROR", "--theme", e.getMessage(),
+                    "Check that the theme and the kit profile can be read.");
+        }
     }
 }

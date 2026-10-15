@@ -21,4 +21,6 @@ Thumbs.db
 *.sf2
 *.sf3
 !samples/kits/*.sf3
+!samples/kits/analysis/*.sf2
 *.dls
+instruments/profiles/

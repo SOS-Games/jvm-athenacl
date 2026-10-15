@@ -1,0 +1,20 @@
+kit: analysis
+version: 1
+sources:
+  fx:
+    path: samples/kits/analysis/fixtures.sf2
+    format: sf2
+    sha256: d898dbf3121bf3ad3d716e53acbf59bbbb269c9cfdb3417a4f4a7cb802f5ada4
+    license:
+      spdx: CC0-1.0
+      attribution: "Generated fixtures, public domain"
+      redistribute: true
+      commercial: true
+instruments:
+  saw: {source: fx, bank: 0, program: 0, keyRange: [C4, C4]}
+  inharmonic: {source: fx, bank: 0, program: 1, keyRange: [C4, C4]}
+  clipped: {source: fx, bank: 0, program: 2, keyRange: [C4, C4]}
+  loopclick: {source: fx, bank: 0, program: 3, keyRange: [C4, C4]}
+  noise: {source: fx, bank: 0, program: 4, keyRange: [C4, C4]}
+  pad: {source: fx, bank: 0, program: 5, keyRange: [C4, C4]}
+  pluck: {source: fx, bank: 0, program: 6, keyRange: [C4, C4]}

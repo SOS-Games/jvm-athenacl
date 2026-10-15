@@ -65,13 +65,14 @@ public final class CommandCatalog {
                     "athenacl.result.describe-music/1"),
             new CommandInfo(
                     "debug",
-                    "debug determinism hashes a note list or theme twice. --fork-jvm uses a fresh process for each run. debug bisect finds the first bar where two renders split. debug inspect filters notes with --where pitch=E4. debug check --stuck-notes counts notes that never turn off. debug bar explains one bar. debug trace --transitions lists state changes. debug replay hashes a control log. debug fuzz-transitions tries seeded state changes. debug overhead times provenance against debug off.",
+                    "debug determinism hashes a note list or theme twice. --fork-jvm uses a fresh process for each run. debug bisect finds the first bar where two renders split. debug inspect filters notes with --where pitch=E4. debug check --stuck-notes counts notes that never turn off. debug bar explains one bar. debug trace --transitions lists state changes. debug replay hashes a control log. debug fuzz-transitions tries seeded state changes. debug overhead times provenance against debug off. debug probe prints one dry note. debug determinism --analyze hashes a kit profile.",
                     List.of(
                             gradle("debug determinism samples/notes/c-major-scale.yaml --runs 2"),
                             gradle("debug determinism themes/fantasy-dungeon.yaml --runs 2 --fork-jvm"),
                             gradle("debug bisect --good build/l11/a --bad build/l11/b"),
                             gradle("debug inspect build/l0/events.jsonl --where pitch=E4"),
-                            gradle("debug bar samples/themes/poc.yaml --seed 42 --bar 9")),
+                            gradle("debug bar samples/themes/poc.yaml --seed 42 --bar 9"),
+                            gradle("debug probe flute --kit gm-lite --pitch C4 --velocity 80")),
                     false,
                     "athenacl.result.determinism/1"),
             new CommandInfo(
@@ -177,10 +178,21 @@ public final class CommandCatalog {
                     "athenacl.result.instrument/1"),
             new CommandInfo(
                     "kit",
-                    "kit validate checks sources, licenses, SF3 files, and slot assignment.",
-                    List.of(gradle("kit validate instruments/gm-lite.yaml")),
-                    false,
+                    "kit validate checks sources, licenses, SF3 files, and slot assignment. kit analyze probes a kit and writes a profile. kit describe prints one instrument's verdict. kit lint checks a resolved theme. kit fit scores one role. kit compat compares a pair.",
+                    List.of(
+                            gradle("kit validate instruments/gm-lite.yaml"),
+                            gradle("kit analyze samples/kits/analysis.yaml"),
+                            gradle("kit describe saw --kit analysis"),
+                            gradle("kit lint samples/themes/lint-clean.yaml --all-states"),
+                            gradle("kit fit pluck --role arp --kit analysis")),
+                    true,
                     "athenacl.result.kit/1"),
+            new CommandInfo(
+                    "ensemble",
+                    "ensemble select fills each role from a kit profile. The same seed picks the same instruments. A missing profile keeps the fixed names.",
+                    List.of(gradle("ensemble select --genre fantasy --state sneaking --seed 1 --kit analysis")),
+                    false,
+                    "athenacl.result.ensemble/1"),
             new CommandInfo(
                     "credits",
                     "credits writes CREDITS.md for the soundfonts a theme's kits use.",

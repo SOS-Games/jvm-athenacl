@@ -7,6 +7,8 @@ import io.github.sosgames.athenacl.adaptive.ThemeException;
 import io.github.sosgames.athenacl.adaptive.ThemeIssue;
 import io.github.sosgames.athenacl.adaptive.Themes;
 import io.github.sosgames.athenacl.debug.Determinism;
+import io.github.sosgames.athenacl.instruments.KitException;
+import io.github.sosgames.athenacl.instruments.analysis.InstrumentProfile;
 import io.github.sosgames.athenacl.cli.model.ExitCode;
 import io.github.sosgames.athenacl.cli.model.KeyValue;
 import io.github.sosgames.athenacl.events.EventLog;
@@ -45,6 +47,10 @@ public class DeterminismCommand implements Callable<Integer> {
     long seed;
     @CommandLine.Option(names = "--fork-jvm")
     boolean forkJvm;
+    @CommandLine.Option(names = "--analyze")
+    boolean analyze;
+    @CommandLine.Option(names = "--out", paramLabel = "<dir>")
+    Path out;
 
     private int parentCode;
 
@@ -111,12 +117,15 @@ public class DeterminismCommand implements Callable<Integer> {
 
     private String hashOnce() {
         try {
+            if (analyze) {
+                return InstrumentProfile.analyze(notes, out).hash();
+            }
             if (Themes.looksLike(notes)) {
                 Theme theme = Themes.load(notes);
                 return EventLog.hash(Director.perform(theme, theme.timeline(), seed).score());
             }
             return EventLog.hash(NoteFiles.yaml(notes, seed));
-        } catch (IOException | ScoreException | ThemeException e) {
+        } catch (IOException | ScoreException | ThemeException | KitException e) {
             throw new IllegalStateException(e);
         }
     }
@@ -172,6 +181,13 @@ public class DeterminismCommand implements Callable<Integer> {
         cmd.add("1");
         cmd.add("--seed");
         cmd.add(Long.toString(seed));
+        if (analyze) {
+            cmd.add("--analyze");
+        }
+        if (out != null) {
+            cmd.add("--out");
+            cmd.add(out.toString());
+        }
         ProcessBuilder pb = new ProcessBuilder(cmd);
         pb.directory(Path.of("").toAbsolutePath().toFile());
         try {

@@ -13,7 +13,7 @@ import java.util.concurrent.Callable;
 @CommandLine.Command(name = "debug", description = "Determinism, bisect, inspect, and overhead.",
         subcommands = {DeterminismCommand.class, BisectCommand.class, InspectCommand.class, CheckCommand.class,
                 BarCommand.class, ExplainNoteCommand.class, TraceCommands.Trace.class, TraceCommands.Replay.class,
-                FuzzCommand.class, OverheadCommand.class})
+                FuzzCommand.class, OverheadCommand.class, ProbeCommand.class})
 public class DebugCommand implements Callable<Integer> {
     @CommandLine.ParentCommand AgentCli parent;
 

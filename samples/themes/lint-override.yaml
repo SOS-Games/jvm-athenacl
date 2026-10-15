@@ -1,0 +1,9 @@
+id: lint-override
+genre: fantasy
+instruments:
+  kits: [analysis]
+states:
+  combat:
+    layers: [lead]
+    instruments: {lead: clipped}
+    lead: {register: [C4, C4]}

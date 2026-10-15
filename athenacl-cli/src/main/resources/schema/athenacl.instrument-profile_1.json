@@ -1,0 +1,13 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "athenacl.instrument-profile/1",
+  "type": "object",
+  "required": ["schema", "kit", "probeVersion", "jdk", "instruments"],
+  "properties": {
+    "schema": { "const": "athenacl.instrument-profile/1" },
+    "kit": { "type": "string" },
+    "probeVersion": { "type": "integer" },
+    "jdk": { "type": "integer" },
+    "instruments": { "type": "array" }
+  }
+}

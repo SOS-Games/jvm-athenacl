@@ -81,6 +81,52 @@ public final class GervillStreams implements AutoCloseable {
     }
 
     /**
+     * A dry probe: 48 kHz float, one channel, reverb, chorus, and auto gain off,
+     * sinc interpolation. Used by instrument analysis. Music renders stay on {@link #open}.
+     */
+    public static GervillStreams openProbe(Path soundbank)
+            throws MidiUnavailableException, IOException, InvalidMidiDataException {
+        if (soundbank == null) {
+            throw new IOException("probe needs a soundfont");
+        }
+        if (!(MidiSystem.getSynthesizer() instanceof AudioSynthesizer synth)) {
+            throw new MidiUnavailableException("this JDK has no Gervill AudioSynthesizer");
+        }
+        AudioFormat format = new AudioFormat(AudioFormat.Encoding.PCM_FLOAT, 48000, 32, 1, 4, 48000, false);
+        Map<String, Object> info = new HashMap<>();
+        info.put("load default soundbank", Boolean.FALSE);
+        info.put("reverb", Boolean.FALSE);
+        info.put("chorus", Boolean.FALSE);
+        info.put("auto gain control", Boolean.FALSE);
+        info.put("interpolation", "sinc");
+        info.put("max polyphony", 8);
+        AudioInputStream stream = synth.openStream(format, info);
+        try {
+            SoundbankResolver.rejectSf3(soundbank);
+            Soundbank bank = SoundbankCache.get(soundbank);
+            if (!synth.isSoundbankSupported(bank) || !synth.loadAllInstruments(bank)) {
+                throw new MidiUnavailableException("could not load soundbank");
+            }
+        } catch (Exception e) {
+            synth.close();
+            if (e instanceof SoundbankRejected rejected) {
+                throw new IOException(rejected.getMessage(), rejected);
+            }
+            if (e instanceof IOException io) {
+                throw io;
+            }
+            if (e instanceof MidiUnavailableException midi) {
+                throw midi;
+            }
+            if (e instanceof RuntimeException runtime) {
+                throw runtime;
+            }
+            throw new IOException(e);
+        }
+        return new GervillStreams(synth, stream);
+    }
+
+    /**
      * Loads only the named slots. Each source instrument is wrapped so its patch is the slot
      * the engine assigned, which keeps two banks from replacing each other.
      */

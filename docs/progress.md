@@ -169,3 +169,15 @@ Step 8 lets a layer name a parameter object. `source.lead.po` draws rhythm token
 Step 9 counts what a render actually did. `analyze` of a directory with `events.jsonl` prints `harmony.distinctRoots` (the smallest set of bass pitch classes in any eight bars), `harmony.dominantCadences`, `lead.rhythmValues`, `lead.leapsOver7`, `lead.overlaps`, and `lead.distinctBarPatterns`. `harmony.json` beside the log adds `harmony.style`. `preset audition --all --analyze` exits 6 when any preset stays under three bass notes or the lead overlaps. `render --genre` plays one state; a single `--bars` number there is the length. A theme render also writes `harmony.json` and `lead.mid`. `melody score --progression` reads that file. An eighth in that MIDI file stays an eighth, so the cadence is still at the end of the phrase. No golden file changed.
 
 L22 starts with `batch`. A JSONL file lists commands, and this process runs each one with a fresh set of flags. The text under each `id=` is what that command prints on its own. `--stop-on-error` skips the rest. No golden file changed.
+
+## L7d — Instrument analysis
+
+`kit analyze` renders each instrument dry through Gervill and writes a profile. The CC0 fixture bank has seven presets. Three are bad: inharmonic partials, a clipped sine, and a loop that clicks. The saw stays in tune and is tagged bright. A second run reads the profile (`cached=true`) and keeps the same hash, including across two processes. `kit describe` prints the verdict. Thresholds live in `instruments/analysis.yaml`. No golden MIDI file changed.
+
+## L7e — Instrument lint
+
+`kit lint` reads that profile and checks a resolved theme. A bad lead exits 3 with `finding=INSTR_BAD` and a `fix=try` hint. A saw lead prints `errors=0 warnings=0`. `kit fit` scores a role. A pluck is a poor pad and a good arp. `kit compat` reports when two parts cover the same register. The finding names the theme file that chose the instrument. A missing GM profile is skipped so lint does not render the full bank.
+
+## L7f — Ensemble selection
+
+`ensemble select` fills each role from a profile. Fantasy and sci-fi ask for that. The same seed always picks the same instruments, chosen from the top few that stay inside the pair limits. A pinned role stays pinned. A missing profile keeps the fixed instrument names. `theme resolve --seed` prints those choices with `source=ensemble:auto`.

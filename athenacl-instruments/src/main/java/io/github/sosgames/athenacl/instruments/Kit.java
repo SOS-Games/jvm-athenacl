@@ -63,7 +63,9 @@ public record Kit(String id, List<Source> sources, List<Instrument> instruments)
             String keyLow,
             String keyHigh,
             String outOfRange,
-            List<String> fallbacks) {
+            List<String> fallbacks,
+            String analysisVerdict,
+            String analysisNote) {
         public Instrument {
             fallbacks = List.copyOf(fallbacks);
         }

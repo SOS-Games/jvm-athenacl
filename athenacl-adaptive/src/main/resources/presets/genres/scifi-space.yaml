@@ -21,6 +21,16 @@ tempo: {bpm: 100}
 layers: [pad, arp, bass, lead]
 programs: {pad: 89, arp: 80, bass: 38, lead: 80}
 instruments: {pad: pad.warm, arp: lead.square, bass: bass.synth, lead: lead.square}
+ensemble:
+  select: auto
+  kits: [analysis]
+  topK: 3
+  roles:
+    lead: {fit: ">=0.5", tags: {none: [noisy]}}
+    pad: {tags: {any: [pad]}, fit: ">=0.5"}
+    bass: {fit: ">=0.5", tags: {none: [noisy]}}
+    arp: {tags: {any: [plucky]}, fit: ">=0.5"}
+  constraints: {maxPairRoughness: 2000, maxMask: {lead: 0.95}, verdict: [ok, caution]}
 density:
   pad: {degrees: [0, 2, 4]}
   arp: {degrees: [0, 2, 4, 3], steps: 8}

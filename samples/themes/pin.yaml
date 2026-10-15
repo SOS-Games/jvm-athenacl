@@ -1,0 +1,7 @@
+id: pin
+genre: fantasy
+states:
+  combat:
+    ensemble:
+      roles:
+        lead: {pin: saw}

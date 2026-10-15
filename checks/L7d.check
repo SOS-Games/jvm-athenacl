@@ -1,0 +1,66 @@
+# L7d instrument analysis. Directive list: AGENTS.md, section "Layer checks".
+
+name: analyze the fixture kit
+delete-before: build/l7d
+args: kit analyze samples/kits/analysis.yaml --out build/l7d
+exit: 0
+stdout-contains: analyzed=7 bad=3
+stdout-contains: instrument=saw verdict=ok tags=bright
+stdout-contains: cached=false
+stdout-not-contains: cached=true
+capture: profile hash=([0-9a-f]+)
+
+---
+name: a second analyze reads the profile
+args: kit analyze samples/kits/analysis.yaml --out build/l7d
+exit: 0
+stdout-contains: analyzed=7 bad=3
+stdout-contains: cached=true
+stdout-not-contains: cached=false
+stdout-contains-capture: profile
+
+---
+name: inharmonic is bad
+args: kit describe inharmonic --kit analysis --out build/l7d
+exit: 0
+stdout-contains: verdict=bad
+stdout-contains: reasons=inharmonicity
+
+---
+name: saw stays in tune
+args: kit describe saw --kit analysis --out build/l7d
+exit: 0
+stdout-contains: verdict=ok
+stdout-contains: tags=bright
+stdout-regex: pitch\.errorCents=(-?0(\.[0-9]+)?|-?1(\.[0-9]+)?|-?2(\.0+)?)(?![0-9.])
+
+---
+name: clipped and the loop click
+args: kit describe clipped --kit analysis --out build/l7d
+exit: 0
+stdout-contains: reasons=clipping
+
+---
+name: the loop click names its reason
+args: kit describe loopclick --kit analysis --out build/l7d
+exit: 0
+stdout-contains: reasons=loopClicks
+
+---
+name: the pad text mentions a slow attack
+args: kit describe pad --kit analysis --out build/l7d --text
+exit: 0
+stdout-contains: slow attack
+
+---
+name: an unknown name suggests one
+args: kit describe nosuch --kit analysis
+exit: 4
+stdout-contains: Did you mean
+
+---
+name: analyze hashes match across processes
+args: debug determinism --analyze samples/kits/analysis.yaml --runs 2 --fork-jvm --out build/l7d
+exit: 0
+stdout-contains: identical=true
+stdout-contains: fork=true

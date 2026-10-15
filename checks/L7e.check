@@ -1,0 +1,38 @@
+# L7e compatibility lint. Directive list: AGENTS.md, section "Layer checks".
+
+name: a bad instrument fails lint
+args: kit lint samples/themes/lint-bad.yaml --all-states
+exit: 3
+stdout-contains: finding=INSTR_BAD
+stdout-contains: fix=try
+
+---
+name: a fitting instrument passes lint
+args: kit lint samples/themes/lint-clean.yaml --all-states
+exit: 0
+stdout-contains: errors=0 warnings=0
+
+---
+name: the same saw clashes with itself
+args: kit compat saw saw --kit analysis --registers C4..C5,C4..C5
+exit: 0
+stdout-contains: verdict=clash
+stdout-regex: mask=(1(\.0+)?|0\.9[0-9]*)
+
+---
+name: a pluck is a poor pad
+args: kit fit pluck --role pad --kit analysis
+exit: 0
+stdout-regex: fitness=0\.[0-4]
+
+---
+name: a pluck fits an arp
+args: kit fit pluck --role arp --kit analysis
+exit: 0
+stdout-regex: fitness=(0\.[7-9][0-9]*|1(\.0+)?)
+
+---
+name: a theme override is named on the finding
+args: kit lint samples/themes/lint-override.yaml --state combat
+exit: 3
+stdout-contains: from=theme:lint-override.yaml

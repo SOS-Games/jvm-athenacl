@@ -4,7 +4,7 @@ Instructions for AI coding agents working in **jvm-athenacl**.
 
 ## Project
 
-GPL-3.0-or-later Java 21 rewrite of athenaCL as an adaptive game-music engine for libGDX desktop. Package `io.github.sosgames.athenacl`. Layer plan: [docs/research/05-project-plan.md](docs/research/05-project-plan.md). L0a–L21, L1b (instrument kits), L7b (hook generator and melody critic), and L7c (melodic engine) are in the tree. Do not start L6b or L9b until the user asks.
+GPL-3.0-or-later Java 21 rewrite of athenaCL as an adaptive game-music engine for libGDX desktop. Package `io.github.sosgames.athenacl`. Layer plan: [docs/research/05-project-plan.md](docs/research/05-project-plan.md). L0a–L21, L1b (instrument kits), L7b (hook generator and melody critic), L7c (melodic engine), L7d (instrument analysis), L7e (instrument lint), and L7f (ensemble selection) are in the tree. Do not start L6b or L9b until the user asks.
 
 - Java 21 (`options.release = 21`). Versions live in `gradle.properties`.
 - Groovy Gradle, same shape as SOS-Games/jvm-mw. Root `gradlew layerCheck`. CLI: `gradlew :athenacl-cli:agentCli --args="help"`.
@@ -88,6 +88,11 @@ gradlew.bat :athenacl-cli:agentCli --args="motif generate --key D-dorian --seed 
 gradlew.bat :athenacl-cli:agentCli --args="motif transform m1 --invert --invert"
 gradlew.bat :athenacl-cli:agentCli --args="motif import samples/motifs/theme.mid --out build/l7/m.yaml"
 gradlew.bat :athenacl-cli:agentCli --args="melody generate --key E-minor --candidates 64 --seed 3 --explain"
+gradlew.bat :athenacl-cli:agentCli --args="kit analyze samples/kits/analysis.yaml --out build/l7d"
+gradlew.bat :athenacl-cli:agentCli --args="kit describe saw --kit analysis --out build/l7d"
+gradlew.bat :athenacl-cli:agentCli --args="kit lint samples/themes/lint-clean.yaml --all-states"
+gradlew.bat :athenacl-cli:agentCli --args="ensemble select --genre fantasy --state sneaking --seed 1 --kit analysis"
+gradlew.bat :athenacl-cli:agentCli --args="debug probe flute --kit gm-lite --pitch C4 --velocity 80"
 ```
 
 | Command | Use when |
@@ -98,7 +103,7 @@ gradlew.bat :athenacl-cli:agentCli --args="melody generate --key E-minor --candi
 | render | You have a note-list YAML file and want `score.mid`, `score.wav`, `events.jsonl`, and `score.txt` under `--out`. `render --genre fantasy --state sneaking` plays that preset state; a single `--bars` number there is the bar count. |
 | play | You want to hear a note list, an event log, or a WAV on the speakers. `--dry-run` does not open the device. |
 | describe-music | You want one `bar=` line per bar from an event log, a piano roll (`--roll`), or the chord and key estimate. |
-| debug | You want `debug determinism` (same event-log hash twice, optionally `--fork-jvm`), `debug bisect` (first bar where two renders split), `debug inspect` (filter notes with `--where`), `debug check --loudness`, `debug check --stuck-notes`, `debug bar`, `debug trace --transitions`, `debug replay`, `debug fuzz-transitions`, or `debug overhead`. |
+| debug | You want `debug determinism` (same event-log hash twice, optionally `--fork-jvm`; `--analyze` hashes a kit profile), `debug bisect` (first bar where two renders split), `debug inspect` (filter notes with `--where`), `debug check --loudness`, `debug check --stuck-notes`, `debug bar`, `debug trace --transitions`, `debug replay`, `debug fuzz-transitions`, `debug overhead`, or `debug probe` (one dry note). |
 | diff | You want a semantic diff of two themes, or the first bar where two render directories split. `--fail-on-diff` exits 6 when they differ. |
 | compat | You want CPython `random()` draws. `compat random --seed 7 --n 5` prints the five values the port must match. |
 | conformance | You want `conformance list` to count the 31 pregui MIDI demo scripts, `conformance run` to check that each script has commands, `conformance run --subset slice` to compare the LineGroove beats to their golden MIDI, `conformance run --subset po.value` to sample the value generators, `conformance run --subset po.omde,po.rhythm` to sample the wave, breakpoint, and rhythm generators, `conformance run --subset texture,clone` to check the texture modules and the clone filters, `conformance run --subset sieve,generators` to check sieves, tunings, and generator fixtures, `conformance run --subset commands.a,xml` to check the first 55 commands and one project file, or `conformance run --subset commands.b` to check the other 48 command names. |
@@ -116,7 +121,8 @@ gradlew.bat :athenacl-cli:agentCli --args="melody generate --key E-minor --candi
 | melody | You want `melody generate` to rank hook candidates, `melody score` to rate a MIDI line, `melody rate` to write an A/B row, or `melody fit` to turn ratings into weights. `melody score --progression harmony.json` reads that file's key and roman numerals. |
 | adapt | You want the scheduler snapshot: `state=`, `intensity=`, `bar=`, `sched.lookaheadMs=`, and `cpu.msPerBar=`. |
 | instruments | You want `instruments list`, `show`, `audition`, or `compare` for a named instrument in a kit. |
-| kit | You want `kit validate` to check sources, licenses, and slots. |
+| kit | You want `kit validate` to check sources, licenses, and slots, `kit analyze` to probe a kit and write a profile, `kit describe` to print one instrument's verdict, `kit lint` to check a resolved theme, `kit fit` to score one role, or `kit compat` to compare a pair. |
+| ensemble | You want `ensemble select` to fill each role from a kit profile. The same seed picks the same instruments. |
 | credits | You want `credits` to write `CREDITS.md` for the soundfonts a theme uses. |
 
 Shared flags, in front of the command or after it: `--json`, `--dry-run`, `--strict`, `-v`, `-vv`, `--log-level <error|warn|info|debug|trace>`, `-h`.
@@ -165,6 +171,8 @@ Published schema ids:
 - `athenacl.result.adapt/1`
 - `athenacl.result.instrument/1`
 - `athenacl.result.kit/1`
+- `athenacl.result.ensemble/1`
+- `athenacl.instrument-profile/1`
 - `athenacl.result.credits/1`
 - `athenacl.result.compat/1`
 - `athenacl.result.conformance/1`
@@ -350,6 +358,14 @@ A preset turns hooks on unless the theme file has its own `hooks:` block, which 
 
 `themes/fantasy-dungeon.yaml` names `instruments.kits: [gm-lite]` and the preset maps each layer to a kit instrument (`strings`, `piano`, `horn`, `flute`, `cello`, and the rest). A render of that theme normalizes those instruments, then trims each state onto the loudness contour. The event-log hash stays the program-change log, not the trim.
 
+## Instrument analysis
+
+`kit analyze samples/kits/analysis.yaml` probes the CC0 fixture bank and writes a profile. The summary is `analyzed=7 bad=3`. A second run prints `cached=true` and the same `hash=`. The profile lives under `--out`, or in `instruments/profiles/` when `--out` is left off. It is not recomputed while the game is playing. `kit describe inharmonic --kit analysis` prints `verdict=bad` and `reasons=inharmonicity`. `kit describe saw` prints `verdict=ok`, `tags=bright`, and `pitch.errorCents` within 2 cents. `clipped` names `clipping` and `loopclick` names `loopClicks`. `kit describe pad --text` is at most eight lines and says the attack is slow. An unknown name exits 4 and suggests a close name. `debug determinism --analyze` hashes that profile, including with `--fork-jvm`. `debug probe flute --kit gm-lite --pitch C4` prints one probe's measurements. Thresholds are in `instruments/analysis.yaml`. Tags are listed in `docs/instrument-tags.md`.
+
+`kit lint samples/themes/lint-clean.yaml --all-states` checks the resolved instruments and prints `errors=0 warnings=0`. A bad instrument prints `finding=INSTR_BAD` and `fix=try`, and the command exits 3. `from=` names the file that chose the instrument. `kit fit pluck --role pad --kit analysis` prints a fitness below 0.5. The same pluck with `--role arp` is at least 0.7. `kit compat saw saw --kit analysis --registers C4..C5,C4..C5` prints `verdict=clash`. `theme resolve --with-lint` adds the same findings when a theme file is given. A kit that has no profile is skipped (`lint.skipped=no-profile`) instead of rendering GeneralUser GS.
+
+`ensemble select --genre fantasy --state sneaking --seed 1 --kit analysis` fills each declared role from that profile. None of the picks is a bad instrument, and `pairs.maxRoughness<=` stays inside the constraint. The same seed prints the same text. `--seed 2` may pick another instrument from the top few. `ensemble select samples/themes/pin.yaml --state combat` prints `from=pin` for the pinned lead. A kit with no profile prints `ensemble.fallback=fixed` and keeps the fixed names. `theme resolve --seed 1 --explain` adds `source=ensemble:auto` on the chosen instruments. Fantasy and sci-fi ask for `select: auto`. The other genres stay on their fixed instruments until a profile exists.
+
 ## Beat switches
 
 Entering combat or danger waits for the next beat and drops notes already queued after that beat. Other states still wait for the bar. `render themes/fantasy-dungeon.yaml --timeline samples/timelines/ambush.json --seed 1 --out build/l6` lands on beat 3 of bar 4. `debug trace build/l6 --transitions` prints `quantize=beat`, `retracted=`, and `latency.ms=`. `debug check build/l6 --stuck-notes` prints `stuck=0`. `debug fuzz-transitions themes/fantasy-dungeon.yaml --runs 1000 --seed 1` prints `lateTransitions=0`.
@@ -368,7 +384,7 @@ A named `from` beats a wildcard, so entering combat or danger still waits for th
 
 `preset show scifi-space` prints `preset=scifi-space` and the synth set (pad, square, saw, bass, celesta, 808). `themes/scifi-space.yaml` is that preset at 100 bpm in Lydian. There is no whole-tone scale, so the raised fourth stands in for it. Combat stays at 100; the drive is a sixteenth-note arp, not a tempo jump. Other states arpeggiate in eighths. The lead rhythm is a Markov pulse and the arp keeps the steps a sieve allows. Both name the texture `LineGroove`. `describe-music` prints `arp.grid=` and `programs=` for the bars you asked about.
 
-`render themes/fantasy-dungeon.yaml --at "8 theme themes/scifi-space.yaml" --bars 1-16` prints `themeSwitch.bar=9`. A theme change asked for on a bar line still waits until the next bar. The window still preloads the combat kit and swaps that at a bar until a track button is pressed. Ambush, Dungeon, Combat, Party, Trading, Space, and Space combat each start that piece from the beginning, and the window shows how far through the current track you are.
+`render themes/fantasy-dungeon.yaml --at "8 theme themes/scifi-space.yaml" --bars 1-16` prints `themeSwitch.bar=9`. A theme change asked for on a bar line still waits until the next bar. The window still preloads the combat kit and swaps that at a bar until a track button is pressed. Ambush, Dungeon, Combat, Party, Trading, Space, and Space combat each start that piece from the beginning and repeat it until another button is pressed. The window shows where you are in the current pass.
 
 ## Debug depth
 

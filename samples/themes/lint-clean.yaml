@@ -1,0 +1,9 @@
+id: lint-clean
+genre: fantasy
+instruments:
+  kits: [analysis]
+states:
+  peaceful:
+    layers: [lead]
+    instruments: {lead: saw}
+    lead: {register: [C4, C4]}

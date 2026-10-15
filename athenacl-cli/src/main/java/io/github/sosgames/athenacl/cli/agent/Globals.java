@@ -16,7 +16,8 @@ final class Globals {
             "--out", "--formats", "--where", "--runs", "--bars", "--seed", "--soundbank", "--cache", "--key",
             "--groove", "--meter", "--timeline", "--at", "--bar", "--by", "--kit", "--kits", "--notes", "--theme",
             "--candidates", "--chords", "--references", "--choose", "--state", "--note",
-            "--genre", "--progression");
+            "--genre", "--progression", "--pitch", "--velocity", "--instruments", "--probe-version",
+            "--role", "--registers");
     boolean json;
     boolean dryRun;
     boolean strict;

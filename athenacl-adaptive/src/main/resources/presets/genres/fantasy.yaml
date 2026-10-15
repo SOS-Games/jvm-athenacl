@@ -21,6 +21,16 @@ lead: {enabled: true, phrase: period, rhythmCells: [lsS, sslL, dotted], register
 hooks: {enabled: true, candidates: 64}
 tempo: {bpm: 96}
 instruments: {lead: flute, pad: strings, bass: cello, chords: piano, brass: horn, arp: harp, perc: taiko}
+ensemble:
+  select: auto
+  kits: [analysis]
+  topK: 3
+  roles:
+    lead: {fit: ">=0.5", tags: {none: [noisy]}}
+    pad: {tags: {any: [pad]}, fit: ">=0.5"}
+    bass: {fit: ">=0.5", tags: {none: [noisy]}}
+    arp: {tags: {any: [plucky]}, fit: ">=0.5"}
+  constraints: {maxPairRoughness: 2000, maxMask: {lead: 0.95}, verdict: [ok, caution]}
 layers: [pad, chords, bass, lead]
 programs: {pad: 48, harp: 46, bass: 43, lead: 73}
 density:

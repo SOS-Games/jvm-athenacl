@@ -10,12 +10,17 @@ public final class Suggestions {
     }
 
     public static String nearest(String token, Collection<String> names) {
-        if (token == null || token.isBlank() || names == null) {
+        return nearest(token, names, 2);
+    }
+
+    /** Like {@link #nearest(String, Collection)} but the caller picks how far a hint may reach. */
+    public static String nearest(String token, Collection<String> names, int maxDistance) {
+        if (token == null || token.isBlank() || names == null || maxDistance < 0) {
             return null;
         }
         String want = token.toLowerCase(Locale.ROOT);
         String best = null;
-        int bestDistance = 3;
+        int bestDistance = maxDistance + 1;
         for (String name : names) {
             int distance = distance(want, name.toLowerCase(Locale.ROOT));
             if (distance < bestDistance) {
@@ -23,7 +28,7 @@ public final class Suggestions {
                 bestDistance = distance;
             }
         }
-        return bestDistance <= 2 ? best : null;
+        return bestDistance <= maxDistance ? best : null;
     }
 
     static int distance(String left, String right) {

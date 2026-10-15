@@ -33,7 +33,40 @@ public final class Kits {
         if (id.endsWith(".yaml") || id.endsWith(".yml")) {
             return Path.of(id);
         }
-        return Path.of("instruments").resolve(id + ".yaml");
+        Path bundled = Path.of("instruments").resolve(id + ".yaml");
+        Path sample = Path.of("samples", "kits").resolve(id + ".yaml");
+        if (isKitFile(bundled)) {
+            return bundled;
+        }
+        if (Files.isRegularFile(sample)) {
+            return sample;
+        }
+        return bundled;
+    }
+
+    /**
+     * {@code instruments/analysis.yaml} holds probe thresholds, not a kit.
+     * A file counts as a kit when its first lines set {@code kit:}.
+     */
+    private static boolean isKitFile(Path file) {
+        if (!Files.isRegularFile(file)) {
+            return false;
+        }
+        try {
+            String text = Files.readString(file, StandardCharsets.UTF_8);
+            for (String line : text.split("\n", 40)) {
+                String trimmed = line.strip();
+                if (trimmed.startsWith("kit:")) {
+                    return true;
+                }
+                if (!trimmed.isEmpty() && !trimmed.startsWith("#")) {
+                    return false;
+                }
+            }
+        } catch (IOException e) {
+            return false;
+        }
+        return false;
     }
 
     private static Kit load(Path file, List<String> stack) throws IOException, KitException {
@@ -127,10 +160,15 @@ public final class Kits {
                 low,
                 high,
                 body.path("outOfRange").asText(low == null ? "" : "fold"),
-                fallbacks);
+                fallbacks,
+                text(body.path("analysis"), "verdict"),
+                text(body.path("analysis"), "note"));
     }
 
     private static String text(JsonNode body, String field) {
+        if (body == null || body.isMissingNode() || body.isNull()) {
+            return null;
+        }
         String value = body.path(field).asText("");
         return value.isBlank() ? null : value;
     }

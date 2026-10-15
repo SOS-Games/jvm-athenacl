@@ -57,6 +57,8 @@ public final class SchemaRegistry {
             "athenacl.result.adapt/1",
             "athenacl.result.instrument/1",
             "athenacl.result.kit/1",
+            "athenacl.result.ensemble/1",
+            "athenacl.instrument-profile/1",
             "athenacl.result.credits/1",
             "athenacl.result.compat/1",
             "athenacl.result.conformance/1",

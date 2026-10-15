@@ -1,0 +1,19 @@
+# Probe thresholds. These are starting values, calibrated on the CC0 fixture bank.
+# A real kit's profile is produced by `kit analyze`, not by editing a verdict here.
+# 2 stores the descriptor numbers kit lint reads. Bump this when those numbers change.
+probeVersion: 2
+pitchSoftCents: 15
+pitchHardCents: 30
+inharmonicCents: 50
+inharmonicEnergy: 0.25
+flatness: 0.35
+# Gervill leaves a full-scale sample near -4 dBFS at velocity 120, so -0.1 never fires.
+clipDbfs: -6.0
+loopClickSigma: 8
+loopClickCount: 8
+brightRatio: 2.0
+warmRatio: 1.4
+padAttackMs: 80
+pluckAttackMs: 40
+pluckDecayMs: 400
+velocityMinLu: 3

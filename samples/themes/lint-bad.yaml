@@ -1,0 +1,9 @@
+id: lint-bad
+genre: fantasy
+instruments:
+  kits: [analysis]
+states:
+  combat:
+    layers: [lead]
+    instruments: {lead: inharmonic}
+    lead: {register: [C4, C4]}

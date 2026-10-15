@@ -25,10 +25,10 @@ import java.util.Set;
 public final class Resolver {
     static final List<String> MODULES = List.of(
             "scale", "harmony", "cadence", "drone", "voicing", "lead", "hooks",
-            "instruments", "tempo", "density", "dynamics", "source");
+            "instruments", "tempo", "density", "dynamics", "source", "ensemble");
     private static final Set<String> STATE_KEYS = Set.of(
             "scale", "harmony", "cadence", "drone", "voicing", "lead", "hooks",
-            "instruments", "tempo", "density", "dynamics", "source", "layers", "programs",
+            "instruments", "tempo", "density", "dynamics", "source", "ensemble", "layers", "programs",
             "key", "stinger", "meter");
 
     private Resolver() {

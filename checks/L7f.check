@@ -1,0 +1,47 @@
+# L7f ensemble selection. Directive list: AGENTS.md, section "Layer checks".
+
+name: fantasy sneaking fills every role
+args: ensemble select --genre fantasy --state sneaking --seed 1 --kit analysis
+exit: 0
+stdout-contains: role=lead
+stdout-contains: role=pad
+stdout-contains: role=bass
+stdout-contains: role=arp
+stdout-contains: pairs.maxRoughness<=
+stdout-not-contains: verdict=bad
+stdout-not-contains: ensemble.fallback
+stdout-same-as: ensemble select --genre fantasy --state sneaking --seed 1 --kit analysis
+
+---
+name: another seed stays inside the constraint
+args: ensemble select --genre fantasy --state sneaking --seed 2 --kit analysis
+exit: 0
+stdout-contains: pairs.maxRoughness<=
+stdout-not-contains: verdict=bad
+stdout-not-contains: ensemble.fallback
+
+---
+name: a pin names the lead
+args: ensemble select samples/themes/pin.yaml --state combat --kit analysis
+exit: 0
+stdout-contains: role=lead instrument=saw
+stdout-contains: from=pin
+stdout-contains: from=auto
+
+---
+name: a missing profile keeps the fixed instruments
+args: ensemble select --genre fantasy --state sneaking --kit nosuchprofile
+exit: 0
+stdout-contains: ensemble.fallback=fixed
+
+---
+name: resolve names the automatic source
+args: theme resolve --genre fantasy --state sneaking --seed 1 --explain
+exit: 0
+stdout-contains: source=ensemble:auto
+
+---
+name: the automatic ensemble passes lint
+args: kit lint --genre fantasy --all-states --seed 1
+exit: 0
+stdout-contains: errors=0

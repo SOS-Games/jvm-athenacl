@@ -78,84 +78,56 @@ public final class StockLayers {
     static int bar(Theme theme, Theme.StateDef state, Director.BarInfo info, long start, long seed,
                    Director.Ids ids, List<Director.Played> notes, int leadDegree, boolean drumsOn,
                    int held, int every) {
-        int degree = leadDegree;
-        for (String layer : state.layers()) {
-            degree = switch (layer) {
-                case "pad" -> {
-                    pad(state, info, start, seed, ids, notes);
-                    yield degree;
-                }
-                case "bass" -> {
-                    bass(state, info, start, seed, ids, notes);
-                    yield degree;
-                }
-                case "lead" -> {
-                    lead(theme, state, info, start, seed, ids, notes, held, every);
-                    yield degree;
-                }
-                case "drums" -> {
-                    if (drumsOn) {
-                        drums(state, info, start, seed, ids, notes);
+        for (LayerSpec spec : state.specs()) {
+            switch (spec.behaviour()) {
+                case "chord-pad" -> {
+                    if ("chords".equals(spec.name())) {
+                        chords(theme, state, info, start, seed, ids, notes, spec);
+                    } else {
+                        pad(state, info, start, seed, ids, notes, spec);
                     }
-                    yield degree;
                 }
-                case "drone" -> {
-                    drone(state, info, start, seed, ids, notes);
-                    yield degree;
+                case "bass-line" -> bass(state, info, start, seed, ids, notes, spec);
+                case "phrase-lead" -> lead(theme, state, info, start, seed, ids, notes, held, every, spec);
+                case "arpeggio" -> arpeggio(state, info, start, seed, ids, notes, spec);
+                case "drone" -> drone(state, info, start, seed, ids, notes, spec);
+                case "ostinato" -> ostinato(state, info, start, seed, ids, notes, spec);
+                case "drum-pattern" -> {
+                    if (drumsOn) {
+                        drums(state, info, start, seed, ids, notes, spec);
+                    }
                 }
-                case "harp" -> {
-                    harp(state, info, start, seed, ids, notes);
-                    yield degree;
+                case "po-source" -> arp(state, info, start, seed, ids, notes, spec);
+                default -> {
                 }
-                case "taiko" -> {
-                    taiko(state, info, start, seed, ids, notes);
-                    yield degree;
-                }
-                case "brass" -> {
-                    brass(state, info, start, seed, ids, notes);
-                    yield degree;
-                }
-                case "arp" -> {
-                    arp(state, info, start, seed, ids, notes);
-                    yield degree;
-                }
-                case "bell" -> {
-                    bell(state, info, start, seed, ids, notes);
-                    yield degree;
-                }
-                case "chords" -> {
-                    chords(theme, state, info, start, seed, ids, notes);
-                    yield degree;
-                }
-                default -> degree;
-            };
+            }
         }
-        return degree;
+        return leadDegree;
     }
 
     private static void pad(Theme.StateDef state, Director.BarInfo info, long start, long seed,
-                            Director.Ids ids, List<Director.Played> notes) {
+                            Director.Ids ids, List<Director.Played> notes, LayerSpec spec) {
         for (int midi : voicing(state, info.bar())) {
             long id = ids.take();
             notes.add(played(id, start, "1/1", midi, PitchName.name(midi), velocity(info.intensity()),
-                    0, "pad", info, seed, state.id(), "chord-tone"));
+                    spec.channel(), spec.name(), info, seed, state.id(), "chord-tone"));
         }
     }
 
     private static void bass(Theme.StateDef state, Director.BarInfo info, long start, long seed,
-                             Director.Ids ids, List<Director.Played> notes) {
+                             Director.Ids ids, List<Director.Played> notes, LayerSpec spec) {
         Progression.Chord chord = harmony(state, info.bar());
         int midi = chord.pedal() ? 12 * 3 + state.key().tonicPc() : chord.rootMidi(2);
         int step = count(state, "density.bass.step", 2);
         for (int beat = 0; beat < 4; beat += step) {
             long id = ids.take();
             notes.add(played(id, start + beat * TimeBase.PPQ, "1/4", midi, PitchName.name(midi),
-                    velocity(info.intensity()), 1, "bass", info, seed, state.id(), "root"));
+                    velocity(info.intensity()), spec.channel(), spec.name(), info, seed, state.id(), "root"));
         }
     }
 
     private static void lead(Theme theme, Theme.StateDef state, Director.BarInfo info, long start, long seed,
-                             Director.Ids ids, List<Director.Played> notes, int held, int every) {
+                             Director.Ids ids, List<Director.Played> notes, int held, int every, LayerSpec spec) {
         Motif motif;
         HookCache.HookChoice choice = null;
         if (theme.hooks() != null) {
@@ -169,69 +141,82 @@ public final class StockLayers {
             long id = ids.take();
             String label = choice == null ? tone.motif() : choice.label(tone.motif());
             notes.add(played(id, start + tone.offset(), tone.ticks(), tone.midi(), PitchName.name(tone.midi()),
-                    velocity(info.intensity()), 2, "lead", info, seed, state.id(), tone.why(), label));
+                    velocity(info.intensity()), spec.channel(), spec.name(), info, seed, state.id(), tone.why(), label));
         }
     }
 
     public static int channel(String layer) {
-        return switch (layer) {
-            case "bass" -> 1;
-            case "lead" -> 2;
-            case "stinger" -> 3;
-            case "drone" -> 4;
-            case "taiko" -> 5;
-            case "harp" -> 6;
-            case "brass" -> 7;
-            case "drums" -> 9;
-            case "arp" -> 10;
-            case "bell" -> 6;
-            case "chords" -> 12;
-            default -> 0;
-        };
+        return Behaviours.channel(layer);
     }
 
     public static int program(Theme.StateDef state, String layer) {
-        int fallback = switch (layer) {
-            case "bass" -> 32;
-            case "lead" -> 73;
-            case "stinger" -> 56;
-            case "drone" -> 49;
-            case "taiko" -> 116;
-            case "harp" -> 46;
-            case "brass" -> 60;
-            case "arp" -> 80;
-            case "bell" -> 8;
-            case "chords" -> 48;
-            default -> layer.equals("pad") ? 48 : 0;
-        };
-        return state.program(layer, fallback);
+        return state.program(layer, Behaviours.program(layer));
     }
 
     private static void drone(Theme.StateDef state, Director.BarInfo info, long start, long seed,
-                              Director.Ids ids, List<Director.Played> notes) {
+                              Director.Ids ids, List<Director.Played> notes, LayerSpec spec) {
         long id = ids.take();
         int octave = count(state, "drone.octave", 2);
         int midi = state.composition() != null && state.composition().has("drone.degree")
                 ? scaleMidi(state.key(), state.composition().number("drone.degree", 0), octave)
                 : harmony(state, info.bar()).rootMidi(octave);
         notes.add(played(id, start, "1/1", midi, PitchName.name(midi), velocity(info.intensity()),
-                4, "drone", info, seed, state.id(), "drone"));
+                spec.channel(), spec.name(), info, seed, state.id(), "drone"));
+    }
+
+    private static void arpeggio(Theme.StateDef state, Director.BarInfo info, long start, long seed,
+                                 Director.Ids ids, List<Director.Played> notes, LayerSpec spec) {
+        if ("harp".equals(spec.name()) && spec.params().isEmpty()) {
+            harp(state, info, start, seed, ids, notes, spec);
+            return;
+        }
+        if ("bell".equals(spec.name()) && spec.params().isEmpty()) {
+            bell(state, info, start, seed, ids, notes, spec);
+            return;
+        }
+        if ("arp".equals(spec.name()) && spec.params().isEmpty()) {
+            arp(state, info, start, seed, ids, notes, spec);
+            return;
+        }
+        int[] degrees = patternDegrees(spec, 0, 2, 4, 7);
+        int steps = subdivision(spec, 8);
+        long cell = steps <= 0 ? TimeBase.PPQ : (TimeBase.PPQ * 4L) / steps;
+        if (cell <= 0) {
+            cell = TimeBase.PPQ / 4;
+        }
+        String duration = steps >= 16 ? "1/16" : steps >= 8 ? "1/8" : "1/4";
+        Progression.Chord chord = harmony(state, info.bar());
+        for (int i = 0; i < steps; i++) {
+            long id = ids.take();
+            int midi = chord.midi(degrees[i % degrees.length], 5);
+            notes.add(played(id, start + i * cell, duration, midi, PitchName.name(midi),
+                    velocity(info.intensity()), spec.channel(), spec.name(), info, seed, state.id(), "arp"));
+        }
+    }
+
+    private static void ostinato(Theme.StateDef state, Director.BarInfo info, long start, long seed,
+                                 Director.Ids ids, List<Director.Played> notes, LayerSpec spec) {
+        if ("brass".equals(spec.name())) {
+            brass(state, info, start, seed, ids, notes, spec);
+            return;
+        }
+        taiko(state, info, start, seed, ids, notes, spec);
     }
 
     private static void harp(Theme.StateDef state, Director.BarInfo info, long start, long seed,
-                             Director.Ids ids, List<Director.Played> notes) {
+                             Director.Ids ids, List<Director.Played> notes, LayerSpec spec) {
         Progression.Chord chord = harmony(state, info.bar());
         int[] degrees = {0, 2, 4, 2};
         for (int beat = 0; beat < degrees.length; beat++) {
             long id = ids.take();
             int midi = chord.midi(degrees[beat], 4);
             notes.add(played(id, start + beat * TimeBase.PPQ, "1/4", midi, PitchName.name(midi),
-                    velocity(info.intensity()), 6, "harp", info, seed, state.id(), "harp"));
+                    velocity(info.intensity()), spec.channel(), spec.name(), info, seed, state.id(), "harp"));
         }
     }
 
     private static void taiko(Theme.StateDef state, Director.BarInfo info, long start, long seed,
-                              Director.Ids ids, List<Director.Played> notes) {
+                              Director.Ids ids, List<Director.Played> notes, LayerSpec spec) {
         int midi = 45;
         int step = count(state, "density.taiko.step", 2);
         int floor = count(state, "density.taiko.minVelocity", 0);
@@ -239,19 +224,19 @@ public final class StockLayers {
         for (int beat = 0; beat < 4; beat += step) {
             long id = ids.take();
             notes.add(played(id, start + beat * TimeBase.PPQ, "1/8", midi, PitchName.name(midi),
-                    vel, 5, "taiko", info, seed, state.id(), "taiko"));
+                    vel, spec.channel(), spec.name(), info, seed, state.id(), "taiko"));
         }
     }
 
     private static void brass(Theme.StateDef state, Director.BarInfo info, long start, long seed,
-                              Director.Ids ids, List<Director.Played> notes) {
+                              Director.Ids ids, List<Director.Played> notes, LayerSpec spec) {
         if (on(state, "density.brass.stab")) {
             int vel = Math.max(velocity(info.intensity()), 110);
             for (int beat = 0; beat < 4; beat += 2) {
                 for (int midi : voicing(state, info.bar())) {
                     long id = ids.take();
                     notes.add(played(id, start + beat * TimeBase.PPQ, "1/8", midi, PitchName.name(midi),
-                            vel, 7, "brass", info, seed, state.id(), "brass"));
+                            vel, spec.channel(), spec.name(), info, seed, state.id(), "brass"));
                 }
             }
             return;
@@ -259,21 +244,35 @@ public final class StockLayers {
         for (int midi : voicing(state, info.bar())) {
             long id = ids.take();
             notes.add(played(id, start, "1/1", midi, PitchName.name(midi), velocity(info.intensity()),
-                    7, "brass", info, seed, state.id(), "brass"));
+                    spec.channel(), spec.name(), info, seed, state.id(), "brass"));
         }
     }
 
     private static void drums(Theme.StateDef state, Director.BarInfo info, long start, long seed,
-                              Director.Ids ids, List<Director.Played> notes) {
+                              Director.Ids ids, List<Director.Played> notes, LayerSpec spec) {
+        String pattern = spec.params().get("pattern");
+        if (pattern != null && !pattern.isBlank() && !"drums".equals(spec.name())) {
+            long cell = pattern.length() == 0 ? TimeBase.PPQ : (TimeBase.PPQ * 4L) / pattern.length();
+            for (int i = 0; i < pattern.length(); i++) {
+                char mark = pattern.charAt(i);
+                if (mark != 'x' && mark != 'X') {
+                    continue;
+                }
+                long id = ids.take();
+                notes.add(played(id, start + i * cell, "1/16", 36, PitchName.name(36),
+                        110, spec.channel(), spec.name(), info, seed, state.id(), "drum-grid"));
+            }
+            return;
+        }
         if (on(state, "density.drums.fill")) {
-            hit(ids, notes, info, seed, state, start, 0, "1/8", 36, 124);
-            hit(ids, notes, info, seed, state, start, 2, "1/8", 36, 124);
-            hit(ids, notes, info, seed, state, start, 1, "1/8", 38, 118);
-            hit(ids, notes, info, seed, state, start, 3, "1/8", 38, 118);
+            hit(ids, notes, info, seed, state, start, 0, "1/8", 36, 124, spec);
+            hit(ids, notes, info, seed, state, start, 2, "1/8", 36, 124, spec);
+            hit(ids, notes, info, seed, state, start, 1, "1/8", 38, 118, spec);
+            hit(ids, notes, info, seed, state, start, 3, "1/8", 38, 118, spec);
             for (int eighth = 0; eighth < 8; eighth++) {
                 long id = ids.take();
                 notes.add(played(id, start + eighth * (TimeBase.PPQ / 2), "1/16", 42, PitchName.name(42),
-                        96, 9, "drums", info, seed, state.id(), "drum-grid"));
+                        96, spec.channel(), spec.name(), info, seed, state.id(), "drum-grid"));
             }
             return;
         }
@@ -281,20 +280,21 @@ public final class StockLayers {
         for (int beat = 0; beat < 4; beat += 2) {
             long id = ids.take();
             notes.add(played(id, start + beat * TimeBase.PPQ, "1/16", midi, PitchName.name(midi),
-                    110, 9, "drums", info, seed, state.id(), "drum-grid"));
+                    110, spec.channel(), spec.name(), info, seed, state.id(), "drum-grid"));
         }
     }
 
     private static void hit(Director.Ids ids, List<Director.Played> notes, Director.BarInfo info, long seed,
-                            Theme.StateDef state, long start, int beat, String duration, int midi, int velocity) {
+                            Theme.StateDef state, long start, int beat, String duration, int midi, int velocity,
+                            LayerSpec spec) {
         long id = ids.take();
         notes.add(played(id, start + beat * TimeBase.PPQ, duration, midi, PitchName.name(midi),
-                velocity, 9, "drums", info, seed, state.id(), "drum-grid"));
+                velocity, spec.channel(), spec.name(), info, seed, state.id(), "drum-grid"));
     }
 
     /** Even notes on the eighth, or the sixteenth in combat. Every attack sits on that grid. */
     private static void arp(Theme.StateDef state, Director.BarInfo info, long start, long seed,
-                            Director.Ids ids, List<Director.Played> notes) {
+                            Director.Ids ids, List<Director.Played> notes, LayerSpec spec) {
         int[] degrees = degrees(state, "density.arp.degrees", 0, 2, 4, 2);
         int steps = count(state, "density.arp.steps", 8);
         boolean sixteenths = steps >= 16;
@@ -307,7 +307,7 @@ public final class StockLayers {
                 long id = ids.take();
                 int midi = harmony(state, info.bar()).midi(degrees[n % degrees.length], 5);
                 notes.add(played(id, start + hit * cell, duration, midi, PitchName.name(midi),
-                        velocity(info.intensity()), 10, "arp", info, seed, state.id(), "sieve"));
+                        velocity(info.intensity()), spec.channel(), spec.name(), info, seed, state.id(), "sieve"));
                 n++;
             }
             return;
@@ -316,28 +316,77 @@ public final class StockLayers {
             long id = ids.take();
             int midi = harmony(state, info.bar()).midi(degrees[i % degrees.length], 5);
             notes.add(played(id, start + i * cell, duration, midi, PitchName.name(midi),
-                    velocity(info.intensity()), 10, "arp", info, seed, state.id(), "arp"));
+                    velocity(info.intensity()), spec.channel(), spec.name(), info, seed, state.id(), "arp"));
         }
     }
 
     /** The phrase chord for this bar, held. */
     private static void chords(Theme theme, Theme.StateDef state, Director.BarInfo info, long start, long seed,
-                               Director.Ids ids, List<Director.Played> notes) {
+                               Director.Ids ids, List<Director.Played> notes, LayerSpec spec) {
         boolean cadence = harmony(state, info.bar()).cadence();
         for (int midi : voicing(state, info.bar())) {
             long id = ids.take();
             notes.add(played(id, start, "1/1", midi, PitchName.name(midi), velocity(info.intensity()),
-                    12, "chords", info, seed, state.id(), cadence ? "cadence" : "chord"));
+                    spec.channel(), spec.name(), info, seed, state.id(), cadence ? "cadence" : "chord"));
         }
     }
 
     /** Two held bell tones, the root and the fifth. */
     private static void bell(Theme.StateDef state, Director.BarInfo info, long start, long seed,
-                             Director.Ids ids, List<Director.Played> notes) {
+                             Director.Ids ids, List<Director.Played> notes, LayerSpec spec) {
         for (int midi : voicing(state, info.bar())) {
             long id = ids.take();
             notes.add(played(id, start, "1/1", midi, PitchName.name(midi), velocity(info.intensity()),
-                    6, "bell", info, seed, state.id(), "bell"));
+                    spec.channel(), spec.name(), info, seed, state.id(), "bell"));
+        }
+    }
+
+    private static int[] patternDegrees(LayerSpec spec, int... fallback) {
+        String text = spec.params().get("pattern");
+        if (text == null || text.isBlank() || text.indexOf('x') >= 0 || text.indexOf('X') >= 0 || text.indexOf('.') >= 0) {
+            return fallback;
+        }
+        String[] parts = text.split(",");
+        int[] values = new int[parts.length];
+        int n = 0;
+        for (String part : parts) {
+            String trimmed = part.trim();
+            if (trimmed.isEmpty()) {
+                continue;
+            }
+            try {
+                values[n++] = Integer.parseInt(trimmed);
+            } catch (NumberFormatException e) {
+                return fallback;
+            }
+        }
+        if (n == 0) {
+            return fallback;
+        }
+        int[] trimmed = new int[n];
+        System.arraycopy(values, 0, trimmed, 0, n);
+        return trimmed;
+    }
+
+    private static int subdivision(LayerSpec spec, int fallback) {
+        String text = spec.params().get("subdivision");
+        if (text == null || text.isBlank()) {
+            return fallback;
+        }
+        int slash = text.indexOf('/');
+        if (slash >= 0) {
+            try {
+                int steps = Integer.parseInt(text.substring(slash + 1).trim());
+                return steps > 0 ? steps : fallback;
+            } catch (NumberFormatException e) {
+                return fallback;
+            }
+        }
+        try {
+            int steps = Integer.parseInt(text.trim());
+            return steps > 0 ? steps : fallback;
+        } catch (NumberFormatException e) {
+            return fallback;
         }
     }
 

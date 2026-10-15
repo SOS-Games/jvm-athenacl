@@ -45,6 +45,10 @@ import java.util.concurrent.ConcurrentHashMap;
  * is pressed. Each button starts that piece from the beginning and repeats it until
  * another button is pressed. Genre buttons are the presets that do not already have a
  * track. The line under the scheduler is where you are in the current pass.
+ * The window opens on a silent menu. Sounds lists the soundpack and hides the genres.
+ * A sound click repeats until another sound or Back. Genres lists the tracks and
+ * starts the ambush piece. Back returns to the menu and stops the speakers.
+ * The analysis shows when the kit profile has a row for the same program.
  * F3 writes {@code build/athenacl-snapshot.txt}. F4 hides the scheduler line.
  */
 public class MusicDemo extends ApplicationAdapter {
@@ -113,6 +117,17 @@ public class MusicDemo extends ApplicationAdapter {
     private volatile double trackSeconds;
     private boolean overlay = true;
     private final ThemeSwitch swap = new ThemeSwitch("fantasy-dungeon", SWAP_BAR);
+    private enum Page { MENU, SOUNDS, GENRES }
+
+    private SoundBrowser sounds;
+    private boolean soundsLoaded;
+    /** Genres should start the ambush piece once its recording is ready. */
+    private volatile boolean wantDefault;
+    private String genreChoice;
+    private Page page = Page.MENU;
+    private TextButton menuSounds;
+    private TextButton menuGenres;
+    private TextButton back;
 
     @Override
     public void create() {
@@ -135,9 +150,26 @@ public class MusicDemo extends ApplicationAdapter {
                     request(track);
                 }
             });
+            button.setVisible(false);
             buttons.put(track.name, button);
             stage.addActor(button);
         }
+        menuSounds = menuButton("Sounds", Page.SOUNDS);
+        menuGenres = menuButton("Genres", Page.GENRES);
+        back = new TextButton("Back", skin);
+        back.setSize(140, 36);
+        back.addListener(new ChangeListener() {
+            @Override
+            public void changed(ChangeEvent event, com.badlogic.gdx.scenes.scene2d.Actor actor) {
+                show(Page.MENU);
+            }
+        });
+        stage.addActor(menuSounds);
+        stage.addActor(menuGenres);
+        stage.addActor(back);
+        sounds = new SoundBrowser(skin, font, this::preview);
+        stage.addActor(sounds.root());
+        show(Page.MENU);
         Gdx.input.setInputProcessor(stage);
         try {
             Theme theme = load(TRACKS[0]);
@@ -165,10 +197,14 @@ public class MusicDemo extends ApplicationAdapter {
         if (clock != null && Gdx.input.isKeyJustPressed(Input.Keys.F3)) {
             writeSnapshot();
         }
+        if (Gdx.input.isKeyJustPressed(Input.Keys.ESCAPE) && page != Page.MENU) {
+            show(Page.MENU);
+        }
         if (Gdx.input.isKeyJustPressed(Input.Keys.F4)) {
             overlay = !overlay;
         }
-        if (clock != null && started && !picked) {
+        layout();
+        if (clock != null && started && !picked && page == Page.GENRES) {
             clock.poll(Gdx.graphics.getDeltaTime());
             if (!playStandby && standbyWav != null && "fantasy-combat".equals(swap.poll(clock.bar()))) {
                 try {
@@ -203,11 +239,73 @@ public class MusicDemo extends ApplicationAdapter {
         stage.draw();
     }
 
+    private TextButton menuButton(String label, Page target) {
+        TextButton button = new TextButton(label, skin);
+        button.setSize(280, 48);
+        button.addListener(new ChangeListener() {
+            @Override
+            public void changed(ChangeEvent event, com.badlogic.gdx.scenes.scene2d.Actor actor) {
+                show(target);
+            }
+        });
+        return button;
+    }
+
+    private void show(Page next) {
+        page = next;
+        boolean menu = next == Page.MENU;
+        boolean genres = next == Page.GENRES;
+        boolean soundPage = next == Page.SOUNDS;
+        menuSounds.setVisible(menu);
+        menuGenres.setVisible(menu);
+        back.setVisible(!menu);
+        for (TextButton button : buttons.values()) {
+            button.setVisible(genres);
+        }
+        sounds.root().setVisible(soundPage);
+        if (menu || soundPage) {
+            wantDefault = false;
+            queuedWav = null;
+            queuedId++;
+            nowPlaying = "";
+        }
+        if (genres && !picked) {
+            wantDefault = true;
+        } else if (genres && genreChoice != null) {
+            byte[] ready = cache.get(genreChoice);
+            if (ready != null) {
+                handoff(genreChoice, ready, clocks.get(genreChoice));
+            }
+        }
+        if (soundPage && !soundsLoaded) {
+            soundsLoaded = true;
+            Thread loading = new Thread(sounds::load, "athenacl-sounds");
+            loading.setDaemon(true);
+            loading.start();
+        }
+    }
+
+    private void layout() {
+        float width = Gdx.graphics.getWidth();
+        float height = Gdx.graphics.getHeight();
+        float x = width / 2f - 140f;
+        float y = height / 2f;
+        menuSounds.setPosition(x, y + 12f);
+        menuGenres.setPosition(x, y - 52f);
+        back.setPosition(16, height - 72f);
+        if (page == Page.SOUNDS) {
+            sounds.root().setPosition(16, 88);
+            sounds.root().setSize(width - 32f, Math.max(120f, height - 172f));
+        }
+    }
+
     private void drawProgress(float width) {
         float barWidth = Math.min(640f, width - 32f);
         double into = trackSeconds <= 0 ? 0 : heardSeconds % trackSeconds;
         float fraction = trackSeconds <= 0 ? 0f : (float) (into / trackSeconds);
-        float barY = 28 + ((TRACKS.length + COLUMNS - 1) / COLUMNS) * 44f;
+        float barY = page == Page.GENRES
+                ? 28 + ((TRACKS.length + COLUMNS - 1) / COLUMNS) * 44f
+                : 28f;
         batch.begin();
         font.setColor(Color.WHITE);
         font.draw(batch, nowPlaying + "  " + timestamp(heardSeconds), 16, barY + 36);
@@ -235,6 +333,7 @@ public class MusicDemo extends ApplicationAdapter {
         if (device == null) {
             return;
         }
+        genreChoice = track.name;
         picked = true;
         playStandby = false;
         byte[] ready = cache.get(track.name);
@@ -276,7 +375,7 @@ public class MusicDemo extends ApplicationAdapter {
                     Gdx.app.postRunnable(this::showLabels);
                 }
                 if (wanted == track) {
-                    handoff(track.name, wav, next);
+                    handoffTrack(track.name, wav, next);
                     wanted = null;
                     return;
                 }
@@ -334,6 +433,14 @@ public class MusicDemo extends ApplicationAdapter {
         queuedId++;
     }
 
+    /** A finished genre recording stays cached while the menu or the sound list is open. */
+    private void handoffTrack(String name, byte[] wav, LiveClock next) {
+        if (page != Page.GENRES) {
+            return;
+        }
+        handoff(name, wav, next);
+    }
+
     private void showRendering(String name) {
         for (Track track : TRACKS) {
             buttons.get(track.name).setText(track.name.equals(name) ? "Rendering..." : track.name);
@@ -357,7 +464,7 @@ public class MusicDemo extends ApplicationAdapter {
             swap.preloaded();
             Track asked = wanted;
             if (asked != null && "Combat".equals(asked.name)) {
-                handoff("Combat", wav, next);
+                handoffTrack("Combat", wav, next);
                 wanted = null;
                 Gdx.app.postRunnable(this::showLabels);
             }
@@ -376,7 +483,7 @@ public class MusicDemo extends ApplicationAdapter {
             preload.start();
             String name = "Ambush";
             int id = queuedId;
-            boolean fresh = true;
+            boolean fresh = false;
             while (!stop) {
                 if (queuedWav != null) {
                     wav = queuedWav;
@@ -388,6 +495,13 @@ public class MusicDemo extends ApplicationAdapter {
                         clock = next;
                     }
                     playStandby = false;
+                    wantDefault = false;
+                    fresh = true;
+                }
+                if (wantDefault && page == Page.GENRES && !picked && wav != null) {
+                    name = "Ambush";
+                    id = queuedId;
+                    wantDefault = false;
                     fresh = true;
                 }
                 if (fresh && wav != null) {
@@ -395,7 +509,7 @@ public class MusicDemo extends ApplicationAdapter {
                     play(wav, name, id);
                     continue;
                 }
-                if (!picked && playStandby && standbyWav != null && wav != standbyWav) {
+                if (page == Page.GENRES && !picked && playStandby && standbyWav != null && wav != standbyWav) {
                     wav = standbyWav;
                     name = "Combat";
                     fresh = true;
@@ -411,6 +525,23 @@ public class MusicDemo extends ApplicationAdapter {
         } catch (Exception e) {
             error = e.getMessage() == null ? e.getClass().getSimpleName() : e.getMessage();
         }
+    }
+
+    private void preview(SoundBrowser.Choice sound) {
+        error = null;
+        Thread playing = new Thread(() -> {
+            try {
+                byte[] wav = SoundBrowser.preview(sound.file(), sound.preset());
+                if (page != Page.SOUNDS) {
+                    return;
+                }
+                handoff(sound.preset().name(), wav, clock);
+            } catch (Exception e) {
+                error = e.getMessage() == null ? e.getClass().getSimpleName() : e.getMessage();
+            }
+        }, "athenacl-preview");
+        playing.setDaemon(true);
+        playing.start();
     }
 
     private void play(byte[] wav, String name, int id) throws Exception {
@@ -459,7 +590,8 @@ public class MusicDemo extends ApplicationAdapter {
         if (queuedWav != null && wav != queuedWav) {
             return true;
         }
-        return !picked && wav != standbyWav && playStandby && standbyWav != null && queuedWav == null;
+        return page == Page.GENRES && !picked && wav != standbyWav && playStandby && standbyWav != null
+                && queuedWav == null;
     }
 
     private static String timestamp(double seconds) {

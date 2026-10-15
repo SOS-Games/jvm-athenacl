@@ -356,9 +356,8 @@ public final class Director {
             ids.start(bar);
         }
         if (changed) {
-            for (String layer : state.layers()) {
-                events.add(new ControlEvent.ProgramChange(eventTick, StockLayers.channel(layer),
-                        StockLayers.program(state, layer)));
+            for (LayerSpec spec : state.specs()) {
+                events.add(new ControlEvent.ProgramChange(eventTick, spec.channel(), spec.program()));
             }
         }
         if (changed && state.stinger() != null) {

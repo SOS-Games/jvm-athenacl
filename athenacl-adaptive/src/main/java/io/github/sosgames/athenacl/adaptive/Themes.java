@@ -97,6 +97,7 @@ public final class Themes {
         } else {
             errors.add(issue("THEME_METER", "/meter", "meter " + meter, "Use a meter like 4/4."));
         }
+        List<String> kitIds = kits(root);
         Map<String, Theme.StateDef> states = new LinkedHashMap<>();
         if (preset != null) {
             states.putAll(preset.states());
@@ -108,9 +109,9 @@ public final class Themes {
                 var entry = fields.next();
                 Theme.StateDef existing = states.get(entry.getKey());
                 if (existing == null) {
-                    states.put(entry.getKey(), stateDef(entry.getKey(), entry.getValue(), bpm, errors));
+                    states.put(entry.getKey(), stateDef(entry.getKey(), entry.getValue(), bpm, kitIds, errors));
                 } else {
-                    states.put(entry.getKey(), overlay(existing, entry.getValue(), errors));
+                    states.put(entry.getKey(), overlay(existing, entry.getValue(), kitIds, errors));
                 }
             }
         }
@@ -195,7 +196,7 @@ public final class Themes {
         }
         int motifEvery = motifEvery(root, errors);
         Theme.Hold hold = hold(root, states, errors);
-        List<String> kits = kits(root);
+        List<String> kits = kitIds;
         if (kits.isEmpty() && ("fantasy".equals(presetId) || "scifi-space".equals(presetId))) {
             kits = List.of("gm-lite");
         }
@@ -334,7 +335,8 @@ public final class Themes {
         return BigDecimal.valueOf(intensity(value)).stripTrailingZeros().toPlainString();
     }
 
-    private static Theme.StateDef stateDef(String id, JsonNode body, int bpm, List<ThemeIssue> issues) {
+    private static Theme.StateDef stateDef(String id, JsonNode body, int bpm, List<String> kits,
+                                           List<ThemeIssue> issues) {
         issues.addAll(Resolver.unknownKeys(id, body));
         String keyText = body.path("key").asText("C major");
         Key key;
@@ -346,13 +348,15 @@ public final class Themes {
             key = Key.parse("C major");
         }
         int tempo = body.path("tempo").asInt(bpm);
-        List<String> layers = layers(id, body, issues);
+        ParsedLayers parsed = layers(id, body, kits, issues);
         String stinger = body.hasNonNull("stinger") ? body.get("stinger").asText() : null;
-        return new Theme.StateDef(id, key, tempo, layers, stinger, Map.of(), Map.of(), meter(id, body, issues));
+        return new Theme.StateDef(id, key, tempo, parsed.names(), stinger, Map.of(), parsed.instruments(),
+                meter(id, body, issues), null, parsed.specs());
     }
 
     /** A preset state keeps its instruments when the theme only overrides a field such as tempo. */
-    private static Theme.StateDef overlay(Theme.StateDef existing, JsonNode body, List<ThemeIssue> issues) {
+    private static Theme.StateDef overlay(Theme.StateDef existing, JsonNode body, List<String> kits,
+                                          List<ThemeIssue> issues) {
         issues.addAll(Resolver.unknownKeys(existing.id(), body));
         Key key = existing.key();
         if (body.hasNonNull("key")) {
@@ -369,7 +373,13 @@ public final class Themes {
                     "Use a tempo of 1 bpm or more."));
             tempo = existing.tempo();
         }
-        List<String> layers = body.has("layers") ? layers(existing.id(), body, issues) : existing.layers();
+        ParsedLayers parsed = body.has("layers")
+                ? layers(existing.id(), body, kits, issues)
+                : new ParsedLayers(existing.layers(), null, existing.instruments());
+        List<String> layers = parsed.names();
+        Map<String, String> instruments = new LinkedHashMap<>(existing.instruments());
+        instruments.putAll(parsed.instruments());
+        List<LayerSpec> specs = body.has("layers") ? parsed.specs() : existing.specs();
         String stinger = body.has("stinger")
                 ? (body.hasNonNull("stinger") ? body.get("stinger").asText() : null)
                 : existing.stinger();
@@ -379,12 +389,21 @@ public final class Themes {
             composition = composition.merge(body, "theme");
         }
         return new Theme.StateDef(existing.id(), key, tempo, layers, stinger, existing.programs(),
-                existing.instruments(), meter, composition);
+                instruments, meter, composition, specs);
     }
 
-    private static List<String> layers(String id, JsonNode body, List<ThemeIssue> issues) {
-        List<String> layers = new ArrayList<>();
+    private record ParsedLayers(List<String> names, List<LayerSpec> specs, Map<String, String> instruments) {
+        private ParsedLayers {
+            instruments = instruments == null ? Map.of() : instruments;
+        }
+    }
+
+    private static ParsedLayers layers(String id, JsonNode body, List<String> kits, List<ThemeIssue> issues) {
         JsonNode layerNode = body.get("layers");
+        if (layerNode != null && layerNode.isObject()) {
+            return freeLayers(id, layerNode, kits, issues);
+        }
+        List<String> layers = new ArrayList<>();
         if (layerNode != null && layerNode.isArray()) {
             for (int i = 0; i < layerNode.size(); i++) {
                 String layer = layerNode.get(i).asText("");
@@ -399,7 +418,120 @@ public final class Themes {
         if (layers.isEmpty()) {
             layers.add("pad");
         }
-        return layers;
+        return new ParsedLayers(layers, null, Map.of());
+    }
+
+    private static ParsedLayers freeLayers(String id, JsonNode layerNode, List<String> kits, List<ThemeIssue> issues) {
+        List<String> names = new ArrayList<>();
+        List<LayerPlan.Draft> drafts = new ArrayList<>();
+        Map<String, String> instruments = new LinkedHashMap<>();
+        var fields = layerNode.fields();
+        while (fields.hasNext()) {
+            var entry = fields.next();
+            String name = entry.getKey();
+            String path = "/states/" + id + "/layers/" + name;
+            names.add(name);
+            JsonNode body = entry.getValue();
+            if (body == null || !body.isObject()) {
+                issues.add(issue("THEME_UNKNOWN_BEHAVIOUR", path, "layer " + name + " needs a behaviour",
+                        "Use behaviour, instrument, and optional params."));
+                continue;
+            }
+            String behaviour = body.path("behaviour").asText("");
+            if (!Behaviours.known(behaviour)) {
+                String near = Behaviours.suggest(behaviour);
+                String fix = near == null
+                        ? "Use chord-pad, bass-line, phrase-lead, arpeggio, drone, ostinato, drum-pattern, or po-source."
+                        : "Did you mean " + near + "?";
+                issues.add(issue("THEME_UNKNOWN_BEHAVIOUR", path + "/behaviour",
+                        "unknown behaviour " + behaviour, fix));
+                continue;
+            }
+            String instrument = body.path("instrument").asText(name);
+            Resolved ref = resolveInstrument(instrument, kits, issues, path + "/instrument");
+            Map<String, String> params = params(body.get("params"));
+            drafts.add(new LayerPlan.Draft(name, behaviour, ref.program, ref.percussion, instrument, ref.kitName, params));
+            if (!ref.kitName.isBlank()) {
+                instruments.put(name, ref.kitName);
+            }
+        }
+        if (names.isEmpty()) {
+            issues.add(issue("THEME_UNKNOWN_LAYER", "/states/" + id + "/layers", "theme has no layers",
+                    "Name a layer, such as shimmer, and give it a behaviour."));
+            names.add("pad");
+        }
+        List<LayerSpec> specs = LayerPlan.allocate(drafts);
+        return new ParsedLayers(names, specs, instruments);
+    }
+
+    private record Resolved(int program, boolean percussion, String kitName) {
+    }
+
+    private static Resolved resolveInstrument(String text, List<String> kits, List<ThemeIssue> issues, String path) {
+        if (text == null || text.isBlank()) {
+            return new Resolved(0, false, "");
+        }
+        if (text.startsWith("sf:")) {
+            String[] parts = text.substring(3).split("/");
+            if (parts.length == 3 && parts[1].matches("\\d+") && parts[2].matches("\\d+")) {
+                return new Resolved(Integer.parseInt(parts[2]), false, "");
+            }
+            issues.add(issue("THEME_UNKNOWN_INSTRUMENT", path, "soundfont address " + text,
+                    "Use sf:<soundbank>/<bank>/<program>, such as sf:generaluser/0/52."));
+            return new Resolved(0, false, "");
+        }
+        if (text.startsWith("ensemble:")) {
+            String role = text.substring("ensemble:".length());
+            return new Resolved(Behaviours.program(role), false, role);
+        }
+        String body = text.startsWith("kit:") ? text.substring(4) : text;
+        int colon = body.indexOf(':');
+        if (colon > 0) {
+            String kit = body.substring(0, colon);
+            String name = body.substring(colon + 1);
+            KitPrograms.Hit hit = KitPrograms.lookup(kit, name);
+            if (hit == null) {
+                issues.add(issue("THEME_UNKNOWN_INSTRUMENT", path, "unknown instrument " + text,
+                        "Use a name from the kit, such as gm-lite:celesta."));
+                return new Resolved(0, false, name);
+            }
+            return new Resolved(hit.program(), hit.percussion(), name);
+        }
+        for (String kit : kits) {
+            KitPrograms.Hit hit = KitPrograms.lookup(kit, text);
+            if (hit != null) {
+                return new Resolved(hit.program(), hit.percussion(), text);
+            }
+        }
+        return new Resolved(0, false, text);
+    }
+
+    private static Map<String, String> params(JsonNode node) {
+        Map<String, String> params = new LinkedHashMap<>();
+        if (node == null || !node.isObject()) {
+            return params;
+        }
+        var fields = node.fields();
+        while (fields.hasNext()) {
+            var entry = fields.next();
+            JsonNode value = entry.getValue();
+            if (value == null || value.isNull()) {
+                continue;
+            }
+            if (value.isArray()) {
+                StringBuilder text = new StringBuilder();
+                for (JsonNode item : value) {
+                    if (!text.isEmpty()) {
+                        text.append(',');
+                    }
+                    text.append(item.asText());
+                }
+                params.put(entry.getKey(), text.toString());
+            } else {
+                params.put(entry.getKey(), value.asText());
+            }
+        }
+        return params;
     }
 
     private static Theme.Rule rule(JsonNode body, int index, Map<String, Theme.StateDef> states, List<ThemeIssue> issues) {

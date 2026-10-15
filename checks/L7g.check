@@ -1,0 +1,36 @@
+# L7g instruments as data
+---
+name: scan generaluser
+args: kit scan generaluser
+exit: 0
+stdout-contains: presets=287 percussion=13
+stdout-contains: preset bank=0 program=0
+---
+name: free named layers
+args: render samples/themes/free-layers.yaml --bars 8 --seed 1 --out build/l7g --formats events
+delete-before: build/l7g
+exit: 0
+stdout-contains: layers=shimmer,low,ritual
+stdout-contains: channels=3
+---
+name: three channels in the log
+args: describe-music build/l7g/events.jsonl --bars 8-8
+exit: 0
+stdout-contains: layers=shimmer,low,ritual
+stdout-contains: channels=3
+---
+name: soundfont address
+args: render samples/themes/sf-address.yaml --bars 1 --seed 1 --out build/l7g-sf --formats events
+delete-before: build/l7g-sf
+exit: 0
+---
+name: program 52 is in the log
+args: describe-music build/l7g-sf/events.jsonl --bars 1-1
+exit: 0
+stdout-contains: programs=52
+---
+name: unknown behaviour
+args: theme validate samples/themes/unknown-behaviour.yaml
+exit: 3
+stdout-contains: THEME_UNKNOWN_BEHAVIOUR
+stdout-contains: Did you mean

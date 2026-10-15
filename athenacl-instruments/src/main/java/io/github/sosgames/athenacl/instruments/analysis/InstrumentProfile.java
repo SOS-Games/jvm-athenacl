@@ -171,8 +171,13 @@ public final class InstrumentProfile {
         if (row.attackMs() >= 80) {
             lines.add("It has a slow attack.");
         }
-        if (row.tags().contains("bright")) {
-            lines.add("The tone is bright.");
+        String tone = toneLine(row);
+        if (tone != null) {
+            lines.add(tone);
+        }
+        String level = levelLine(row);
+        if (level != null) {
+            lines.add(level);
         }
         if (row.tags().contains("plucky")) {
             lines.add("The note dies quickly.");
@@ -189,13 +194,46 @@ public final class InstrumentProfile {
         if (hasReason(row, "loopClicks")) {
             lines.add("The loop clicks.");
         }
-        if (row.note() != null && row.note().startsWith("loud")) {
-            lines.add("The note is loud.");
-        }
         if (lines.size() > 8) {
             lines = lines.subList(0, 8);
         }
         return String.join("\n", lines);
+    }
+
+    /** Dark is the warm tag. Neutral sits between that and bright. */
+    private static String toneLine(Row row) {
+        Thresholds thresholds = Thresholds.defaults();
+        double centroid = row.centroidRatio();
+        if (row.tags().contains("bright") || centroid >= thresholds.brightRatio()) {
+            return "The tone is bright.";
+        }
+        if (row.tags().contains("warm") || (centroid > 0 && centroid <= thresholds.warmRatio())) {
+            return "The tone is dark.";
+        }
+        if (centroid > 0) {
+            return "The tone is neutral.";
+        }
+        return null;
+    }
+
+    /**
+     * Quiet is at or under -28 LUFS. Loud is at or above -18, or a hot peak.
+     * The band between those two is average.
+     */
+    private static String levelLine(Row row) {
+        boolean hot = row.tags().contains("loud")
+                || (row.note() != null && row.note().startsWith("loud"));
+        double level = row.loudnessLu();
+        if (hot || (level < 0 && level >= -18)) {
+            return "The sound is loud.";
+        }
+        if (level <= -28) {
+            return "The sound is quiet.";
+        }
+        if (level < 0) {
+            return "The sound is average.";
+        }
+        return null;
     }
 
     public static String rowLine(Row row, Boolean cached) {
@@ -283,17 +321,21 @@ public final class InstrumentProfile {
                 roughness = Math.max(roughness, measurement.roughness());
             }
         }
-        double inharmonic = median(inharmonics);
-        double pitch = quantize(median(pitchErrors), 1);
-        int octave = (int) Math.round(median(octaves));
-        double centroid = median(centroids);
-        double attack = median(attacks);
-        double decay = median(decays);
-        boolean noisy = flatness >= thresholds.flatness();
-        boolean mostlyDied = takes > 0 && died * 2 >= takes;
-        String soundClass = SoundClass.classify(instrument.name(), instrument.program(),
-                instrument.percussion(), instrument.soundClass(), attack, decay, mostlyDied, flatness);
-        ClassVerdict.Decision decision = ClassVerdict.judge(soundClass, pitch, inharmonic, flatness,
+        return summarize(instrument.name(), instrument.program(), instrument.percussion(),
+                instrument.soundClass(), median(pitchErrors), (int) Math.round(median(octaves)),
+                median(centroids), median(attacks), median(decays), takes > 0 && died * 2 >= takes,
+                flatness, median(inharmonics), clips, clicks, roughness, peakDb, quiet, loud, thresholds);
+    }
+
+    /** One probe, or the medians of a grid, turned into the same row a kit profile stores. */
+    static Row summarize(String name, int program, boolean percussion, String declaredClass,
+                         double pitch, int octave, double centroid, double attack, double decay,
+                         boolean mostlyDied, double flatness, double inharmonic, int clips, int clicks,
+                         double roughness, double peakDb, Double quiet, Double loud, Thresholds thresholds) {
+        double pitchQ = quantize(pitch, 1);
+        String soundClass = SoundClass.classify(name, program, percussion, declaredClass,
+                attack, decay, mostlyDied, flatness);
+        ClassVerdict.Decision decision = ClassVerdict.judge(soundClass, pitchQ, inharmonic, flatness,
                 clips, clicks, roughness, mostlyDied, peakDb, thresholds);
         List<String> reasons = new ArrayList<>(decision.reasons());
         List<String> soft = new ArrayList<>(decision.soft());
@@ -310,11 +352,11 @@ public final class InstrumentProfile {
         if (attack >= thresholds.padAttackMs()) {
             tags.add("pad");
         }
-        if (attack <= thresholds.pluckAttackMs() && takes > 0 && died * 2 >= takes
+        if (attack <= thresholds.pluckAttackMs() && mostlyDied
                 && decay > 0 && decay <= thresholds.pluckDecayMs()) {
             tags.add("plucky");
         }
-        if (noisy) {
+        if (flatness >= thresholds.flatness()) {
             tags.add("noisy");
         }
         if (decision.note().startsWith("loud")) {
@@ -322,9 +364,14 @@ public final class InstrumentProfile {
         }
         String verdict = !reasons.isEmpty() ? "bad" : !soft.isEmpty() ? "caution" : "ok";
         double level = loud != null && Double.isFinite(loud) ? loud : 0;
-        return new Row(instrument.name(), verdict, reasons, tags, pitch, quantize(attack, 1), "measured",
+        return new Row(name, verdict, reasons, tags, pitchQ, quantize(attack, 1), "measured",
                 quantize(centroid, 2), quantize(flatness, 2), quantize(decay, 1), mostlyDied,
                 quantize(roughness, 2), quantize(level, 1), soundClass, octave, decision.note());
+    }
+
+    static Row unfinished(String name) {
+        return new Row(name, "caution", List.of("probe"), List.of(), 0, 0, "measured",
+                0, 0, 0, true, 0, 0, "", 0, "The probe did not finish.");
     }
 
     private static Descriptors.Measurement renderOne(Kit.Instrument instrument, Resolved resolved,

@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 package io.github.sosgames.athenacl.instruments;
 
-import io.github.sosgames.athenacl.adaptive.StockLayers;
+import io.github.sosgames.athenacl.adaptive.LayerSpec;
 import io.github.sosgames.athenacl.adaptive.Theme;
 import io.github.sosgames.athenacl.events.ControlEvent;
 import io.github.sosgames.athenacl.events.Score;
@@ -41,15 +41,22 @@ public final class ThemeMix {
         Map<String, Playable> byPatch = new LinkedHashMap<>();
         Map<String, Playable> used = new LinkedHashMap<>();
         for (Theme.StateDef state : theme.states().values()) {
-            for (String layer : state.layers()) {
-                int channel = StockLayers.channel(layer);
-                int program = StockLayers.program(state, layer);
+            for (LayerSpec spec : state.specs()) {
+                int channel = spec.channel();
+                int program = spec.program();
                 String patch = channel + ":" + program;
-                Playable playable = resolve(sessions, state.instrument(layer));
+                String name = state.instrument(spec.name());
+                if (name.startsWith("sf:") || name.startsWith("kit:") || name.indexOf(':') > 0) {
+                    name = spec.kitName().isBlank() ? name : spec.kitName();
+                }
+                Playable playable = resolve(sessions, name);
                 if (playable == null) {
+                    if (spec.instrument().startsWith("sf:")) {
+                        continue;
+                    }
                     throw new KitException(new KitException.Issue(
-                            "KIT_UNKNOWN_INSTRUMENT", "/states/" + state.id() + "/" + layer,
-                            "unknown instrument " + state.instrument(layer),
+                            "KIT_UNKNOWN_INSTRUMENT", "/states/" + state.id() + "/" + spec.name(),
+                            "unknown instrument " + name,
                             "Use a name from the kit, such as harp or taiko."));
                 }
                 byPatch.putIfAbsent(patch, playable);

@@ -1,0 +1,13 @@
+id: sf-address
+bars: 2
+bpm: 100
+meter: "4/4"
+states:
+  play:
+    key: C major
+    layers:
+      choir:
+        behaviour: chord-pad
+        instrument: "sf:generaluser/0/52"
+timeline:
+  - {bar: 1, state: play, intensity: 0.5}

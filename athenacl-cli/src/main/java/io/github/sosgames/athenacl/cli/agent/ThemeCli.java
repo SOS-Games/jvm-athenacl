@@ -31,6 +31,7 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 
@@ -153,6 +154,14 @@ final class ThemeCli {
         fields.put("bars", Integer.toString(loaded.theme.bars()));
         fields.put("states", full.stateList());
         fields.put("transitions", Integer.toString(full.transitions().size()));
+        String layerList = layerNames(shown.score());
+        if (!layerList.isEmpty()) {
+            fields.put("layers", layerList);
+        }
+        int channelCount = channelCount(shown.score());
+        if (channelCount > 0) {
+            fields.put("channels", Integer.toString(channelCount));
+        }
         if (!full.overlayList().isEmpty()) {
             fields.put("overlays", full.overlayList());
         }
@@ -341,6 +350,24 @@ final class ThemeCli {
             return null;
         }
         return text.substring(0, text.length() - 1);
+    }
+
+    private static String layerNames(Score score) {
+        LinkedHashSet<String> names = new LinkedHashSet<>();
+        for (NoteEvent note : score.notes()) {
+            if (note.layer() != null && !note.layer().isBlank()) {
+                names.add(note.layer());
+            }
+        }
+        return String.join(",", names);
+    }
+
+    private static int channelCount(Score score) {
+        LinkedHashSet<Integer> channels = new LinkedHashSet<>();
+        for (NoteEvent note : score.notes()) {
+            channels.add(note.channel());
+        }
+        return channels.size();
     }
 
     private static String windowLine(BarRange range, Director.Performance shown) {

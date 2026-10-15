@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 package io.github.sosgames.athenacl.cli.agent;
 
+import io.github.sosgames.athenacl.cli.model.AtomicFiles;
 import io.github.sosgames.athenacl.cli.model.ExitCode;
 import io.github.sosgames.athenacl.cli.model.KeyValue;
 import io.github.sosgames.athenacl.cli.model.Suggestions;
@@ -9,10 +10,16 @@ import io.github.sosgames.athenacl.instruments.KitException;
 import io.github.sosgames.athenacl.instruments.KitSession;
 import io.github.sosgames.athenacl.instruments.Kits;
 import io.github.sosgames.athenacl.instruments.analysis.InstrumentProfile;
+import io.github.sosgames.athenacl.render.soundbank.InstrumentIndex;
 import io.github.sosgames.athenacl.render.soundbank.SoundbankPaths;
+import io.github.sosgames.athenacl.render.soundbank.SoundbankRejected;
+import io.github.sosgames.athenacl.render.soundbank.SoundbankResolver;
 import picocli.CommandLine;
 
+import javax.sound.midi.InvalidMidiDataException;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -24,9 +31,11 @@ import java.util.concurrent.Callable;
  * {@code kit validate} checks checksums, licenses, and slots.
  * {@code kit analyze} probes each instrument and writes a profile.
  * {@code kit describe} prints one instrument's verdict from that profile.
+ * {@code kit scan} lists every preset in a soundfont.
  */
-@CommandLine.Command(name = "kit", description = "Validate or analyze an instrument kit.",
+@CommandLine.Command(name = "kit", description = "Validate, analyze, or scan an instrument kit.",
         subcommands = {KitCommand.Validate.class, KitCommand.Analyze.class, KitCommand.Describe.class,
+                KitCommand.Scan.class,
                 KitAnalysisCommands.Lint.class, KitAnalysisCommands.Compat.class, KitAnalysisCommands.Fit.class})
 public class KitCommand implements Callable<Integer> {
     @CommandLine.ParentCommand AgentCli parent;
@@ -35,8 +44,8 @@ public class KitCommand implements Callable<Integer> {
     public Integer call() {
         parent.commandName = "kit";
         return parent.fail(ExitCode.USAGE, "USAGE", "argv[1]",
-                "usage: kit validate <kit.yaml> | kit analyze <kit.yaml> | kit describe <name> | kit lint <theme.yaml>",
-                "Try kit analyze samples/kits/analysis.yaml.");
+                "usage: kit validate <kit.yaml> | kit analyze <kit.yaml> | kit describe <name> | kit scan <soundfont> | kit lint <theme.yaml>",
+                "Try kit scan generaluser.");
     }
 
     AgentCli cli() {
@@ -242,6 +251,115 @@ public class KitCommand implements Callable<Integer> {
             }
         }
         return names;
+    }
+
+    @CommandLine.Command(name = "scan", description = "List every preset in a soundfont.")
+    public static class Scan implements Callable<Integer> {
+        @CommandLine.ParentCommand KitCommand kit;
+        @CommandLine.Parameters(index = "0", paramLabel = "<soundfont>")
+        String source;
+        @CommandLine.Option(names = "--cache", paramLabel = "<dir>")
+        Path cache;
+        @CommandLine.Option(names = "--write", paramLabel = "<yaml>")
+        Path write;
+
+        @Override
+        public Integer call() {
+            AgentCli parent = kit.cli();
+            parent.commandName = "kit scan";
+            if (source == null || source.isBlank()) {
+                return parent.fail(ExitCode.USAGE, "USAGE", "argv[2]", "usage: kit scan <soundfont>",
+                        "Try kit scan generaluser.");
+            }
+            Path file = Path.of(source);
+            if (!Files.isRegularFile(file)) {
+                try {
+                    file = SoundbankResolver.select(source, SoundbankPaths.cache(cache)).file();
+                } catch (IOException | SoundbankRejected e) {
+                    return parent.fail(ExitCode.NOT_FOUND, "NOT_FOUND", "argv[2]", e.getMessage(),
+                            "Install the soundbank, or pass the .sf2 path.");
+                }
+            }
+            if (file == null || !Files.isRegularFile(file)) {
+                return parent.fail(ExitCode.NOT_FOUND, "NOT_FOUND", "argv[2]", "soundfont not found",
+                        "Install the soundbank, or pass the .sf2 path.");
+            }
+            try {
+                List<InstrumentIndex.Preset> presets = InstrumentIndex.list(file);
+                int percussion = 0;
+                for (InstrumentIndex.Preset preset : presets) {
+                    if (preset.percussion()) {
+                        percussion++;
+                    }
+                }
+                Map<String, String> summary = new LinkedHashMap<>();
+                summary.put("presets", Integer.toString(presets.size()));
+                summary.put("percussion", Integer.toString(percussion));
+                StringBuilder text = new StringBuilder(KeyValue.line(summary));
+                for (InstrumentIndex.Preset preset : presets) {
+                    Map<String, String> row = new LinkedHashMap<>();
+                    row.put("bank", Integer.toString(preset.bank()));
+                    row.put("program", Integer.toString(preset.program()));
+                    row.put("name", preset.name());
+                    row.put("percussion", Boolean.toString(preset.percussion()));
+                    text.append('\n').append(KeyValue.record("preset", row));
+                }
+                if (write != null) {
+                    AtomicFiles.write(write, kitYaml(source, presets).getBytes(StandardCharsets.UTF_8), parent.dryRun);
+                }
+                Map<String, Object> data = new LinkedHashMap<>();
+                data.put("presets", presets.size());
+                data.put("percussion", percussion);
+                return parent.finish(ExitCode.OK, text.toString(), "athenacl.result.kit/1", data, List.of(), List.of());
+            } catch (InvalidMidiDataException e) {
+                return parent.fail(ExitCode.INVALID_INPUT, "SOUNDBANK_INVALID", "argv[2]", e.getMessage(),
+                        "Pass an SF2 file.");
+            } catch (IOException e) {
+                return parent.fail(ExitCode.RUNTIME, "IO_ERROR", "argv[2]", e.getMessage(),
+                        "Check that the soundfont can be read.");
+            }
+        }
+
+        private static String kitYaml(String id, List<InstrumentIndex.Preset> presets) {
+            String kitId = id.replace('\\', '/');
+            int slash = kitId.lastIndexOf('/');
+            if (slash >= 0) {
+                kitId = kitId.substring(slash + 1);
+            }
+            if (kitId.endsWith(".sf2")) {
+                kitId = kitId.substring(0, kitId.length() - 4);
+            }
+            StringBuilder yaml = new StringBuilder();
+            yaml.append("kit: ").append(slug(kitId)).append('\n');
+            yaml.append("version: 1\n");
+            yaml.append("instruments:\n");
+            for (InstrumentIndex.Preset preset : presets) {
+                yaml.append("  ").append(slug(preset.name())).append('-').append(preset.program());
+                if (preset.percussion()) {
+                    yaml.append(": {drumkit: ").append(preset.program()).append("}\n");
+                } else {
+                    yaml.append(": {bank: ").append(preset.bank())
+                            .append(", program: ").append(preset.program()).append("}\n");
+                }
+            }
+            return yaml.toString();
+        }
+
+        private static String slug(String name) {
+            StringBuilder slug = new StringBuilder();
+            for (int i = 0; i < name.length(); i++) {
+                char c = Character.toLowerCase(name.charAt(i));
+                if ((c >= 'a' && c <= 'z') || (c >= '0' && c <= '9')) {
+                    slug.append(c);
+                } else if (!slug.isEmpty() && slug.charAt(slug.length() - 1) != '-') {
+                    slug.append('-');
+                }
+            }
+            while (!slug.isEmpty() && slug.charAt(slug.length() - 1) == '-') {
+                slug.setLength(slug.length() - 1);
+            }
+            return slug.isEmpty() ? "preset" : slug.toString();
+        }
     }
 
     private static int fail(AgentCli parent, KitException e) {

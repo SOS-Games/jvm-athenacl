@@ -178,11 +178,12 @@ public final class CommandCatalog {
                     "athenacl.result.instrument/1"),
             new CommandInfo(
                     "kit",
-                    "kit validate checks sources, licenses, SF3 files, and slot assignment. kit analyze probes a kit and writes a profile. kit describe prints one instrument's verdict. kit lint checks a resolved theme. kit fit scores one role. kit compat compares a pair.",
+                    "kit validate checks sources, licenses, SF3 files, and slot assignment. kit analyze probes a kit and writes a profile. kit describe prints one instrument's verdict. kit scan lists every preset in a soundfont. kit lint checks a resolved theme. kit fit scores one role. kit compat compares a pair.",
                     List.of(
                             gradle("kit validate instruments/gm-lite.yaml"),
                             gradle("kit analyze samples/kits/analysis.yaml"),
                             gradle("kit describe saw --kit analysis"),
+                            gradle("kit scan generaluser"),
                             gradle("kit lint samples/themes/lint-clean.yaml --all-states"),
                             gradle("kit fit pluck --role arp --kit analysis")),
                     true,

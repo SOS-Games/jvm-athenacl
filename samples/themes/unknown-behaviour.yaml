@@ -1,0 +1,9 @@
+id: unknown-behaviour
+bars: 2
+states:
+  play:
+    key: C major
+    layers:
+      wobble:
+        behaviour: arppegio
+        instrument: "gm-lite:flute"

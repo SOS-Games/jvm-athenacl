@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 package io.github.sosgames.athenacl.instruments.analysis;
 
+import io.github.sosgames.athenacl.render.soundbank.InstrumentIndex;
 import org.junit.jupiter.api.Test;
 
 import java.nio.file.Files;
@@ -61,6 +62,35 @@ class FixtureAnalysisTest {
                 Path.of("samples/kits/analysis.yaml"), Path.of("build/l7d-test"));
         assertTrue(again.cached());
         assertEquals(report.hash(), again.hash());
+    }
+
+    @Test
+    void descriptionNamesTheToneAndTheLevel() {
+        assertTrue(textOf(3.2, -15, List.of("bright"), "").contains("The tone is bright."));
+        assertTrue(textOf(3.2, -15, List.of("bright"), "").contains("The sound is loud."));
+        assertTrue(textOf(1.1, -30, List.of("warm"), "").contains("The tone is dark."));
+        assertTrue(textOf(1.1, -30, List.of("warm"), "").contains("The sound is quiet."));
+        assertTrue(textOf(1.6, -22, List.of(), "").contains("The tone is neutral."));
+        assertTrue(textOf(1.6, -22, List.of(), "").contains("The sound is average."));
+        assertTrue(textOf(2.0, 0, List.of(), "loud trim=-1.0dB").contains("The sound is loud."));
+    }
+
+    private static String textOf(double centroid, double loudness, List<String> tags, String note) {
+        return InstrumentProfile.text(new InstrumentProfile.Row(
+                "piano", "ok", List.of(), tags, 0, 10, "measured",
+                centroid, 0, 0, false, 0, loudness, "pitched-sustained", 0, note));
+    }
+
+    @Test
+    void soundfontScanCoversEveryPreset() throws Exception {
+        Path bank = Path.of("samples/kits/analysis/fixtures.sf2");
+        FixtureBank.write(bank);
+        Path out = Path.of("build/l7d-test/soundfonts");
+        List<SoundfontScan.Hit> first = SoundfontScan.fill(bank, out, "fixtures", null);
+        assertEquals(InstrumentIndex.list(bank).size(), first.size());
+        assertTrue(first.stream().anyMatch(hit -> "saw".equals(hit.name()) && "ok".equals(hit.row().verdict())));
+        List<SoundfontScan.Hit> again = SoundfontScan.open(bank, out, "fixtures");
+        assertEquals(first.size(), again.size());
     }
 
     private static InstrumentProfile.Row row(InstrumentProfile.Report report, String name) {

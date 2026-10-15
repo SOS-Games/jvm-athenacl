@@ -125,33 +125,39 @@ public record Theme(
 
     public record StateDef(String id, Key key, int tempo, List<String> layers, String stinger,
                            Map<String, Integer> programs, Map<String, String> instruments, String meter,
-                           Composition composition) {
+                           Composition composition, List<LayerSpec> specs) {
         public StateDef(String id, Key key, int tempo, List<String> layers, String stinger) {
-            this(id, key, tempo, layers, stinger, Map.of(), Map.of(), null, null);
+            this(id, key, tempo, layers, stinger, Map.of(), Map.of(), null, null, null);
         }
 
         public StateDef(String id, Key key, int tempo, List<String> layers, String stinger,
                         Map<String, Integer> programs) {
-            this(id, key, tempo, layers, stinger, programs, Map.of(), null, null);
+            this(id, key, tempo, layers, stinger, programs, Map.of(), null, null, null);
         }
 
         public StateDef(String id, Key key, int tempo, List<String> layers, String stinger,
                         Map<String, Integer> programs, Map<String, String> instruments) {
-            this(id, key, tempo, layers, stinger, programs, instruments, null, null);
+            this(id, key, tempo, layers, stinger, programs, instruments, null, null, null);
         }
 
         public StateDef(String id, Key key, int tempo, List<String> layers, String stinger,
                         Map<String, Integer> programs, Map<String, String> instruments, String meter) {
-            this(id, key, tempo, layers, stinger, programs, instruments, meter, null);
+            this(id, key, tempo, layers, stinger, programs, instruments, meter, null, null);
         }
 
-        /** Same state, heard in this key. The declared meter stays. */
+        public StateDef(String id, Key key, int tempo, List<String> layers, String stinger,
+                        Map<String, Integer> programs, Map<String, String> instruments, String meter,
+                        Composition composition) {
+            this(id, key, tempo, layers, stinger, programs, instruments, meter, composition, null);
+        }
+
+        /** Same state, heard in this key. The declared meter and the layer specs stay. */
         public StateDef withKey(Key key) {
-            return new StateDef(id, key, tempo, layers, stinger, programs, instruments, meter, composition);
+            return new StateDef(id, key, tempo, layers, stinger, programs, instruments, meter, composition, specs);
         }
 
         public StateDef {
-            layers = List.copyOf(layers);
+            layers = layers == null ? List.of() : List.copyOf(layers);
             programs = programs == null || programs.isEmpty()
                     ? Map.of()
                     : Collections.unmodifiableMap(new LinkedHashMap<>(programs));
@@ -159,6 +165,11 @@ public record Theme(
                     ? Map.of()
                     : Collections.unmodifiableMap(new LinkedHashMap<>(instruments));
             meter = meter == null || meter.isBlank() ? null : meter;
+            if (specs == null) {
+                specs = LayerPlan.legacy(layers, programs, instruments);
+            } else {
+                specs = List.copyOf(specs);
+            }
         }
 
         public int program(String layer, int fallback) {

@@ -1,0 +1,27 @@
+id: free-layers
+bars: 8
+bpm: 100
+meter: "4/4"
+key: C major
+instruments:
+  kits: [gm-lite]
+states:
+  play:
+    key: C major
+    layers:
+      shimmer:
+        behaviour: arpeggio
+        instrument: "gm-lite:celesta"
+        params:
+          pattern: [0, 2, 4, 7]
+          subdivision: "1/16"
+      low:
+        behaviour: bass-line
+        instrument: "gm-lite:cello"
+      ritual:
+        behaviour: drum-pattern
+        instrument: "kit:gm-lite:drums.orchestral"
+        params:
+          pattern: "x..x..x."
+timeline:
+  - {bar: 1, state: play, intensity: 0.6}

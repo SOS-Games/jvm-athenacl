@@ -89,6 +89,7 @@ gradlew.bat :athenacl-cli:agentCli --args="motif transform m1 --invert --invert"
 gradlew.bat :athenacl-cli:agentCli --args="motif import samples/motifs/theme.mid --out build/l7/m.yaml"
 gradlew.bat :athenacl-cli:agentCli --args="melody generate --key E-minor --candidates 64 --seed 3 --explain"
 gradlew.bat :athenacl-cli:agentCli --args="kit analyze samples/kits/analysis.yaml --out build/l7d"
+gradlew.bat :athenacl-cli:agentCli --args="kit scan generaluser"
 gradlew.bat :athenacl-cli:agentCli --args="kit describe saw --kit analysis --out build/l7d"
 gradlew.bat :athenacl-cli:agentCli --args="kit lint samples/themes/lint-clean.yaml --all-states"
 gradlew.bat :athenacl-cli:agentCli --args="ensemble select --genre fantasy --state sneaking --seed 1 --kit analysis"
@@ -121,7 +122,7 @@ gradlew.bat :athenacl-cli:agentCli --args="debug probe flute --kit gm-lite --pit
 | melody | You want `melody generate` to rank hook candidates, `melody score` to rate a MIDI line, `melody rate` to write an A/B row, or `melody fit` to turn ratings into weights. `melody score --progression harmony.json` reads that file's key and roman numerals. |
 | adapt | You want the scheduler snapshot: `state=`, `intensity=`, `bar=`, `sched.lookaheadMs=`, and `cpu.msPerBar=`. |
 | instruments | You want `instruments list`, `show`, `audition`, or `compare` for a named instrument in a kit. |
-| kit | You want `kit validate` to check sources, licenses, and slots, `kit analyze` to probe a kit and write a profile, `kit describe` to print one instrument's verdict, `kit lint` to check a resolved theme, `kit fit` to score one role, or `kit compat` to compare a pair. |
+| kit | You want `kit validate` to check sources, licenses, and slots, `kit analyze` to probe a kit and write a profile, `kit describe` to print one instrument's verdict, `kit scan` to list every preset in a soundfont, `kit lint` to check a resolved theme, `kit fit` to score one role, or `kit compat` to compare a pair. |
 | ensemble | You want `ensemble select` to fill each role from a kit profile. The same seed picks the same instruments. |
 | credits | You want `credits` to write `CREDITS.md` for the soundfonts a theme uses. |
 
@@ -357,6 +358,8 @@ A preset turns hooks on unless the theme file has its own `hooks:` block, which 
 `instruments/gm-lite.yaml` is the default kit (GeneralUser GS). `instruments/gm-full.yaml` extends it and plays every named instrument from MuseScore_General, falling back to GeneralUser when a patch is missing. `soundbank install musescore-general` downloads that SF2. An SF3 file is rejected with `SOUNDBANK_SF3_UNSUPPORTED` before Gervill opens it. `kit validate` checks the checksum, the license, and that two instruments did not receive the same slot. `instruments compare` prints `loudness.probe=` after each instrument is brought to about -20 LUFS, and `raw.deltaLu=` for the gap before that. `render --kit gm-full` puts each named instrument on its own slot.
 
 `themes/fantasy-dungeon.yaml` names `instruments.kits: [gm-lite]` and the preset maps each layer to a kit instrument (`strings`, `piano`, `horn`, `flute`, `cello`, and the rest). A render of that theme normalizes those instruments, then trims each state onto the loudness contour. The event-log hash stays the program-change log, not the trim.
+
+A layer may also be a free name. `samples/themes/free-layers.yaml` pairs each name with a behaviour (`arpeggio`, `bass-line`, `drum-pattern`) and an instrument (`gm-lite:celesta`, `kit:gm-lite:drums.orchestral`, or `sf:generaluser/0/52`). The old names keep their channels and programs. A drum part uses MIDI channel 10. `kit scan generaluser` prints `presets=287 percussion=13` and one line per preset. `theme validate` on an unknown behaviour exits 3 with `THEME_UNKNOWN_BEHAVIOUR` and `Did you mean`. The window opens on a menu. Sounds lists every preset in every soundfont installed in the cache, ordered by soundfont then name, and hides the genres. Genres lists the tracks and hides the sounds. Back returns to the menu. A click plays that preset and shows its soundfont plus the analyzed description. A preset the cache has not measured yet is analyzed in the background and the description updates when that note finishes.
 
 ## Instrument analysis
 

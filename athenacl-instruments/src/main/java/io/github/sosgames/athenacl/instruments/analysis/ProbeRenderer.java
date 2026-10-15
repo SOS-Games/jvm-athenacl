@@ -27,25 +27,46 @@ public final class ProbeRenderer {
     private ProbeRenderer() {
     }
 
+    public static int spanFrames() {
+        return (int) Math.round((HOLD_SECONDS + RELEASE_SECONDS) * RATE);
+    }
+
+    /** How long one probe occupies on a shared synth, in microseconds. */
+    public static long spanUs() {
+        return Math.round(spanFrames() * 1_000_000.0 / RATE);
+    }
+
     public static float[] render(Path soundbank, int bank, int program, boolean percussion,
                                  int[] notes, int velocity) throws IOException {
         try (GervillStreams streams = GervillStreams.openProbe(soundbank)) {
+            return renderAt(streams, 0, bank, program, percussion, notes, velocity);
+        } catch (MidiUnavailableException | InvalidMidiDataException e) {
+            throw new IOException(e.getMessage() == null ? "probe failed" : e.getMessage(), e);
+        }
+    }
+
+    /**
+     * Plays one probe on a synth that is already open. {@code startUs} is how far along that
+     * stream the previous probes reached. The next call should add {@link #spanUs()}.
+     */
+    public static float[] renderAt(GervillStreams streams, long startUs, int bank, int program,
+                                   boolean percussion, int[] notes, int velocity) throws IOException {
+        try {
             Receiver receiver = streams.receiver();
             int channel = percussion ? 9 : 0;
-            long holdUs = Math.round(HOLD_SECONDS * 1_000_000.0);
+            long holdUs = startUs + Math.round(HOLD_SECONDS * 1_000_000.0);
             if (!percussion) {
-                receiver.send(new ShortMessage(ShortMessage.CONTROL_CHANGE, channel, 0, 0), 0);
-                receiver.send(new ShortMessage(ShortMessage.CONTROL_CHANGE, channel, 32, bank & 127), 0);
+                receiver.send(new ShortMessage(ShortMessage.CONTROL_CHANGE, channel, 0, 0), startUs);
+                receiver.send(new ShortMessage(ShortMessage.CONTROL_CHANGE, channel, 32, bank & 127), startUs);
             }
-            receiver.send(new ShortMessage(ShortMessage.PROGRAM_CHANGE, channel, program & 127, 0), 0);
-            receiver.send(new ShortMessage(ShortMessage.CONTROL_CHANGE, channel, 7, 127), 0);
+            receiver.send(new ShortMessage(ShortMessage.PROGRAM_CHANGE, channel, program & 127, 0), startUs);
+            receiver.send(new ShortMessage(ShortMessage.CONTROL_CHANGE, channel, 7, 127), startUs);
             for (int note : notes) {
                 int pitch = Math.max(0, Math.min(127, note));
-                receiver.send(new ShortMessage(ShortMessage.NOTE_ON, channel, pitch, velocity), 0);
+                receiver.send(new ShortMessage(ShortMessage.NOTE_ON, channel, pitch, velocity), startUs);
                 receiver.send(new ShortMessage(ShortMessage.NOTE_OFF, channel, pitch, 0), holdUs);
             }
-            int frames = (int) Math.round((HOLD_SECONDS + RELEASE_SECONDS) * RATE);
-            return read(streams.stream(), frames);
+            return read(streams.stream(), spanFrames());
         } catch (MidiUnavailableException | InvalidMidiDataException e) {
             throw new IOException(e.getMessage() == null ? "probe failed" : e.getMessage(), e);
         }

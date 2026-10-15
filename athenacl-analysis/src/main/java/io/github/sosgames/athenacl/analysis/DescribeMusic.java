@@ -92,6 +92,10 @@ public final class DescribeMusic {
         if (!layers.isEmpty()) {
             line.append(" layers=").append(layers);
         }
+        int channels = channels(inBar);
+        if (channels > 0) {
+            line.append(" channels=").append(channels);
+        }
         String grid = arpGrid(inBar);
         if (grid != null) {
             line.append(" arp.grid=").append(grid);
@@ -180,13 +184,21 @@ public final class DescribeMusic {
     }
 
     private static String layers(List<NoteEvent> inBar) {
-        TreeSet<String> names = new TreeSet<>();
+        java.util.LinkedHashSet<String> names = new java.util.LinkedHashSet<>();
         for (NoteEvent note : inBar) {
             if (note.layer() != null && !note.layer().isBlank()) {
                 names.add(note.layer());
             }
         }
         return String.join(",", names);
+    }
+
+    private static int channels(List<NoteEvent> inBar) {
+        java.util.LinkedHashSet<Integer> channels = new java.util.LinkedHashSet<>();
+        for (NoteEvent note : inBar) {
+            channels.add(note.channel());
+        }
+        return channels.size();
     }
 
     private static String roll(Score score, int bar, List<NoteEvent> inBar, boolean drums) {

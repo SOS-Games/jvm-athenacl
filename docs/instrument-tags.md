@@ -10,6 +10,8 @@
 | plucky | The attack is quick and the note falls away within 400 ms. |
 | noisy | The spectrum is flat enough that a pitch estimate is not trusted. |
 
+`kit describe --text` also names the tone and the level. Bright is "The tone is bright." Warm is "The tone is dark." A centroid between those two is "The tone is neutral." A level at or above -18 LUFS, or a hot peak, is "The sound is loud." A level at or under -28 LUFS is "The sound is quiet." The band between them is "The sound is average."
+
 Each preset is classified first: pitched-sustained, pitched-percussive, unpitched-percussion, tuned-percussion, ensemble, or synth-raw. A kit line `class:` overrides that. `bad` means a hard flag for that class. Clipping is a true peak past -0.3 dBTP, not a hot level. A hot level is the tag `loud` and a gain trim. A loop click is a spike at a loop boundary after the attack. Unpitched percussion skips pitch, inharmonicity, and loop clicks. Tuned percussion skips inharmonicity and uses a wider pitch tolerance. An ensemble is rough only when the beating is far past a chorus. Pitch is compared as a pitch class; `octave_offset` is recorded and is not a failure. A noisy spectrum does not take the pitch or inharmonicity flags. `caution` means a softer flag, such as a pitch error between 15 and 30 cents, or a velocity change under 3 LU. The reason names the class rule, such as `inharmonicity@class=pitched-sustained`. An `analysis:` block on the kit instrument replaces the measured verdict and is marked `source=override`.
 
 Thresholds live in `instruments/analysis.yaml`. They are starting values. The CC0 bank in `samples/kits/analysis/` is what they are checked against.

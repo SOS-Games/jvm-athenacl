@@ -9,8 +9,10 @@ import javax.sound.midi.MidiSystem;
 import javax.sound.midi.Soundbank;
 import java.io.IOException;
 import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.List;
 
-/** Counts presets in a soundbank file. Drum kits are the percussion patches. */
+/** Lists presets in a soundbank file. Drum kits are the percussion patches. */
 public final class InstrumentIndex {
     private InstrumentIndex() {
     }
@@ -18,15 +20,28 @@ public final class InstrumentIndex {
     public record Counts(int instruments, int drumkits) {
     }
 
+    public record Preset(int bank, int program, String name, boolean percussion) {
+    }
+
     public static Counts count(Path file) throws IOException, InvalidMidiDataException {
-        Soundbank bank = MidiSystem.getSoundbank(file.toFile());
+        List<Preset> presets = list(file);
         int drums = 0;
-        Instrument[] instruments = bank.getInstruments();
-        for (Instrument instrument : instruments) {
-            if (instrument.getPatch() instanceof ModelPatch patch && patch.isPercussion()) {
+        for (Preset preset : presets) {
+            if (preset.percussion()) {
                 drums++;
             }
         }
-        return new Counts(instruments.length, drums);
+        return new Counts(presets.size(), drums);
+    }
+
+    public static List<Preset> list(Path file) throws IOException, InvalidMidiDataException {
+        Soundbank bank = MidiSystem.getSoundbank(file.toFile());
+        List<Preset> presets = new ArrayList<>();
+        for (Instrument instrument : bank.getInstruments()) {
+            boolean percussion = instrument.getPatch() instanceof ModelPatch patch && patch.isPercussion();
+            presets.add(new Preset(instrument.getPatch().getBank(), instrument.getPatch().getProgram(),
+                    instrument.getName(), percussion));
+        }
+        return presets;
     }
 }

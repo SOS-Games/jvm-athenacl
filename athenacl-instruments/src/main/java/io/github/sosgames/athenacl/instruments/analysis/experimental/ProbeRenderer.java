@@ -1,7 +1,9 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-package io.github.sosgames.athenacl.instruments.analysis;
+package io.github.sosgames.athenacl.instruments.analysis.experimental;
 
 import io.github.sosgames.athenacl.render.GervillStreams;
+
+import java.nio.file.Files;
 
 import javax.sound.midi.InvalidMidiDataException;
 import javax.sound.midi.MidiUnavailableException;
@@ -21,6 +23,18 @@ import java.nio.file.Path;
  */
 public final class ProbeRenderer {
     public static final int RATE = 48000;
+
+    static {
+        try {
+            Path marker = Path.of("build", "probe-renderer-loaded");
+            if (marker.getParent() != null) {
+                Files.createDirectories(marker.getParent());
+            }
+            Files.writeString(marker, "loaded\n");
+        } catch (IOException ignored) {
+            // The isolation check only cares when the file can be written.
+        }
+    }
     public static final double HOLD_SECONDS = 2.0;
     public static final double RELEASE_SECONDS = 1.5;
 

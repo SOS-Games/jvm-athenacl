@@ -1,0 +1,7 @@
+kit: bad-tag
+version: 1
+instruments:
+  flute:
+    bank: 0
+    program: 73
+    tags: [sofft]

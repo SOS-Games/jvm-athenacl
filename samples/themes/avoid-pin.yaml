@@ -1,0 +1,8 @@
+id: avoid-pin
+genre: fantasy
+states:
+  sneaking:
+    ensemble:
+      roles:
+        lead:
+          pin: soft_flute

@@ -5,6 +5,10 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+import io.github.sosgames.athenacl.instruments.EngineSettings;
+import io.github.sosgames.athenacl.instruments.analysis.experimental.Descriptors;
+import io.github.sosgames.athenacl.instruments.analysis.experimental.ProbeRenderer;
+import io.github.sosgames.athenacl.instruments.analysis.experimental.Thresholds;
 import io.github.sosgames.athenacl.render.GervillStreams;
 import io.github.sosgames.athenacl.render.soundbank.InstrumentIndex;
 import io.github.sosgames.athenacl.render.soundbank.SoundbankInstaller;
@@ -64,6 +68,9 @@ public final class SoundfontScan {
      */
     public static List<Hit> fill(Path soundfont, Path outDir, String id, Consumer<Hit> onRow)
             throws IOException, InvalidMidiDataException {
+        if (!EngineSettings.analysisEnabled()) {
+            return List.of();
+        }
         Path dest = file(outDir, id);
         Thresholds thresholds = Thresholds.load(Path.of("instruments", "analysis.yaml"));
         String sha = SoundbankInstaller.sha256(soundfont);

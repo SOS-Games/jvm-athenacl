@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-package io.github.sosgames.athenacl.instruments.analysis;
+package io.github.sosgames.athenacl.instruments.analysis.experimental;
 
 import java.util.Locale;
 

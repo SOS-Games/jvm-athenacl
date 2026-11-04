@@ -88,6 +88,18 @@ tasks.register('layerCheck', JavaExec) {
   }
 }
 
+tasks.register('analysisCheck', JavaExec) {
+  group = 'athenacl'
+  description = 'Run the experimental analyzer checks. Sets analysis.enabled.'
+  dependsOn tasks.named('classes')
+  classpath = sourceSets.main.runtimeClasspath
+  mainClass = 'io.github.sosgames.athenacl.cli.LayerCheck'
+  workingDir = rootProject.projectDir
+  jvmArgs = cliJvmArgs + ['-Danalysis.enabled=true']
+  args rootProject.projectDir.absolutePath, sourceSets.main.runtimeClasspath.asPath, '',
+      rootProject.projectDir.absolutePath + '/checks/analysis'
+}
+
 test {
   useJUnitPlatform()
   workingDir = rootProject.projectDir

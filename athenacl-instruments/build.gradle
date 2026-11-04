@@ -13,3 +13,21 @@ test {
   jvmArgs '-Dfile.encoding=UTF-8', '-Djava.awt.headless=true',
       '--add-exports=java.desktop/com.sun.media.sound=ALL-UNNAMED'
 }
+
+tasks.register('analysisTest', Test) {
+  group = 'athenacl'
+  description = 'Run the experimental analyzer unit tests.'
+  testClassesDirs = sourceSets.test.output.classesDirs
+  classpath = sourceSets.test.runtimeClasspath
+  useJUnitPlatform()
+  workingDir = rootProject.projectDir
+  systemProperty 'analysis.enabled', 'true'
+  jvmArgs '-Dfile.encoding=UTF-8', '-Djava.awt.headless=true',
+      '--add-exports=java.desktop/com.sun.media.sound=ALL-UNNAMED'
+  filter {
+    includeTestsMatching 'io.github.sosgames.athenacl.instruments.analysis.FixtureAnalysisTest'
+    includeTestsMatching 'io.github.sosgames.athenacl.instruments.analysis.RegressionVerdictTest'
+    includeTestsMatching 'io.github.sosgames.athenacl.instruments.analysis.CompatibilityTest'
+    includeTestsMatching 'io.github.sosgames.athenacl.instruments.analysis.DescriptorTest'
+  }
+}

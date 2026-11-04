@@ -5,7 +5,6 @@ import io.github.sosgames.athenacl.adaptive.Composition;
 import io.github.sosgames.athenacl.adaptive.LayerSpec;
 import io.github.sosgames.athenacl.adaptive.Theme;
 import io.github.sosgames.athenacl.instruments.analysis.Ensemble;
-import io.github.sosgames.athenacl.instruments.analysis.InstrumentProfile;
 import io.github.sosgames.athenacl.events.ControlEvent;
 import io.github.sosgames.athenacl.events.Score;
 import io.github.sosgames.athenacl.render.SlotSpec;
@@ -22,9 +21,9 @@ import java.util.Map;
 
 /**
  * Renders a theme through its instrument kits. Each named instrument is normalized first.
- * A genre that asks for auto selection plays the ensemble for this seed when that kit's
- * profile is already on disk. The state's loudness contour is applied after that, on the
- * mixed audio. The event log keeps the original program changes, so the musical hash does not move.
+ * A genre that asks for auto selection plays the ensemble for this seed from declared
+ * descriptors. The state's loudness contour is applied after that, on the mixed audio.
+ * The event log keeps the original program changes, so the musical hash does not move.
  */
 public final class ThemeMix {
     private ThemeMix() {
@@ -42,11 +41,10 @@ public final class ThemeMix {
         for (String id : theme.kits()) {
             sessions.add(KitSession.open(Kits.find(id), SoundbankPaths.cache(null), false));
         }
-        InstrumentProfile.Report profile = profile(theme);
         Map<String, Map<String, Playable>> byState = new LinkedHashMap<>();
         Map<String, Playable> used = new LinkedHashMap<>();
         for (Theme.StateDef state : theme.states().values()) {
-            Ensemble.Result ensemble = Ensemble.forPlayback(state.composition(), state.id(), profile, seed);
+            Ensemble.Result ensemble = Ensemble.forPlayback(state.composition(), state.id(), seed);
             Map<String, Playable> patches = new LinkedHashMap<>();
             for (LayerSpec spec : state.specs()) {
                 String patch = spec.channel() + ":" + spec.program();
@@ -94,32 +92,6 @@ public final class ThemeMix {
             }
         }
         return null;
-    }
-
-    private static InstrumentProfile.Report profile(Theme theme) throws IOException, KitException {
-        String kitId = "";
-        for (Theme.StateDef state : theme.states().values()) {
-            Composition composition = state.composition();
-            if (composition == null) {
-                continue;
-            }
-            String kits = composition.text("ensemble.kits", "");
-            if (!kits.isBlank()) {
-                kitId = kits.split(",")[0].trim();
-                break;
-            }
-        }
-        if (kitId.isBlank() && !theme.kits().isEmpty()) {
-            kitId = theme.kits().get(0);
-        }
-        if (kitId.isBlank()) {
-            return null;
-        }
-        try {
-            return InstrumentProfile.openCached(Kits.find(kitId), java.nio.file.Path.of("instruments", "profiles"));
-        } catch (KitException e) {
-            return null;
-        }
     }
 
     private static Score retarget(Score score, Map<String, Map<String, Playable>> byState, List<String> stateByBar) {

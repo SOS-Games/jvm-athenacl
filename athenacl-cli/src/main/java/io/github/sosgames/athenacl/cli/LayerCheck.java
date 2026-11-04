@@ -53,12 +53,16 @@ public final class LayerCheck {
             return;
         }
         String layer = args.length > 2 ? args[2] : null;
-        int code = run(Path.of(args[0]), args[1], layer);
+        Path checks = args.length > 3 ? Path.of(args[3]) : Path.of(args[0]).resolve("checks");
+        int code = run(Path.of(args[0]), checks, args[1], layer);
         System.exit(code);
     }
 
     public static int run(Path root, String classpath, String layer) {
-        Path checks = root.resolve("checks");
+        return run(root, root.resolve("checks"), classpath, layer);
+    }
+
+    public static int run(Path root, Path checks, String classpath, String layer) {
         List<Path> files;
         try {
             files = select(checks, layer);
@@ -258,6 +262,10 @@ public final class LayerCheck {
         cmd.add("-Djava.awt.headless=true");
         cmd.add("-Dpicocli.ansi=false");
         cmd.add("--add-exports=java.desktop/com.sun.media.sound=ALL-UNNAMED");
+        String analysis = System.getProperty("analysis.enabled");
+        if (analysis != null && !analysis.isBlank()) {
+            cmd.add("-Danalysis.enabled=" + analysis);
+        }
         cmd.add("-cp");
         cmd.add(classpath);
         cmd.add(MAIN);

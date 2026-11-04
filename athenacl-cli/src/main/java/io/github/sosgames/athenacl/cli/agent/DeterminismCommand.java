@@ -8,7 +8,8 @@ import io.github.sosgames.athenacl.adaptive.ThemeIssue;
 import io.github.sosgames.athenacl.adaptive.Themes;
 import io.github.sosgames.athenacl.debug.Determinism;
 import io.github.sosgames.athenacl.instruments.KitException;
-import io.github.sosgames.athenacl.instruments.analysis.InstrumentProfile;
+import io.github.sosgames.athenacl.instruments.EngineSettings;
+import io.github.sosgames.athenacl.instruments.Experimental;
 import io.github.sosgames.athenacl.cli.model.ExitCode;
 import io.github.sosgames.athenacl.cli.model.KeyValue;
 import io.github.sosgames.athenacl.events.EventLog;
@@ -72,6 +73,10 @@ public class DeterminismCommand implements Callable<Integer> {
                     "note list not found",
                     "Pass a YAML note list such as samples/notes/c-major-scale.yaml.");
         }
+        if (analyze && !EngineSettings.analysisEnabled()) {
+            KitException.Issue issue = EngineSettings.disabled().issues().get(0);
+            return parent.fail(ExitCode.USAGE, issue.code(), issue.path(), issue.message(), issue.fix());
+        }
         Determinism.Report report;
         try {
             if (forkJvm) {
@@ -118,14 +123,23 @@ public class DeterminismCommand implements Callable<Integer> {
     private String hashOnce() {
         try {
             if (analyze) {
-                return InstrumentProfile.analyze(notes, out).hash();
+                if (!EngineSettings.analysisEnabled()) {
+                    throw new IllegalStateException("analysis disabled; set analysis.enabled=true (experimental)");
+                }
+                try {
+                    return Experimental.call("hash",
+                            new Class<?>[] {String.class, String.class},
+                            new Object[] {notes.toString(), out == null ? "" : out.toString()});
+                } catch (Exception e) {
+                    throw new IllegalStateException(e);
+                }
             }
             if (Themes.looksLike(notes)) {
                 Theme theme = Themes.load(notes);
                 return EventLog.hash(Director.perform(theme, theme.timeline(), seed).score());
             }
             return EventLog.hash(NoteFiles.yaml(notes, seed));
-        } catch (IOException | ScoreException | ThemeException | KitException e) {
+        } catch (IOException | ScoreException | ThemeException e) {
             throw new IllegalStateException(e);
         }
     }
@@ -171,6 +185,10 @@ public class DeterminismCommand implements Callable<Integer> {
         cmd.add("-Djava.awt.headless=true");
         cmd.add("-Dpicocli.ansi=false");
         cmd.add("--add-exports=java.desktop/com.sun.media.sound=ALL-UNNAMED");
+        String analysis = System.getProperty("analysis.enabled");
+        if (analysis != null && !analysis.isBlank()) {
+            cmd.add("-Danalysis.enabled=" + analysis);
+        }
         cmd.add("-cp");
         cmd.add(System.getProperty("java.class.path"));
         cmd.add("io.github.sosgames.athenacl.cli.agent.AgentCli");

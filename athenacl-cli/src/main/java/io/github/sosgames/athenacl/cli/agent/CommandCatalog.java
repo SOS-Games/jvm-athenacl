@@ -178,7 +178,7 @@ public final class CommandCatalog {
                     "athenacl.result.instrument/1"),
             new CommandInfo(
                     "kit",
-                    "kit validate checks sources, licenses, SF3 files, and slot assignment. kit analyze probes a kit and writes a profile. kit describe prints one instrument's verdict. kit scan lists every preset in a soundfont. kit lint checks a resolved theme. kit fit scores one role. kit compat compares a pair.",
+                    "kit validate checks sources, licenses, SF3 files, and slot assignment. kit describe prints a resolved descriptor. kit tag writes declared fields. kit scan lists every preset in a soundfont. kit lint checks descriptor rules. kit analyze, kit fit, and kit compat are experimental and stay off unless analysis.enabled is true.",
                     List.of(
                             gradle("kit validate instruments/gm-lite.yaml"),
                             gradle("kit analyze samples/kits/analysis.yaml"),
@@ -190,8 +190,8 @@ public final class CommandCatalog {
                     "athenacl.result.kit/1"),
             new CommandInfo(
                     "ensemble",
-                    "ensemble select fills each role from a kit profile. The same seed picks the same instruments. A missing profile keeps the fixed names.",
-                    List.of(gradle("ensemble select --genre fantasy --state sneaking --seed 1 --kit analysis")),
+                    "ensemble select fills each role from declared descriptors. The same seed picks the same instruments. --explain shows candidates, scores, and relaxations.",
+                    List.of(gradle("ensemble select --genre fantasy --state sneaking --seed 1 --explain")),
                     false,
                     "athenacl.result.ensemble/1"),
             new CommandInfo(

@@ -1,5 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-package io.github.sosgames.athenacl.instruments.analysis;
+package io.github.sosgames.athenacl.instruments.analysis.experimental;
+
+import io.github.sosgames.athenacl.instruments.analysis.InstrumentProfile;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -403,7 +405,7 @@ public final class Compatibility {
         return a <= b ? new int[] {a, b} : new int[] {b, a};
     }
 
-    static String layerName(String source) {
+    public static String layerName(String source) {
         if (source == null || source.isBlank()) {
             return "";
         }

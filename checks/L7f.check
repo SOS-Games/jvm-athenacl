@@ -1,48 +1,44 @@
-# L7f ensemble selection. Directive list: AGENTS.md, section "Layer checks".
+# L7f ensemble selection from descriptors. Directive list: AGENTS.md, section "Layer checks".
 
 name: fantasy sneaking fills every role
-args: ensemble select --genre fantasy --state sneaking --seed 1 --kit analysis
+args: ensemble select --genre fantasy --state sneaking --seed 1 --explain
 exit: 0
 stdout-contains: role=lead
 stdout-contains: role=pad
 stdout-contains: role=bass
 stdout-contains: role=arp
-stdout-contains: pairs.maxRoughness<=
-stdout-not-contains: verdict=bad
+stdout-contains: seed=1/ensemble/lead
+stdout-not-contains: pairs.maxRoughness
 stdout-not-contains: ensemble.fallback
-stdout-same-as: ensemble select --genre fantasy --state sneaking --seed 1 --kit analysis
 
 ---
-name: another seed stays inside the constraint
-args: ensemble select --genre fantasy --state sneaking --seed 2 --kit analysis
+name: the same seed matches
+args: ensemble select --genre fantasy --state sneaking --seed 1
 exit: 0
-stdout-contains: pairs.maxRoughness<=
-stdout-not-contains: verdict=bad
+stdout-same-as: ensemble select --genre fantasy --state sneaking --seed 1
+
+---
+name: another seed still selects
+args: ensemble select --genre fantasy --state sneaking --seed 2
+exit: 0
+stdout-contains: role=lead
 stdout-not-contains: ensemble.fallback
 
 ---
 name: a pin names the lead
-args: ensemble select samples/themes/pin.yaml --state combat --kit analysis
+args: ensemble select samples/themes/pin.yaml --state combat --seed 1
 exit: 0
 stdout-contains: role=lead instrument=saw
 stdout-contains: from=pin
-stdout-contains: from=auto
 
 ---
-name: a missing profile keeps the fixed instruments
+name: a missing kit keeps the fixed instruments
 args: ensemble select --genre fantasy --state sneaking --kit nosuchprofile
 exit: 0
 stdout-contains: ensemble.fallback=fixed
 
 ---
 name: resolve names the automatic source
-args: theme resolve --genre fantasy --state sneaking --seed 1 --kit analysis --explain
+args: theme resolve --genre fantasy --state sneaking --seed 1 --explain
 exit: 0
 stdout-contains: source=ensemble:auto
-
----
-name: lint lists every instrument in the kit
-args: kit lint --genre fantasy --all-states --seed 1 --kit analysis
-exit: 3
-stdout-contains: instruments=7
-stdout-contains: finding=INSTR_BAD

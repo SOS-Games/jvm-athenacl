@@ -1,0 +1,9 @@
+kit: tag
+version: 1
+instruments:
+  soft_flute: {bank: 0, program: 73}
+  piano: {bank: 0, program: 0}
+  warm_pad: {bank: 0, program: 89}
+  finger_bass: {bank: 0, program: 33}
+  harp: {bank: 0, program: 46}
+  square: {bank: 0, program: 80}

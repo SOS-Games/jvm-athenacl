@@ -5,9 +5,15 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.github.sosgames.athenacl.events.EventLog;
 import io.github.sosgames.athenacl.events.PitchName;
+import io.github.sosgames.athenacl.instruments.EngineSettings;
 import io.github.sosgames.athenacl.instruments.Kit;
 import io.github.sosgames.athenacl.instruments.KitException;
 import io.github.sosgames.athenacl.instruments.Kits;
+import io.github.sosgames.athenacl.instruments.analysis.experimental.ClassVerdict;
+import io.github.sosgames.athenacl.instruments.analysis.experimental.Descriptors;
+import io.github.sosgames.athenacl.instruments.analysis.experimental.ProbeRenderer;
+import io.github.sosgames.athenacl.instruments.analysis.experimental.SoundClass;
+import io.github.sosgames.athenacl.instruments.analysis.experimental.Thresholds;
 import io.github.sosgames.athenacl.render.soundbank.SoundbankCatalog;
 import io.github.sosgames.athenacl.render.soundbank.SoundbankInstaller;
 import io.github.sosgames.athenacl.render.soundbank.SoundbankPaths;
@@ -84,6 +90,9 @@ public final class InstrumentProfile {
      * Lint calls {@link #analyze} in that case and writes one row per instrument.
      */
     public static Report openCached(Path kitFile, Path outDir) throws IOException, KitException {
+        if (!EngineSettings.analysisEnabled()) {
+            return null;
+        }
         Kit kit = Kits.load(kitFile);
         Thresholds thresholds = Thresholds.load(Path.of("instruments", "analysis.yaml"));
         return readCache(profileFile(outDir, kit.id()), kit, kit.instruments(), thresholds.probeVersion());
@@ -91,6 +100,9 @@ public final class InstrumentProfile {
 
     public static Report analyze(Path kitFile, Path outDir, List<String> only, Integer probeVersion)
             throws IOException, KitException {
+        if (!EngineSettings.analysisEnabled()) {
+            throw EngineSettings.disabled();
+        }
         Kit kit = Kits.load(kitFile);
         Thresholds thresholds = Thresholds.load(Path.of("instruments", "analysis.yaml"));
         int version = probeVersion == null ? thresholds.probeVersion() : probeVersion;
@@ -139,6 +151,9 @@ public final class InstrumentProfile {
 
     public static Descriptors.Measurement probe(Path kitFile, String name, int midi, int velocity)
             throws IOException, KitException {
+        if (!EngineSettings.analysisEnabled()) {
+            throw EngineSettings.disabled();
+        }
         Kit kit = Kits.load(kitFile);
         Kit.Instrument instrument = kit.instrument(name);
         if (instrument == null) {

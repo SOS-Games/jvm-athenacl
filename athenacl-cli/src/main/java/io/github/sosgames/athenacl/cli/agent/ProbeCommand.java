@@ -4,10 +4,9 @@ package io.github.sosgames.athenacl.cli.agent;
 import io.github.sosgames.athenacl.cli.model.ExitCode;
 import io.github.sosgames.athenacl.cli.model.KeyValue;
 import io.github.sosgames.athenacl.events.PitchName;
+import io.github.sosgames.athenacl.instruments.EngineSettings;
+import io.github.sosgames.athenacl.instruments.Experimental;
 import io.github.sosgames.athenacl.instruments.KitException;
-import io.github.sosgames.athenacl.instruments.Kits;
-import io.github.sosgames.athenacl.instruments.analysis.Descriptors;
-import io.github.sosgames.athenacl.instruments.analysis.InstrumentProfile;
 import picocli.CommandLine;
 
 import java.io.IOException;
@@ -53,26 +52,16 @@ public class ProbeCommand implements Callable<Integer> {
             return parent.fail(ExitCode.INVALID_INPUT, "INVALID_INPUT", "--velocity",
                     "velocity must be from 1 to 127", "Try --velocity 80.");
         }
+        if (!EngineSettings.analysisEnabled()) {
+            KitException.Issue issue = EngineSettings.disabled().issues().get(0);
+            return parent.fail(ExitCode.USAGE, issue.code(), issue.path(), issue.message(), issue.fix());
+        }
         try {
-            Descriptors.Measurement measurement = InstrumentProfile.probe(
-                    Kits.find(kitId), name, midi, velocity);
-            Map<String, String> fields = new LinkedHashMap<>();
-            fields.put("instrument", name);
-            fields.put("pitch", pitch);
-            fields.put("velocity", Integer.toString(velocity));
-            fields.put("pitch.errorCents", String.format(Locale.US, "%.1f", measurement.pitchErrorCents()));
-            fields.put("octave_offset", Integer.toString(measurement.octaveOffset()));
-            fields.put("inharmonic.energy", String.format(Locale.US, "%.2f", measurement.inharmonicEnergy()));
-            fields.put("spectral.centroidRatio", String.format(Locale.US, "%.2f", measurement.centroidRatio()));
-            fields.put("spectral.flatness", String.format(Locale.US, "%.2f", measurement.flatness()));
-            fields.put("attack.ms", String.format(Locale.US, "%.1f", measurement.attackMs()));
-            fields.put("decay.ms", String.format(Locale.US, "%.1f", measurement.decayMs()));
-            fields.put("peak.dbfs", String.format(Locale.US, "%.1f", measurement.peakDbfs()));
-            fields.put("clipping", Integer.toString(measurement.clipCount()));
-            fields.put("loopClicks", Integer.toString(measurement.loopClicks()));
-            fields.put("loudness.integrated", String.format(Locale.US, "%.1f", measurement.loudnessLu()));
-            return parent.finish(ExitCode.OK, KeyValue.line(fields), "athenacl.result.kit/1",
-                    new LinkedHashMap<>(fields), List.of(), List.of());
+            String text = Experimental.call("probe",
+                    new Class<?>[] {String.class, String.class, String.class, String.class, String.class},
+                    new Object[] {kitId, name, pitch, Integer.toString(midi), Integer.toString(velocity)});
+            return parent.finish(ExitCode.OK, text, "athenacl.result.kit/1",
+                    new LinkedHashMap<>(), List.of(), List.of());
         } catch (KitException e) {
             KitException.Issue issue = e.issues().get(0);
             ExitCode code = "NOT_FOUND".equals(issue.code()) || "KIT_NOT_FOUND".equals(issue.code())
@@ -82,6 +71,10 @@ public class ProbeCommand implements Callable<Integer> {
             return parent.fail(ExitCode.RUNTIME, "IO_ERROR", "--kit",
                     e.getMessage() == null ? "probe failed" : e.getMessage(),
                     "Check that the soundfont can be read.");
+        } catch (Exception e) {
+            return parent.fail(ExitCode.INTERNAL, "INTERNAL", "--kit",
+                    e.getMessage() == null ? "probe failed" : e.getMessage(),
+                    "Set analysis.enabled=true only for the experimental probe.");
         }
     }
 }

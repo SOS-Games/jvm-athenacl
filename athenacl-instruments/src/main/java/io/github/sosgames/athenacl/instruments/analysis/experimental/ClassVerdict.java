@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-package io.github.sosgames.athenacl.instruments.analysis;
+package io.github.sosgames.athenacl.instruments.analysis.experimental;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -80,7 +80,7 @@ public final class ClassVerdict {
         return inharmonic >= limit;
     }
 
-    static String rule(String code, String cls) {
+    public static String rule(String code, String cls) {
         return code + "@class=" + cls;
     }
 }

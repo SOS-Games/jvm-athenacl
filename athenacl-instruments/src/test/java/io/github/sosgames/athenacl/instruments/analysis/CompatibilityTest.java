@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 package io.github.sosgames.athenacl.instruments.analysis;
 
+import io.github.sosgames.athenacl.instruments.analysis.experimental.Compatibility;
+import io.github.sosgames.athenacl.instruments.analysis.experimental.SoundClass;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;

@@ -1,0 +1,74 @@
+# L7k descriptors. Directive list: AGENTS.md, section "Layer checks".
+
+name: analysis is disabled
+args: kit analyze samples/kits/analysis.yaml
+exit: 2
+stderr-contains: analysis disabled; set analysis.enabled=true (experimental)
+
+---
+name: an untagged preset uses the GM table
+args: kit describe flute
+exit: 0
+stdout-contains: source=gm-default
+stdout-contains: roles=lead
+
+---
+name: an unknown tag is rejected
+args: kit describe flute --kit samples/kits/bad-tag.yaml
+exit: 3
+stdout-contains: Did you mean
+stdout-contains: soft
+
+---
+name: tagging writes a declared field
+delete-before: build/l7k
+args: kit tag soft_flute avoid=true tags=soft,airy --kit samples/kits/tag.yaml --out build/l7k/tagged.yaml
+exit: 0
+stdout-contains: avoid=true
+stdout-contains: wrote=build/l7k/tagged.yaml
+file-exists: build/l7k/tagged.yaml
+
+---
+name: describe reads the declared tag
+args: kit describe soft_flute --kit build/l7k/tagged.yaml
+exit: 0
+stdout-contains: source=declared
+stdout-contains: avoid=true
+
+---
+name: fantasy explains a seeded ensemble
+args: ensemble select --genre fantasy --state sneaking --seed 1 --explain
+exit: 0
+stdout-contains: seed=1/ensemble/
+stdout-contains: candidate=
+
+---
+name: the same seed matches in a fresh process
+args: ensemble select --genre fantasy --state sneaking --seed 1
+exit: 0
+stdout-same-as: ensemble select --genre fantasy --state sneaking --seed 1
+
+---
+name: sci-fi selects without a profile
+args: ensemble select --genre scifi-space --state peaceful --seed 1 --explain
+exit: 0
+stdout-contains: role=lead
+
+---
+name: lo-fi selects without a profile
+args: ensemble select --genre lofi --state peaceful --seed 1 --explain
+exit: 0
+stdout-contains: role=bass
+
+---
+name: a pin of an avoided instrument warns
+args: kit lint samples/themes/avoid-pin.yaml --state sneaking --kit build/l7k/tagged.yaml
+exit: 0
+stdout-contains: finding=AVOID_PINNED
+stdout-contains: soft_flute
+
+---
+name: strict promotes that warning
+args: --strict kit lint samples/themes/avoid-pin.yaml --state sneaking --kit build/l7k/tagged.yaml
+exit: 3
+stdout-contains: finding=AVOID_PINNED

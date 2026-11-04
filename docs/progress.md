@@ -185,3 +185,7 @@ A genre no longer has to name one key, one progression, and one tempo. `scale`, 
 ## L7f — Ensemble selection
 
 `ensemble select` fills each role from a profile. Fantasy and sci-fi ask for that. The same seed always picks the same instruments, chosen from the top few that stay inside the pair limits. A pinned role stays pinned. A missing profile keeps the fixed instrument names. `theme resolve --seed` prints those choices with `source=ensemble:auto`.
+
+## L7k — Descriptors instead of measured analysis
+
+Measured probe analysis is off unless `analysis.enabled` is true. Ensemble selection reads declared descriptors and the General MIDI table, so an empty profiles directory still selects. `kit tag` writes fields such as `avoid=true`. `kit describe` names the source of each field. `gradlew analysisCheck` still runs the old probe tests. No golden MIDI file changed.

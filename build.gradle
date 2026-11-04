@@ -35,4 +35,10 @@ tasks.register('layerCheck') {
   dependsOn ':athenacl-cli:layerCheck'
 }
 
+tasks.register('analysisCheck') {
+  group = 'athenacl'
+  description = 'Run the experimental analyzer checks and unit tests.'
+  dependsOn ':athenacl-instruments:analysisTest', ':athenacl-cli:analysisCheck'
+}
+
 eclipse.project.name = 'jvm-athenacl-parent'

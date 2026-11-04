@@ -14,8 +14,10 @@ import com.badlogic.gdx.scenes.scene2d.utils.ChangeListener;
 import com.badlogic.gdx.utils.Align;
 import io.github.sosgames.athenacl.instruments.Kit;
 import io.github.sosgames.athenacl.instruments.Kits;
+import io.github.sosgames.athenacl.instruments.EngineSettings;
 import io.github.sosgames.athenacl.instruments.analysis.InstrumentProfile;
-import io.github.sosgames.athenacl.instruments.analysis.ProbeRenderer;
+import io.github.sosgames.athenacl.instruments.descriptors.DescriptorResolver;
+import io.github.sosgames.athenacl.instruments.analysis.experimental.ProbeRenderer;
 import io.github.sosgames.athenacl.instruments.analysis.SoundfontScan;
 import io.github.sosgames.athenacl.render.soundbank.InstrumentIndex;
 import io.github.sosgames.athenacl.render.soundbank.SoundbankCatalog;
@@ -85,7 +87,8 @@ final class SoundBrowser {
     void load() {
         try {
             List<Font> fonts = installed();
-            Map<String, InstrumentProfile.Row> kitRows = profileRows();
+            boolean analysis = EngineSettings.analysisEnabled();
+            Map<String, InstrumentProfile.Row> kitRows = analysis ? profileRows() : new HashMap<>();
             Map<Integer, String> melodic = new HashMap<>();
             Map<Integer, String> drums = new HashMap<>();
             try {
@@ -121,11 +124,11 @@ final class SoundBrowser {
                                 : melodic.get(preset.program());
                         row = name == null ? null : kitRows.get(name);
                     }
-                    boolean waiting = row == null;
+                    boolean waiting = analysis && row == null;
                     if (waiting) {
                         pending++;
                     }
-                    built.add(new Line(sound, describe(sound, row, waiting), label(sound, row)));
+                    built.add(new Line(sound, describe(sound, row, waiting, analysis), label(sound, row)));
                 }
             }
             built.sort(Comparator.comparing((Line line) -> line.sound.font(), String.CASE_INSENSITIVE_ORDER)
@@ -137,8 +140,10 @@ final class SoundBrowser {
             List<Line> shown = built;
             String opening = head;
             Gdx.app.postRunnable(() -> show(shown, opening));
-            for (Font font : fonts) {
-                SoundfontScan.fill(font.file, SoundfontScan.directory(), font.id, hit -> apply(font, hit));
+            if (analysis) {
+                for (Font font : fonts) {
+                    SoundfontScan.fill(font.file, SoundfontScan.directory(), font.id, hit -> apply(font, hit));
+                }
             }
             Gdx.app.postRunnable(this::refreshHeader);
         } catch (Exception e) {
@@ -157,7 +162,7 @@ final class SoundBrowser {
                         || preset.percussion() != hit.percussion()) {
                     continue;
                 }
-                line.text = describe(line.sound, hit.row(), false);
+                line.text = describe(line.sound, hit.row(), false, true);
                 line.label = label(line.sound, hit.row());
                 if (line.button != null) {
                     line.button.setText(line.label);
@@ -288,10 +293,13 @@ final class SoundBrowser {
         return rows;
     }
 
-    private static String describe(Choice sound, InstrumentProfile.Row row, boolean waiting) {
+    private static String describe(Choice sound, InstrumentProfile.Row row, boolean waiting, boolean analysis) {
         InstrumentIndex.Preset preset = sound.preset();
         String name = soundName(preset);
         String head = name + "\nSoundfont: " + sound.font();
+        if (!analysis) {
+            return head + "\n" + DescriptorResolver.blurb(preset.program(), preset.percussion());
+        }
         if (row == null) {
             String state = waiting ? "Analyzing this preset." : "This preset has not been analyzed.";
             return head + "\n" + family(preset) + "\n" + state;

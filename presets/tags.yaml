@@ -1,0 +1,24 @@
+# Vocabulary for instrument descriptors. Add a tag here. No Java change is required.
+roles: [lead, pad, bass, arp, perc, drone, fx]
+classes:
+  - pitched-sustained
+  - pitched-percussive
+  - unpitched-perc
+  - tuned-perc
+  - ensemble
+  - synth
+tags:
+  - warm
+  - bright
+  - dark
+  - soft
+  - plucky
+  - sustained
+  - percussive
+  - airy
+  - metallic
+  - harsh
+  - retro
+  - ethnic
+  - orchestral
+  - electronic

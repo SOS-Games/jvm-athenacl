@@ -5,11 +5,14 @@ import io.github.sosgames.athenacl.cli.model.AtomicFiles;
 import io.github.sosgames.athenacl.cli.model.ExitCode;
 import io.github.sosgames.athenacl.cli.model.KeyValue;
 import io.github.sosgames.athenacl.cli.model.Suggestions;
+import io.github.sosgames.athenacl.instruments.EngineSettings;
+import io.github.sosgames.athenacl.instruments.Experimental;
 import io.github.sosgames.athenacl.instruments.Kit;
 import io.github.sosgames.athenacl.instruments.KitException;
 import io.github.sosgames.athenacl.instruments.KitSession;
 import io.github.sosgames.athenacl.instruments.Kits;
-import io.github.sosgames.athenacl.instruments.analysis.InstrumentProfile;
+import io.github.sosgames.athenacl.instruments.descriptors.DescriptorResolver;
+import io.github.sosgames.athenacl.instruments.descriptors.KitTagger;
 import io.github.sosgames.athenacl.render.soundbank.InstrumentIndex;
 import io.github.sosgames.athenacl.render.soundbank.SoundbankPaths;
 import io.github.sosgames.athenacl.render.soundbank.SoundbankRejected;
@@ -29,13 +32,14 @@ import java.util.concurrent.Callable;
 
 /**
  * {@code kit validate} checks checksums, licenses, and slots.
- * {@code kit analyze} probes each instrument and writes a profile.
- * {@code kit describe} prints one instrument's verdict from that profile.
+ * {@code kit analyze} is off unless {@code analysis.enabled} is true.
+ * {@code kit describe} prints the resolved descriptor and where each field came from.
+ * {@code kit tag} writes those fields into the kit YAML.
  * {@code kit scan} lists every preset in a soundfont.
  */
 @CommandLine.Command(name = "kit", description = "Validate, analyze, or scan an instrument kit.",
         subcommands = {KitCommand.Validate.class, KitCommand.Analyze.class, KitCommand.Describe.class,
-                KitCommand.Scan.class,
+                KitCommand.Tag.class, KitCommand.Scan.class,
                 KitAnalysisCommands.Lint.class, KitAnalysisCommands.Compat.class, KitAnalysisCommands.Fit.class})
 public class KitCommand implements Callable<Integer> {
     @CommandLine.ParentCommand AgentCli parent;
@@ -110,36 +114,34 @@ public class KitCommand implements Callable<Integer> {
                 return parent.fail(ExitCode.USAGE, "USAGE", "argv[2]", "usage: kit analyze <kit.yaml>",
                         "Try kit analyze samples/kits/analysis.yaml.");
             }
+            if (!EngineSettings.analysisEnabled()) {
+                return disabled(parent);
+            }
             try {
-                InstrumentProfile.Report report = InstrumentProfile.analyze(
-                        file, out, names(instruments), probeVersion);
-                StringBuilder text = new StringBuilder();
-                for (InstrumentProfile.Row row : report.rows()) {
-                    text.append(InstrumentProfile.rowLine(row, report.cached())).append('\n');
-                }
-                text.append("analyzed=").append(report.analyzed())
-                        .append(" bad=").append(report.bad())
-                        .append(" cached=").append(report.cached())
-                        .append(" hash=").append(report.hash());
-                Map<String, Object> data = new LinkedHashMap<>();
-                data.put("analyzed", report.analyzed());
-                data.put("bad", report.bad());
-                data.put("cached", report.cached());
-                data.put("hash", report.hash());
-                data.put("instruments", report.rows().stream().map(InstrumentProfile.Row::name).toList());
-                return parent.finish(ExitCode.OK, text.toString(), "athenacl.result.kit/1",
-                        data, List.of(), List.of());
+                String text = Experimental.call("analyze",
+                        new Class<?>[] {String.class, String.class, String.class, String.class},
+                        new Object[] {
+                                file.toString(),
+                                out == null ? "" : out.toString(),
+                                instruments == null ? "" : instruments,
+                                probeVersion == null ? "" : probeVersion.toString()});
+                return parent.finish(ExitCode.OK, text, "athenacl.result.kit/1",
+                        new LinkedHashMap<>(), List.of(), List.of());
             } catch (KitException e) {
                 return fail(parent, e);
             } catch (IOException e) {
                 return parent.fail(ExitCode.RUNTIME, "IO_ERROR", "argv[2]",
                         e.getMessage() == null ? "probe failed" : e.getMessage(),
                         "Check that the soundfont can be read.");
+            } catch (Exception e) {
+                return parent.fail(ExitCode.INTERNAL, "INTERNAL", "argv[2]",
+                        e.getMessage() == null ? "probe failed" : e.getMessage(),
+                        "Set analysis.enabled=true only for the experimental probe.");
             }
         }
     }
 
-    @CommandLine.Command(name = "describe", description = "Print one instrument's verdict.")
+    @CommandLine.Command(name = "describe", description = "Print one instrument's resolved descriptor.")
     public static class Describe implements Callable<Integer> {
         @CommandLine.ParentCommand KitCommand kit;
         @CommandLine.Parameters(index = "0", arity = "0..1", paramLabel = "<name>")
@@ -157,86 +159,97 @@ public class KitCommand implements Callable<Integer> {
         public Integer call() {
             AgentCli parent = kit.cli();
             parent.commandName = "kit describe";
+            if (name == null || name.isBlank()) {
+                return parent.fail(ExitCode.USAGE, "USAGE", "argv[2]",
+                        "usage: kit describe <instrument>", "Try kit describe flute.");
+            }
             Path file = Kits.find(kitId);
             try {
+                if (!Files.isRegularFile(file)) {
+                    return parent.fail(ExitCode.NOT_FOUND, "KIT_NOT_FOUND", "--kit", "kit not found",
+                            "Pass a kit such as gm-lite.");
+                }
                 Kit loaded = Kits.load(file);
-                if (name != null && loaded.instrument(name) == null) {
+                if (loaded.instrument(name) == null) {
                     List<String> names = new ArrayList<>();
                     for (Kit.Instrument instrument : loaded.instruments()) {
                         names.add(instrument.name());
                     }
                     String near = Suggestions.nearest(name, names, 4);
-                    String fix = near == null
-                            ? "Pass a name from the kit."
-                            : "Did you mean " + near + "?";
-                    return parent.fail(ExitCode.NOT_FOUND, "NOT_FOUND", "argv[2]",
-                            "instrument not found", fix);
+                    String fix = near == null ? "Pass a name from the kit." : "Did you mean " + near + "?";
+                    return parent.fail(ExitCode.NOT_FOUND, "NOT_FOUND", "argv[2]", "instrument not found", fix);
                 }
-                InstrumentProfile.Report report = InstrumentProfile.analyze(file, out);
-                List<InstrumentProfile.Row> rows = new ArrayList<>();
-                for (InstrumentProfile.Row row : report.rows()) {
-                    if (name != null && !row.name().equals(name)) {
-                        continue;
-                    }
-                    if (where != null && !matches(row, where)) {
-                        continue;
-                    }
-                    rows.add(row);
+                if (EngineSettings.analysisEnabled()) {
+                    String printed = Experimental.call("describe",
+                            new Class<?>[] {String.class, String.class, String.class, String.class, String.class},
+                            new Object[] {
+                                    file.toString(), name,
+                                    out == null ? "" : out.toString(),
+                                    Boolean.toString(text),
+                                    where == null ? "" : where});
+                    return parent.finish(ExitCode.OK, printed, "athenacl.result.kit/1",
+                            new LinkedHashMap<>(), List.of(), List.of());
                 }
-                if (name != null && rows.isEmpty()) {
-                    return parent.fail(ExitCode.NOT_FOUND, "NOT_FOUND", "argv[2]",
-                            "instrument not found", "Pass a name from the kit.");
-                }
-                StringBuilder printed = new StringBuilder();
-                List<Map<String, Object>> dataRows = new ArrayList<>();
-                for (InstrumentProfile.Row row : rows) {
-                    if (printed.length() > 0) {
-                        printed.append('\n');
-                    }
-                    printed.append(text ? InstrumentProfile.text(row) : InstrumentProfile.rowLine(row, null));
-                    dataRows.add(data(row));
-                }
-                Object data = rows.size() == 1 ? dataRows.get(0) : Map.of("instruments", dataRows);
-                return parent.finish(ExitCode.OK, printed.toString(), "athenacl.result.kit/1",
+                DescriptorResolver.Resolved resolved = DescriptorResolver.one(file, name);
+                Map<String, Object> data = new LinkedHashMap<>();
+                data.put("instrument", resolved.id());
+                data.put("roles", resolved.roles());
+                data.put("rolesSource", resolved.rolesSource());
+                data.put("tags", resolved.tags());
+                data.put("tagsSource", resolved.tagsSource());
+                data.put("class", resolved.soundClass());
+                data.put("classSource", resolved.classSource());
+                data.put("avoid", resolved.avoid());
+                data.put("avoidSource", resolved.avoidSource());
+                data.put("notes", resolved.notes());
+                return parent.finish(ExitCode.OK, resolved.text(), "athenacl.result.kit/1",
                         data, List.of(), List.of());
             } catch (KitException e) {
                 return fail(parent, e);
             } catch (IOException e) {
                 return parent.fail(ExitCode.RUNTIME, "IO_ERROR", "--kit",
-                        e.getMessage() == null ? "probe failed" : e.getMessage(),
-                        "Check that the soundfont can be read.");
+                        e.getMessage() == null ? "describe failed" : e.getMessage(),
+                        "Check that the kit file can be read.");
+            } catch (Exception e) {
+                return parent.fail(ExitCode.INTERNAL, "INTERNAL", "--kit",
+                        e.getMessage() == null ? "describe failed" : e.getMessage(),
+                        "Set analysis.enabled=true only for the experimental probe.");
             }
         }
+    }
 
-        private static boolean matches(InstrumentProfile.Row row, String where) {
-            int eq = where.indexOf('=');
-            if (eq < 0) {
-                return false;
-            }
-            String key = where.substring(0, eq);
-            String value = where.substring(eq + 1);
-            return switch (key) {
-                case "verdict" -> row.verdict().equals(value);
-                case "tag", "tags" -> row.tags().contains(value);
-                case "reason", "reasons" -> row.reasons().stream()
-                        .anyMatch(reason -> reason.equals(value) || reason.startsWith(value + "@"));
-                default -> false;
-            };
-        }
+    @CommandLine.Command(name = "tag", description = "Write declared descriptor fields into a kit.")
+    public static class Tag implements Callable<Integer> {
+        @CommandLine.ParentCommand KitCommand kit;
+        @CommandLine.Parameters(index = "0", arity = "0..1", paramLabel = "<instrument>")
+        String name;
+        @CommandLine.Parameters(index = "1..*", arity = "0..*", paramLabel = "key=value")
+        List<String> assignments;
+        @CommandLine.Option(names = "--kit", paramLabel = "<id>", defaultValue = "gm-lite")
+        String kitId;
+        @CommandLine.Option(names = "--out", paramLabel = "<file>")
+        Path out;
 
-        private static Map<String, Object> data(InstrumentProfile.Row row) {
-            Map<String, Object> data = new LinkedHashMap<>();
-            data.put("instrument", row.name());
-            data.put("verdict", row.verdict());
-            data.put("reasons", row.reasons());
-            data.put("tags", row.tags());
-            data.put("pitchErrorCents", row.pitchErrorCents());
-            data.put("class", row.soundClass());
-            data.put("octaveOffset", row.octaveOffset());
-            if ("override".equals(row.source())) {
-                data.put("source", "override");
+        @Override
+        public Integer call() {
+            AgentCli parent = kit.cli();
+            parent.commandName = "kit tag";
+            if (name == null || name.isBlank()) {
+                return parent.fail(ExitCode.USAGE, "USAGE", "argv[2]",
+                        "usage: kit tag <instrument> key=value", "Try kit tag soft_flute avoid=true.");
             }
-            return data;
+            try {
+                String text = KitTagger.write(Kits.find(kitId), name,
+                        assignments == null ? new String[0] : assignments.toArray(String[]::new), out);
+                return parent.finish(ExitCode.OK, text, "athenacl.result.kit/1",
+                        new LinkedHashMap<>(), List.of(), List.of());
+            } catch (KitException e) {
+                return fail(parent, e);
+            } catch (IOException e) {
+                return parent.fail(ExitCode.RUNTIME, "IO_ERROR", "--out",
+                        e.getMessage() == null ? "tag failed" : e.getMessage(),
+                        "Check that the kit file can be written.");
+            }
         }
     }
 
@@ -362,8 +375,16 @@ public class KitCommand implements Callable<Integer> {
         }
     }
 
+    private static int disabled(AgentCli parent) {
+        KitException.Issue issue = EngineSettings.disabled().issues().get(0);
+        return parent.fail(ExitCode.USAGE, issue.code(), issue.path(), issue.message(), issue.fix());
+    }
+
     private static int fail(AgentCli parent, KitException e) {
         KitException.Issue issue = e.issues().get(0);
+        if ("ANALYSIS_DISABLED".equals(issue.code())) {
+            return parent.fail(ExitCode.USAGE, issue.code(), issue.path(), issue.message(), issue.fix());
+        }
         ExitCode code = "NOT_FOUND".equals(issue.code()) || "KIT_NOT_FOUND".equals(issue.code())
                 ? ExitCode.NOT_FOUND
                 : ExitCode.INVALID_INPUT;

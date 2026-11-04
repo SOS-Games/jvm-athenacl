@@ -14,8 +14,8 @@ import java.util.Map;
 import java.util.concurrent.Callable;
 
 /**
- * {@code ensemble select} fills each role from a kit profile.
- * The same seed picks the same instruments. A missing profile keeps the fixed names.
+ * {@code ensemble select} fills each role from declared descriptors.
+ * The same seed picks the same instruments. A missing kit keeps the fixed names.
  */
 @CommandLine.Command(name = "ensemble", description = "Choose instruments for a genre state.",
         subcommands = {EnsembleCommand.Select.class})
@@ -66,10 +66,7 @@ public class EnsembleCommand implements Callable<Integer> {
             }
             try {
                 Ensemble.Result result = Ensemble.select(genre, state, theme, kit, seed);
-                String text = result.text();
-                if (explain && result.roles().size() > 1) {
-                    text = text + "\nrunner=" + result.roles().get(1).instrument();
-                }
+                String text = explain ? result.explain() : result.text();
                 Map<String, Object> data = new LinkedHashMap<>();
                 data.put("seedPath", result.seedPath());
                 data.put("fallback", result.fallback());

@@ -1,0 +1,89 @@
+# General MIDI defaults. Ranges are inclusive program numbers.
+# A kit instrument with no declared field inherits the group for its program.
+version: 1
+groups:
+  - range: [0, 7]
+    roles: [lead, pad, arp]
+    tags: [bright, percussive]
+    class: pitched-percussive
+    register: {low: 21, high: 108, sweetLow: 48, sweetHigh: 84}
+  - range: [8, 15]
+    roles: [arp, lead]
+    tags: [plucky, bright]
+    class: tuned-perc
+    register: {low: 48, high: 96, sweetLow: 60, sweetHigh: 84}
+  - range: [16, 23]
+    roles: [pad, lead]
+    tags: [sustained, warm]
+    class: pitched-sustained
+    register: {low: 36, high: 96, sweetLow: 48, sweetHigh: 79}
+  - range: [24, 31]
+    roles: [lead, arp]
+    tags: [plucky, bright]
+    class: pitched-percussive
+    register: {low: 40, high: 88, sweetLow: 52, sweetHigh: 76}
+  - range: [32, 39]
+    roles: [bass]
+    tags: [warm, sustained]
+    class: pitched-sustained
+    register: {low: 28, high: 60, sweetLow: 36, sweetHigh: 48}
+  - range: [40, 47]
+    roles: [pad, lead]
+    tags: [sustained, soft, orchestral]
+    class: pitched-sustained
+    register: {low: 36, high: 96, sweetLow: 55, sweetHigh: 84}
+  - range: [48, 55]
+    roles: [pad]
+    tags: [sustained, soft, orchestral]
+    class: ensemble
+    register: {low: 36, high: 96, sweetLow: 48, sweetHigh: 79}
+  - range: [56, 63]
+    roles: [lead, pad]
+    tags: [bright, sustained, orchestral]
+    class: pitched-sustained
+    register: {low: 40, high: 84, sweetLow: 52, sweetHigh: 72}
+  - range: [64, 71]
+    roles: [lead]
+    tags: [soft, sustained, orchestral]
+    class: pitched-sustained
+    register: {low: 48, high: 88, sweetLow: 58, sweetHigh: 79}
+  - range: [72, 79]
+    roles: [lead]
+    tags: [airy, soft, sustained, orchestral]
+    class: pitched-sustained
+    register: {low: 60, high: 96, sweetLow: 67, sweetHigh: 88}
+  - range: [80, 87]
+    roles: [lead]
+    tags: [bright, electronic, retro]
+    class: synth
+    register: {low: 36, high: 96, sweetLow: 60, sweetHigh: 84}
+  - range: [88, 95]
+    roles: [pad]
+    tags: [sustained, soft, electronic]
+    class: synth
+    register: {low: 36, high: 96, sweetLow: 48, sweetHigh: 84}
+  - range: [96, 103]
+    roles: [fx]
+    tags: [electronic, airy]
+    class: synth
+    register: {low: 24, high: 108, sweetLow: 48, sweetHigh: 84}
+  - range: [104, 111]
+    roles: [lead, arp]
+    tags: [ethnic, plucky]
+    class: pitched-percussive
+    register: {low: 48, high: 90, sweetLow: 55, sweetHigh: 79}
+  - range: [112, 119]
+    roles: [perc]
+    tags: [percussive]
+    class: tuned-perc
+    register: {low: 36, high: 84, sweetLow: 48, sweetHigh: 72}
+  - range: [120, 127]
+    roles: [fx]
+    tags: [electronic]
+    class: synth
+    register: {low: 36, high: 84, sweetLow: 48, sweetHigh: 72}
+drums:
+  roles: [perc]
+  tags: [percussive]
+  class: unpitched-perc
+  register: {low: 35, high: 81, sweetLow: 36, sweetHigh: 60}

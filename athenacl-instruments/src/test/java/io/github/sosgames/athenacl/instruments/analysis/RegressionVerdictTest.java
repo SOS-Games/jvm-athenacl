@@ -4,6 +4,9 @@ package io.github.sosgames.athenacl.instruments.analysis;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
+import io.github.sosgames.athenacl.instruments.analysis.experimental.ClassVerdict;
+import io.github.sosgames.athenacl.instruments.analysis.experimental.Descriptors;
+import io.github.sosgames.athenacl.instruments.analysis.experimental.Thresholds;
 import org.junit.jupiter.api.Test;
 
 import java.nio.file.Files;

@@ -6,8 +6,8 @@ import io.github.sosgames.athenacl.adaptive.Resolver;
 import io.github.sosgames.athenacl.adaptive.Sampler;
 import io.github.sosgames.athenacl.cli.model.ExitCode;
 import io.github.sosgames.athenacl.instruments.KitException;
-import io.github.sosgames.athenacl.instruments.analysis.Compatibility;
 import io.github.sosgames.athenacl.instruments.analysis.Ensemble;
+import io.github.sosgames.athenacl.instruments.descriptors.DescriptorLint;
 import picocli.CommandLine;
 
 import java.io.IOException;
@@ -89,7 +89,7 @@ public class ResolveCommand implements Callable<Integer> {
                     data, java.util.List.of(), java.util.List.of());
         }
         try {
-            Compatibility.Lint lint = Compatibility.lintTheme(theme, state);
+            DescriptorLint.Report lint = DescriptorLint.theme(theme, state);
             text = text + "\n" + lint.text();
             data.put("errors", lint.errors());
             data.put("warnings", lint.warnings());

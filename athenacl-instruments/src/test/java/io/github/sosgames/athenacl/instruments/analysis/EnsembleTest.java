@@ -1,109 +1,74 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 package io.github.sosgames.athenacl.instruments.analysis;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
-import io.github.sosgames.athenacl.adaptive.Composition;
 import org.junit.jupiter.api.Test;
 
-import java.nio.file.Path;
-import java.util.HashSet;
-import java.util.List;
+import java.util.LinkedHashSet;
 import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class EnsembleTest {
     @Test
     void theSameSeedPicksTheSameEnsemble() throws Exception {
-        Ensemble.Result first = Ensemble.choose(profile(), composition(), "sneaking", 1);
-        Ensemble.Result second = Ensemble.choose(profile(), composition(), "sneaking", 1);
+        Ensemble.Result first = Ensemble.select("fantasy", "sneaking", null, null, 1);
+        Ensemble.Result second = Ensemble.select("fantasy", "sneaking", null, null, 1);
         assertEquals(first.text(), second.text());
-        assertTrue(first.text().contains("pairs.maxRoughness<="));
-        for (Ensemble.Role role : first.roles()) {
-            assertEquals("ok", role.verdict());
-        }
+        assertFalse(first.text().contains("pairs.maxRoughness"));
+        assertTrue(first.text().contains("role=lead"));
+        assertTrue(first.text().contains("role=bass"));
     }
 
     @Test
-    void aHundredSeedsStayInsideTheTopFew() throws Exception {
-        Set<String> leads = new HashSet<>();
-        for (int seed = 1; seed <= 100; seed++) {
-            Ensemble.Result result = Ensemble.choose(profile(), composition(), "sneaking", seed);
-            assertEquals(2, result.roles().size());
-            leads.add(result.roles().get(0).instrument());
-            assertTrue(result.maxRoughness() <= result.roughLimit());
+    void twentySeedsUseAtLeastThreeLeads() throws Exception {
+        Set<String> leads = new LinkedHashSet<>();
+        Set<String> scifi = new LinkedHashSet<>();
+        Set<String> lofi = new LinkedHashSet<>();
+        for (int seed = 1; seed <= 20; seed++) {
+            Ensemble.Result fantasy = Ensemble.select("fantasy", "sneaking", null, null, seed);
+            Ensemble.Result space = Ensemble.select("scifi-space", "peaceful", null, null, seed);
+            Ensemble.Result calm = Ensemble.select("lofi", "peaceful", null, null, seed);
+            assertFalse(fantasy.fallback());
+            assertFalse(space.fallback());
+            assertFalse(calm.fallback());
+            leads.add(instrument(fantasy, "lead"));
+            scifi.add(instrument(space, "lead"));
+            lofi.add(instrument(calm, "lead"));
         }
-        assertTrue(leads.size() > 1, leads.toString());
+        assertTrue(leads.size() >= 3, leads.toString());
+        assertFalse(scifi.isEmpty());
+        assertFalse(lofi.isEmpty());
     }
 
     @Test
     void aPinBeatsTheSearch() throws Exception {
-        String yaml = """
-                ensemble:
-                  select: auto
-                  roles:
-                    lead: {pin: saw}
-                    pad: {fit: ">=0.5"}
-                  constraints: {maxPairRoughness: 5, maxMask: {lead: 0.95}, verdict: [ok]}
-                instruments: {lead: flute, pad: strings}
-                """;
-        Ensemble.Result result = Ensemble.choose(profile(), composition(yaml), "combat", 1);
-        Ensemble.Role lead = result.roles().get(0);
-        assertEquals("saw", lead.instrument());
-        assertEquals("pin", lead.from());
+        Ensemble.Result result = Ensemble.select(null, "combat", java.nio.file.Path.of("samples/themes/pin.yaml"), null, 1);
+        assertEquals("saw", instrument(result, "lead"));
+        assertTrue(result.text().contains("from=pin"));
     }
 
     @Test
-    void playbackUsesThePickAndKeepsUnlistedLayers() throws Exception {
-        Ensemble.Result result = Ensemble.forPlayback(composition(), "sneaking", profile(), 1);
-        assertEquals(result.roles().get(0).instrument(), result.playing("lead", "flute"));
-        assertEquals("strings", result.playing("chords", "strings"));
-        assertEquals(null, Ensemble.forPlayback(composition(), "sneaking", null, 1));
-        String fixed = """
-                ensemble:
-                  select: fixed
-                instruments: {lead: flute}
-                """;
-        assertEquals(null, Ensemble.forPlayback(composition(fixed), "sneaking", profile(), 1));
+    void playbackSelectsWithoutAProfile() throws Exception {
+        Ensemble.Result selected = Ensemble.select("fantasy", "sneaking", null, null, 1);
+        assertEquals(instrument(selected, "lead"), selected.playing("lead", "flute"));
+        assertEquals("strings", selected.playing("chords", "strings"));
     }
 
     @Test
-    void aMissingProfileKeepsTheFixedInstruments() throws Exception {
-        Ensemble.Result result = Ensemble.fallback(composition(), "sneaking", 1);
+    void aMissingKitKeepsTheFixedInstruments() throws Exception {
+        Ensemble.Result result = Ensemble.select("fantasy", "sneaking", null, "nosuchprofile", 1);
         assertTrue(result.fallback());
         assertTrue(result.text().contains("ensemble.fallback=fixed"));
-        assertEquals("flute", result.roles().get(0).instrument());
     }
 
-    private static Composition composition() throws Exception {
-        return composition("""
-                ensemble:
-                  select: auto
-                  topK: 3
-                  roles:
-                    lead: {fit: ">=0.5"}
-                    pad: {fit: ">=0.5"}
-                  constraints: {maxPairRoughness: 5, maxMask: {lead: 0.95}, verdict: [ok]}
-                instruments: {lead: flute, pad: strings}
-                """);
-    }
-
-    private static Composition composition(String yaml) throws Exception {
-        return Composition.empty().merge(new ObjectMapper(new YAMLFactory()).readTree(yaml), "test");
-    }
-
-    private static InstrumentProfile.Report profile() {
-        return new InstrumentProfile.Report("analysis", List.of(
-                row("pad", List.of("pad", "warm"), 1.2),
-                row("pluck", List.of("plucky", "warm"), 4.0),
-                row("saw", List.of("bright"), 3.0)),
-                0, true, "abc", Path.of("profile.json"));
-    }
-
-    private static InstrumentProfile.Row row(String name, List<String> tags, double centroid) {
-        return new InstrumentProfile.Row(name, "ok", List.of(), tags, 0.1, 20, "measured",
-                centroid, 0.02, 200, false, 0.1, -20, SoundClass.SUSTAINED, 0, "");
+    private static String instrument(Ensemble.Result result, String role) {
+        for (Ensemble.Role row : result.roles()) {
+            if (role.equals(row.role())) {
+                return row.instrument();
+            }
+        }
+        return "";
     }
 }

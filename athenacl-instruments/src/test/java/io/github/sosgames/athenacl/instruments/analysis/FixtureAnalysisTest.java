@@ -1,7 +1,12 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 package io.github.sosgames.athenacl.instruments.analysis;
 
+import io.github.sosgames.athenacl.instruments.EngineSettings;
+import io.github.sosgames.athenacl.instruments.analysis.experimental.Descriptors;
+import io.github.sosgames.athenacl.instruments.analysis.experimental.FixtureBank;
+import io.github.sosgames.athenacl.instruments.analysis.experimental.SoundClass;
 import io.github.sosgames.athenacl.render.soundbank.InstrumentIndex;
+import org.junit.jupiter.api.Assumptions;
 import org.junit.jupiter.api.Test;
 
 import java.nio.file.Files;
@@ -21,6 +26,7 @@ class FixtureAnalysisTest {
 
     @Test
     void clippedIsLouderThanTheSaw() throws Exception {
+        Assumptions.assumeTrue(EngineSettings.analysisEnabled());
         Descriptors.Measurement clipped = InstrumentProfile.probe(
                 Path.of("samples/kits/analysis.yaml"), "clipped", 60, 120);
         Descriptors.Measurement saw = InstrumentProfile.probe(
@@ -31,6 +37,7 @@ class FixtureAnalysisTest {
 
     @Test
     void threeFixturesAreBadAndTheSawIsBright() throws Exception {
+        Assumptions.assumeTrue(EngineSettings.analysisEnabled());
         Files.createDirectories(Path.of("build/l7d-test"));
         Path profile = Path.of("build/l7d-test/analysis.profile.json");
         Files.deleteIfExists(profile);
@@ -83,6 +90,7 @@ class FixtureAnalysisTest {
 
     @Test
     void soundfontScanCoversEveryPreset() throws Exception {
+        Assumptions.assumeTrue(EngineSettings.analysisEnabled());
         Path bank = Path.of("samples/kits/analysis/fixtures.sf2");
         FixtureBank.write(bank);
         Path out = Path.of("build/l7d-test/soundfonts");

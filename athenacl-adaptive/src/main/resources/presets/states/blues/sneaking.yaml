@@ -1,2 +1,2 @@
 scale: {tonic: A, mode: mixolydian, leadingTone: false}
-tempo: {bpm: 70}
+tempo: {relative: 0.875}

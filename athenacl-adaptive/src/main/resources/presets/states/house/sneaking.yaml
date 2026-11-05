@@ -1,2 +1,2 @@
 scale: {tonic: A, mode: aeolian, leadingTone: false}
-tempo: {bpm: 108}
+tempo: {relative: 0.87}

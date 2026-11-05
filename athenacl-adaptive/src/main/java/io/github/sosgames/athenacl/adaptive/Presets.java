@@ -54,7 +54,8 @@ public final class Presets {
 
     /**
      * Plays the genre for {@code bars} at {@code seed} and reports its key, tempo, and character.
-     * {@code notes} is how many notes that pass wrote. No state is applied.
+     * {@code bpm} is the tempo that seed played. {@code notes} is how many notes that pass wrote.
+     * No state is applied.
      */
     public static Audition audition(String id, int bars, long seed) throws ThemeException {
         Preset preset = get(id);
@@ -67,7 +68,7 @@ public final class Presets {
         Director.Performance performance = play(id, bars, seed);
         Composition genre = preset.genre();
         Key key = Key.parse(genre.text("scale.tonic", "C") + " " + genre.text("scale.mode", "aeolian"));
-        return new Audition(id, bars, seed, key.name(), genre.number("tempo.bpm", 120), preset.meter(),
+        return new Audition(id, bars, seed, key.name(), performance.score().bpm(), preset.meter(),
                 preset.character(), preset.instruments(), performance.notes().size());
     }
 

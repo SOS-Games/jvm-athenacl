@@ -4,7 +4,6 @@ preset: fantasy
 instruments:
   kits: [gm-full]
 bars: 14
-bpm: 100
 meter: "4/4"
 hold:
   state: trading

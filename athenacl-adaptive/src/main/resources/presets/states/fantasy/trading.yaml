@@ -1,5 +1,4 @@
 scale: {tonic: D, mode: aeolian, leadingTone: true}
-tempo: {bpm: 96}
 harmony: {style: functional, progression: [i, VI, iv, V]}
 layers: [pad, chords, bass, lead]
 programs: {pad: 48, chords: 0, bass: 43, lead: 71}

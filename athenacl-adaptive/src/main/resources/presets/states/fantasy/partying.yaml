@@ -1,5 +1,5 @@
 scale: {tonic: D, mode: ionian, leadingTone: true}
-tempo: {bpm: 120}
+tempo: {relative: 1.25}
 harmony: {style: functional, progression: [I, IV, V, I]}
 layers: [pad, chords, bass, lead, drums]
 programs: {pad: 48, chords: 0, bass: 43, lead: 110, drums: 0}

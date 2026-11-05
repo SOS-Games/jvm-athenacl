@@ -3,7 +3,6 @@ preset: fantasy
 instruments:
   kits: [gm-full]
 bars: 14
-bpm: 100
 meter: "4/4"
 hold:
   state: combat
@@ -12,5 +11,6 @@ motif:
   every: 1
 states:
   combat:
+    # Held fight. 144 pins the tempo; the library combat tempo follows the genre draw.
     tempo: 144
     loudness: 4.0

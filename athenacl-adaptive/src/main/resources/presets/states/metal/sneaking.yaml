@@ -1,2 +1,2 @@
 scale: {tonic: E, mode: phrygian, leadingTone: false}
-tempo: {bpm: 140}
+tempo: {relative: 0.875}

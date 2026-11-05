@@ -4,7 +4,6 @@ preset: fantasy
 instruments:
   kits: [gm-full]
 bars: 14
-bpm: 120
 meter: "4/4"
 hold:
   state: partying
@@ -12,6 +11,4 @@ hold:
 motif:
   every: 1
 states:
-  partying:
-    tempo: 120
-    loudness: 1.5
+  partying: {use: library:partying, loudness: 1.5}

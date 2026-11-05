@@ -92,7 +92,7 @@ final class SoundBrowser {
             Map<Integer, String> melodic = new HashMap<>();
             Map<Integer, String> drums = new HashMap<>();
             try {
-                Kit kit = Kits.load(Kits.find("gm-lite"));
+                Kit kit = Kits.load(Kits.find(io.github.sosgames.athenacl.instruments.KitDefaults.id(null)));
                 for (Kit.Instrument instrument : kit.instruments()) {
                     if (instrument.percussion()) {
                         drums.putIfAbsent(instrument.drumkit(), instrument.name());
@@ -280,7 +280,8 @@ final class SoundBrowser {
         Map<String, InstrumentProfile.Row> rows = new HashMap<>();
         try {
             InstrumentProfile.Report report = InstrumentProfile.openCached(
-                    Kits.find("gm-lite"), Path.of("instruments", "profiles"));
+                    Kits.find(io.github.sosgames.athenacl.instruments.KitDefaults.id(null)),
+                    Path.of("instruments", "profiles"));
             if (report == null) {
                 return rows;
             }

@@ -10,6 +10,7 @@ import io.github.sosgames.athenacl.adaptive.Composition;
 import io.github.sosgames.athenacl.adaptive.Resolver;
 import io.github.sosgames.athenacl.events.PitchName;
 import io.github.sosgames.athenacl.instruments.Kit;
+import io.github.sosgames.athenacl.instruments.KitDefaults;
 import io.github.sosgames.athenacl.instruments.KitException;
 import io.github.sosgames.athenacl.instruments.Kits;
 
@@ -420,9 +421,9 @@ public final class Compatibility {
     private static String kitId(JsonNode root) {
         JsonNode kits = root.path("instruments").path("kits");
         if (kits.isArray() && !kits.isEmpty()) {
-            return kits.get(0).asText("gm-lite");
+            return kits.get(0).asText(KitDefaults.BUILTIN);
         }
-        return "gm-lite";
+        return KitDefaults.BUILTIN;
     }
 
     private static double clamp(double value) {

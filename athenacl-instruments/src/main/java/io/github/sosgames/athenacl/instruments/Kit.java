@@ -6,7 +6,8 @@ import java.util.List;
 
 /**
  * A reusable set of named instruments drawn from one or more soundfonts.
- * {@code instruments/gm-lite.yaml} is the default. A kit may extend another and override names.
+ * {@code instruments/gm-full.yaml} is the default. It extends {@code gm-lite}, and a missing
+ * MuseScore bank falls back to GeneralUser. A kit may extend another and override names.
  */
 public record Kit(String id, List<Source> sources, List<Instrument> instruments) {
     public Kit {

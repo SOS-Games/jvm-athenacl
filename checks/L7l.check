@@ -1,0 +1,61 @@
+# L7l default kit is MuseScore_General. Does not download a soundfont.
+# Directive list: AGENTS.md, section "Layer checks".
+
+name: missing muse bank warns and still renders
+args: render --genre fantasy --state sneaking --bars 4 --seed 1 --out build/l7l/a --formats events --cache build/l7l/empty
+env: ATHENACL_KIT=
+env: ATHENACL_RC=samples/kits/empty.rc
+exit: 0
+delete-before: build/l7l
+stdout-contains: warning=KIT_SOURCE_MISSING
+stdout-contains: kit=gm-full
+stdout-contains: source=msg
+stdout-contains: fallback=gm-lite
+stdout-contains: hint="athenacl soundbank install musescore-general"
+capture: hash hash=([0-9a-f]+)
+
+---
+name: the same seed hashes the same
+args: render --genre fantasy --state sneaking --bars 4 --seed 1 --out build/l7l/b --formats events --cache build/l7l/empty
+env: ATHENACL_KIT=
+env: ATHENACL_RC=samples/kits/empty.rc
+exit: 0
+stdout-contains-capture: hash
+stdout-contains: fallback=gm-lite
+
+---
+name: flag selects gm-lite
+args: theme resolve --genre fantasy --state sneaking --kit gm-lite
+exit: 0
+stdout-contains: kit=gm-lite source=flag
+
+---
+name: env selects the kit
+args: theme resolve --genre fantasy --state sneaking
+env: ATHENACL_KIT=gm-lite
+exit: 0
+stdout-contains: kit=gm-lite source=env
+
+---
+name: rc selects the kit
+args: theme resolve --genre fantasy --state sneaking
+env: ATHENACL_KIT=
+env: ATHENACL_RC=samples/kits/gm-lite.rc
+exit: 0
+stdout-contains: kit=gm-lite source=rc
+
+---
+name: builtin default is gm-full
+args: theme resolve --genre fantasy --state sneaking
+env: ATHENACL_KIT=
+env: ATHENACL_RC=samples/kits/empty.rc
+exit: 0
+stdout-contains: kit=gm-full source=builtin
+
+---
+name: a pinned theme keeps gm-lite
+args: theme resolve themes/fantasy-dungeon.yaml --state sneaking
+env: ATHENACL_KIT=gm-full
+env: ATHENACL_RC=samples/kits/empty.rc
+exit: 0
+stdout-contains: kit=gm-lite source=pin

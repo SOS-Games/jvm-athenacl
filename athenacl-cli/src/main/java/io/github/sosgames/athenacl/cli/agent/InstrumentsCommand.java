@@ -33,7 +33,7 @@ import java.util.concurrent.Callable;
 
 /**
  * Lists, shows, auditions, and compares named instruments from a kit.
- * The default kit is {@code gm-lite}. Audition and compare write WAVs under {@code --out}.
+ * The default kit is {@code gm-full}. Audition and compare write WAVs under {@code --out}.
  */
 @CommandLine.Command(name = "instruments", description = "List or audition instruments from a kit.",
         subcommands = {InstrumentsCommand.ListInstruments.class, InstrumentsCommand.Show.class,
@@ -56,7 +56,7 @@ public class InstrumentsCommand implements Callable<Integer> {
     private static int openCode;
 
     static KitSession open(AgentCli parent, String kit, Path cache) {
-        String id = kit == null || kit.isBlank() ? "gm-lite" : kit;
+        String id = io.github.sosgames.athenacl.instruments.KitDefaults.id(kit);
         try {
             openCode = 0;
             return KitSession.open(Kits.find(id), SoundbankPaths.cache(cache), false);
@@ -74,7 +74,7 @@ public class InstrumentsCommand implements Callable<Integer> {
     @CommandLine.Command(name = "list", description = "List the instruments in a kit and the slot each one uses.")
     public static class ListInstruments implements Callable<Integer> {
         @CommandLine.ParentCommand InstrumentsCommand instruments;
-        @CommandLine.Option(names = "--kit", paramLabel = "<id|file>", defaultValue = "gm-lite")
+        @CommandLine.Option(names = "--kit", paramLabel = "<id|file>")
         String kit;
         @CommandLine.Option(names = "--cache", paramLabel = "<dir>")
         Path cache;
@@ -106,7 +106,7 @@ public class InstrumentsCommand implements Callable<Integer> {
         @CommandLine.ParentCommand InstrumentsCommand instruments;
         @CommandLine.Parameters(index = "0", arity = "0..1", paramLabel = "<name>")
         String name;
-        @CommandLine.Option(names = "--kit", paramLabel = "<id|file>", defaultValue = "gm-lite")
+        @CommandLine.Option(names = "--kit", paramLabel = "<id|file>")
         String kit;
         @CommandLine.Option(names = "--memory")
         boolean memory;
@@ -169,7 +169,7 @@ public class InstrumentsCommand implements Callable<Integer> {
         @CommandLine.ParentCommand InstrumentsCommand instruments;
         @CommandLine.Parameters(index = "0", arity = "0..1", paramLabel = "<name>")
         String name;
-        @CommandLine.Option(names = "--kit", paramLabel = "<id|file>", defaultValue = "gm-lite")
+        @CommandLine.Option(names = "--kit", paramLabel = "<id|file>")
         String kit;
         @CommandLine.Option(names = "--notes", paramLabel = "<C4,E4,G4>", defaultValue = "C4,E4,G4")
         String notes;

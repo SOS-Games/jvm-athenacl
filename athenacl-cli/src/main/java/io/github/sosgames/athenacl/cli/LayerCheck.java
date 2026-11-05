@@ -41,7 +41,7 @@ public final class LayerCheck {
             "stderr-contains", "stderr-regex", "stderr-empty",
             "stdout-count", "capture", "stdout-contains-capture",
             "json-document", "json-array-nonempty", "json-equals", "json-regex",
-            "file-exists", "file-absent", "delete-before");
+            "file-exists", "file-absent", "delete-before", "env");
 
     private LayerCheck() {
     }
@@ -119,7 +119,8 @@ public final class LayerCheck {
                 deleteUnderBuild(root, rel);
             }
             int want = Integer.parseInt(only(block, "exit"));
-            Captured got = spawn(root, classpath, pool, split(only(block, "args")));
+            Map<String, String> env = environment(block);
+            Captured got = spawn(root, classpath, pool, split(only(block, "args")), env);
             StringBuilder fail = new StringBuilder();
             if (got.timedOut) {
                 fail.append("  timed out\n");
@@ -185,7 +186,7 @@ public final class LayerCheck {
                 }
             }
             for (String other : block.dirs.getOrDefault("stdout-same-as", List.of())) {
-                Captured ref = spawn(root, classpath, pool, split(other));
+                Captured ref = spawn(root, classpath, pool, split(other), env);
                 if (!got.stdout.equals(ref.stdout)) {
                     fail.append("  stdout differs from: ").append(other).append('\n');
                 }
@@ -249,7 +250,20 @@ public final class LayerCheck {
         }
     }
 
-    private static Captured spawn(Path root, String classpath, ExecutorService pool, List<String> args)
+    private static Map<String, String> environment(Block block) {
+        Map<String, String> env = new LinkedHashMap<>();
+        for (String spec : block.dirs.getOrDefault("env", List.of())) {
+            int eq = spec.indexOf('=');
+            if (eq <= 0) {
+                throw new IllegalArgumentException("env must be KEY=VALUE but was: " + spec);
+            }
+            env.put(spec.substring(0, eq), spec.substring(eq + 1));
+        }
+        return env;
+    }
+
+    private static Captured spawn(Path root, String classpath, ExecutorService pool, List<String> args,
+                                  Map<String, String> extraEnv)
             throws IOException, InterruptedException {
         String javaName = System.getProperty("os.name", "").toLowerCase(Locale.ROOT).contains("win")
                 ? "java.exe" : "java";
@@ -272,6 +286,9 @@ public final class LayerCheck {
         cmd.addAll(args);
         ProcessBuilder pb = new ProcessBuilder(cmd);
         pb.directory(root.toFile());
+        if (extraEnv != null && !extraEnv.isEmpty()) {
+            pb.environment().putAll(extraEnv);
+        }
         Process process = pb.start();
         Future<byte[]> outFuture = pool.submit(() -> process.getInputStream().readAllBytes());
         Future<byte[]> errFuture = pool.submit(() -> process.getErrorStream().readAllBytes());

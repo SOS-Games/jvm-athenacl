@@ -25,7 +25,8 @@ import java.util.Set;
 /**
  * Resolves a kit against the soundbank cache. Missing or disallowed sources use the instrument's
  * fallback list. SF3 is rejected before Gervill sees the file. Slots are assigned by sorted name
- * so two runs of the same kit get the same patches.
+ * so two runs of the same kit get the same patches. A missing or mismatched {@code gm-full}
+ * source is one {@link Notice} and still plays through {@code gm-lite} when that bank is present.
  */
 public final class KitSession {
     private final Kit kit;
@@ -35,9 +36,14 @@ public final class KitSession {
     private final int collisions;
     private final int fallbacksTaken;
     private final List<String> warnings;
+    private final List<Notice> notices;
+
+    /** One recovered soundfont problem. Render prints this and still exits 0. */
+    public record Notice(String kit, String source, String fallback, String hint) {
+    }
 
     private KitSession(Kit kit, Path cache, LicensePolicy policy, Map<String, Playable> byName,
-                       int collisions, int fallbacksTaken, List<String> warnings) {
+                       int collisions, int fallbacksTaken, List<String> warnings, List<Notice> notices) {
         this.kit = kit;
         this.cache = cache;
         this.policy = policy;
@@ -45,6 +51,7 @@ public final class KitSession {
         this.collisions = collisions;
         this.fallbacksTaken = fallbacksTaken;
         this.warnings = warnings;
+        this.notices = notices;
     }
 
     public static KitSession open(Path file, Path cache, boolean allowUnlicensed)
@@ -74,6 +81,57 @@ public final class KitSession {
 
     public List<String> warnings() {
         return warnings;
+    }
+
+    /** Sources that were missing or failed their checksum and were recovered through a fallback. */
+    public List<Notice> notices() {
+        return notices;
+    }
+
+    public static boolean recoverable(KitException error) {
+        if (error == null || error.issues().isEmpty()) {
+            return false;
+        }
+        String code = error.issues().get(0).code();
+        return "KIT_SOURCE_MISSING".equals(code) || "KIT_CHECKSUM".equals(code);
+    }
+
+    /**
+     * Reports missing or mismatched sources without opening Gervill. A file whose size matches
+     * the catalog pin is treated as present, so an events render does not hash a 200 MB bank.
+     * {@code kit validate} and a WAV render still check the checksum.
+     */
+    public static List<Notice> peek(Path file, Path cache) throws IOException, KitException {
+        Kit kit = Kits.load(file);
+        LicensePolicy policy = LicensePolicy.load(false);
+        List<Notice> notices = new ArrayList<>();
+        for (Kit.Source source : kit.sources()) {
+            if (!recovers(kit, source.key())) {
+                continue;
+            }
+            if (declaredSf3(source)) {
+                throw sf3(source.key());
+            }
+            if (policy.judge(source.license()) == LicensePolicy.Verdict.DENY) {
+                throw new KitException(new KitException.Issue(
+                        "KIT_LICENSE_DENIED", "/sources/" + source.key(),
+                        "license is not allowed",
+                        "Use an allowed license, or pass --allow-unlicensed for a local file that must not be shipped."));
+            }
+            Path found = locate(source, cache);
+            if (found != null && Files.isRegularFile(found) && trustedSize(source, found)) {
+                continue;
+            }
+            SourceState state = inspect(source, cache, policy);
+            if (state.ok()) {
+                continue;
+            }
+            if (state.sf3() || !recoverable(state.error())) {
+                throw state.error();
+            }
+            notices.add(noticeFor(kit, source));
+        }
+        return List.copyOf(notices);
     }
 
     public List<Playable> instruments() {
@@ -133,6 +191,8 @@ public final class KitSession {
             sources.put(source.key(), inspect(source, cache, policy));
         }
         List<String> warnings = new ArrayList<>();
+        List<Notice> notices = new ArrayList<>();
+        Set<String> noted = new HashSet<>();
         List<Bound> bound = new ArrayList<>();
         int fallbacks = 0;
         for (Kit.Instrument instrument : kit.instruments()) {
@@ -153,15 +213,21 @@ public final class KitSession {
                 chosen = from(kit.id(), state, instrument, List.of());
             }
             if (chosen == null) {
-                for (String fallback : instrument.fallbacks()) {
-                    Playable resolved = fallback(kit, cache, policy, stack, fallback);
-                    if (resolved != null) {
-                        chosen = copy(resolved, instrument.name(), resolved.sourceKey(), resolved.file(),
-                                resolved.sourceBank(), resolved.sourceProgram(), resolved.preset(),
-                                resolved.drumkit(), resolved.percussion(), List.of(fallback));
-                        chosen = withChildTrim(chosen, instrument);
-                        fellBack = true;
-                        break;
+                for (String fallbackRef : instrument.fallbacks()) {
+                    try {
+                        Playable resolved = fallback(kit, cache, policy, stack, fallbackRef);
+                        if (resolved != null) {
+                            chosen = copy(resolved, instrument.name(), resolved.sourceKey(), resolved.file(),
+                                    resolved.sourceBank(), resolved.sourceProgram(), resolved.preset(),
+                                    resolved.drumkit(), resolved.percussion(), List.of(fallbackRef));
+                            chosen = withChildTrim(chosen, instrument);
+                            fellBack = true;
+                            break;
+                        }
+                    } catch (KitException error) {
+                        if (!recoverable(error)) {
+                            throw error;
+                        }
                     }
                 }
             }
@@ -173,13 +239,20 @@ public final class KitSession {
             }
             if (fellBack) {
                 fallbacks++;
+                if (!state.ok() && noted.add(instrument.source())) {
+                    Kit.Source source = kit.source(instrument.source());
+                    if (source != null) {
+                        notices.add(noticeFor(kit, source));
+                    }
+                }
             }
             bound.add(new Bound(instrument.name(), chosen));
         }
         bound.sort(Comparator.comparing(Bound::name));
         Map<String, Playable> slotted = assign(bound);
         int collisions = collisions(slotted);
-        return new KitSession(kit, cache, policy, slotted, collisions, fallbacks, List.copyOf(warnings));
+        return new KitSession(kit, cache, policy, slotted, collisions, fallbacks, List.copyOf(warnings),
+                List.copyOf(notices));
     }
 
     private static Playable fallback(Kit kit, Path cache, LicensePolicy policy, Set<String> stack, String ref)
@@ -271,6 +344,56 @@ public final class KitSession {
             return null;
         }
         return SoundbankPaths.cache(cache).resolve(entry.fileName());
+    }
+
+    /** True when some instrument on this source can fall back, so a missing file is a warning. */
+    private static boolean recovers(Kit kit, String key) {
+        for (Kit.Instrument instrument : kit.instruments()) {
+            if (key.equals(instrument.source()) && !instrument.fallbacks().isEmpty()) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private static boolean declaredSf3(Kit.Source source) {
+        return "sf3".equalsIgnoreCase(source.format())
+                || (source.path() != null && source.path().getFileName().toString().toLowerCase().endsWith(".sf3"));
+    }
+
+    private static boolean trustedSize(Kit.Source source, Path file) throws IOException {
+        if (source.catalogId() == null || source.catalogId().isBlank()) {
+            return false;
+        }
+        SoundbankCatalog.Entry entry = SoundbankCatalog.byId(source.catalogId());
+        return entry != null && entry.size() > 0 && Files.size(file) == entry.size();
+    }
+
+    private static Notice noticeFor(Kit kit, Kit.Source source) {
+        String fallback = "";
+        for (Kit.Instrument instrument : kit.instruments()) {
+            if (!source.key().equals(instrument.source())) {
+                continue;
+            }
+            for (String ref : instrument.fallbacks()) {
+                int colon = ref.indexOf(':');
+                if (colon > 0) {
+                    fallback = ref.substring(0, colon);
+                    break;
+                }
+            }
+            if (!fallback.isEmpty()) {
+                break;
+            }
+        }
+        if (fallback.isEmpty()) {
+            fallback = KitDefaults.FALLBACK;
+        }
+        String id = source.catalogId();
+        String hint = id == null || id.isBlank()
+                ? "Run soundbank install for " + source.key()
+                : "athenacl soundbank install " + id;
+        return new Notice(kit.id(), source.key(), fallback, hint);
     }
 
     private static KitException sf3(String key) {

@@ -14,6 +14,7 @@ import io.github.sosgames.athenacl.render.soundbank.SoundbankPaths;
 
 import javax.sound.midi.MidiUnavailableException;
 import java.io.IOException;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -29,17 +30,29 @@ public final class ThemeMix {
     private ThemeMix() {
     }
 
+    /** The mixed WAV and any source that fell back because its bank was missing or mismatched. */
+    public record Mix(byte[] wav, List<KitSession.Notice> notices) {
+    }
+
     public static byte[] wav(Theme theme, Score score, List<String> stateByBar, long seed)
+            throws IOException, KitException, MidiUnavailableException {
+        return mix(theme, score, stateByBar, seed, null).wav();
+    }
+
+    public static Mix mix(Theme theme, Score score, List<String> stateByBar, long seed, Path cache)
             throws IOException, KitException, MidiUnavailableException {
         if (theme.kits().isEmpty()) {
             throw new KitException(new KitException.Issue(
                     "KIT_UNKNOWN", "/instruments/kits",
                     "theme has no kit",
-                    "Set instruments.kits, such as gm-lite."));
+                    "Set instruments.kits, such as gm-full, or leave it unset to use the default."));
         }
         List<KitSession> sessions = new ArrayList<>();
+        List<KitSession.Notice> notices = new ArrayList<>();
         for (String id : theme.kits()) {
-            sessions.add(KitSession.open(Kits.find(id), SoundbankPaths.cache(null), false));
+            KitSession session = KitSession.open(Kits.find(id), SoundbankPaths.cache(cache), false);
+            sessions.add(session);
+            notices.addAll(session.notices());
         }
         Map<String, Map<String, Playable>> byState = new LinkedHashMap<>();
         Map<String, Playable> used = new LinkedHashMap<>();
@@ -81,7 +94,7 @@ public final class ThemeMix {
             body = StateLoudness.fit(body, score.bpm(), score.barTicks(), stateByBar,
                     theme.loudness().reference(), theme.loudness().offsets());
         }
-        return body;
+        return new Mix(body, List.copyOf(notices));
     }
 
     private static Playable resolve(List<KitSession> sessions, String name) throws IOException, KitException {

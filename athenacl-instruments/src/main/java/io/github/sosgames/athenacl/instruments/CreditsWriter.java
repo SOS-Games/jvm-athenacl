@@ -38,7 +38,7 @@ public final class CreditsWriter {
             if (listed.isArray() && !listed.isEmpty()) {
                 listed.forEach(item -> kits.add(item.asText()));
             } else {
-                kits.add("gm-lite");
+                kits.add(KitDefaults.id(null));
             }
             for (String id : kits) {
                 KitSession session = KitSession.open(Kits.find(id), cache, false);

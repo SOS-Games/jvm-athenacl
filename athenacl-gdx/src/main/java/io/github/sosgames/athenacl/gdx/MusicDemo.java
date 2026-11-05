@@ -25,6 +25,7 @@ import io.github.sosgames.athenacl.adaptive.Presets;
 import io.github.sosgames.athenacl.adaptive.Theme;
 import io.github.sosgames.athenacl.adaptive.ThemeSwitch;
 import io.github.sosgames.athenacl.adaptive.Themes;
+import io.github.sosgames.athenacl.instruments.KitDefaults;
 import io.github.sosgames.athenacl.instruments.ThemeMix;
 
 import javax.sound.sampled.AudioFormat;
@@ -41,7 +42,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ThreadLocalRandom;
 
 /**
- * Plays each track through the MuseScore kit ({@code gm-full}).
+ * Plays each track through the default kit ({@code gm-full}, MuseScore_General).
  * The ambush can still swap to the combat theme at a bar line. That kit is rendered on a
  * background thread and becomes audible on the next bar after bar 8, until a track button
  * is pressed. Each button starts that piece from the beginning and repeats it until
@@ -57,8 +58,6 @@ import java.util.concurrent.ThreadLocalRandom;
 public class MusicDemo extends ApplicationAdapter {
     private static final int SWAP_BAR = 8;
     private static final int COLUMNS = 5;
-    /** Window playback uses MuseScore_General. Theme files still name their own kit. */
-    private static final String KIT = "gm-full";
 
     private record Track(String name, String theme, String timeline, String preset) {
     }
@@ -442,7 +441,7 @@ public class MusicDemo extends ApplicationAdapter {
         request(track(name));
     }
 
-    /** Theme file, or a short tour of a preset. Playback always uses {@link #KIT}. */
+    /** Theme file, or a short tour of a preset. Playback uses the configured default kit. */
     private static Theme load(Track track) throws Exception {
         Theme theme;
         if (track.preset != null) {
@@ -465,7 +464,7 @@ public class MusicDemo extends ApplicationAdapter {
         } else {
             theme = Themes.load(Path.of(track.theme));
         }
-        return theme.withKits(List.of(KIT));
+        return theme.withKits(List.of(KitDefaults.id(null)));
     }
 
     private static Track track(String name) {

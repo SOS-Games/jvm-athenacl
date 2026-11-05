@@ -65,6 +65,12 @@ public class AdaptCommand implements Callable<Integer> {
             return parent.fail(ExitCode.NOT_FOUND, "NOT_FOUND", "--timeline", e.getMessage(),
                     "Pass a JSON array of bar, state, and intensity.");
         }
+        try {
+            loaded = PlaybackKit.apply(loaded, theme, null);
+        } catch (IOException e) {
+            return parent.fail(ExitCode.RUNTIME, "IO_ERROR", "argv[1]", e.getMessage(),
+                    "Check that the theme file is readable.");
+        }
         LiveClock clock = LiveClock.start(loaded, controls, seed);
         clock.poll(0);
         String line = clock.snapshot();

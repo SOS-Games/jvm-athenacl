@@ -111,6 +111,12 @@ public class ResolveCommand implements Callable<Integer> {
             resolved = Sampler.sample(resolved, seed, Sampler.SECTION);
         }
         String text = resolved.lines(explain);
+        try {
+            text = text + "\n" + io.github.sosgames.athenacl.instruments.KitDefaults.playbackLine(kit, theme);
+        } catch (IOException e) {
+            return parent.fail(ExitCode.RUNTIME, "IO_ERROR", "--kit", e.getMessage(),
+                    "Check that the theme file is readable.");
+        }
         if (seed != null && state != null && !state.isBlank()) {
             try {
                 Ensemble.Result picked = Ensemble.select(genre, state, theme, kit, seed);

@@ -52,6 +52,12 @@ public class ExplainThemeCommand implements Callable<Integer> {
             return parent.fail(ExitCode.RUNTIME, "IO_ERROR", "argv[2]", e.getMessage(),
                     "Check that the theme file is readable.");
         }
+        try {
+            loaded = PlaybackKit.apply(loaded, theme, null);
+        } catch (IOException e) {
+            return parent.fail(ExitCode.RUNTIME, "IO_ERROR", "argv[2]", e.getMessage(),
+                    "Check that the theme file is readable.");
+        }
         StringBuilder text = new StringBuilder();
         Map<String, String> head = new LinkedHashMap<>();
         head.put("id", loaded.id());

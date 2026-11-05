@@ -146,7 +146,7 @@ public class KitCommand implements Callable<Integer> {
         @CommandLine.ParentCommand KitCommand kit;
         @CommandLine.Parameters(index = "0", arity = "0..1", paramLabel = "<name>")
         String name;
-        @CommandLine.Option(names = "--kit", paramLabel = "<id>", defaultValue = "gm-lite")
+        @CommandLine.Option(names = "--kit", paramLabel = "<id>")
         String kitId;
         @CommandLine.Option(names = "--out", paramLabel = "<dir>")
         Path out;
@@ -163,7 +163,7 @@ public class KitCommand implements Callable<Integer> {
                 return parent.fail(ExitCode.USAGE, "USAGE", "argv[2]",
                         "usage: kit describe <instrument>", "Try kit describe flute.");
             }
-            Path file = Kits.find(kitId);
+            Path file = Kits.find(io.github.sosgames.athenacl.instruments.KitDefaults.id(kitId));
             try {
                 if (!Files.isRegularFile(file)) {
                     return parent.fail(ExitCode.NOT_FOUND, "KIT_NOT_FOUND", "--kit", "kit not found",
@@ -225,7 +225,7 @@ public class KitCommand implements Callable<Integer> {
         String name;
         @CommandLine.Parameters(index = "1..*", arity = "0..*", paramLabel = "key=value")
         List<String> assignments;
-        @CommandLine.Option(names = "--kit", paramLabel = "<id>", defaultValue = "gm-lite")
+        @CommandLine.Option(names = "--kit", paramLabel = "<id>")
         String kitId;
         @CommandLine.Option(names = "--out", paramLabel = "<file>")
         Path out;
@@ -239,7 +239,7 @@ public class KitCommand implements Callable<Integer> {
                         "usage: kit tag <instrument> key=value", "Try kit tag soft_flute avoid=true.");
             }
             try {
-                String text = KitTagger.write(Kits.find(kitId), name,
+                String text = KitTagger.write(Kits.find(io.github.sosgames.athenacl.instruments.KitDefaults.id(kitId)), name,
                         assignments == null ? new String[0] : assignments.toArray(String[]::new), out);
                 return parent.finish(ExitCode.OK, text, "athenacl.result.kit/1",
                         new LinkedHashMap<>(), List.of(), List.of());

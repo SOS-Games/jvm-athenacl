@@ -170,7 +170,7 @@ public final class CommandCatalog {
                     "athenacl.result.adapt/1"),
             new CommandInfo(
                     "instruments",
-                    "instruments list, show, audition, and compare named instruments from a kit. gm-lite is the default.",
+                    "instruments list, show, audition, and compare named instruments from a kit. gm-full is the default. gm-lite is the GeneralUser fallback.",
                     List.of(
                             gradle("instruments list --kit gm-lite"),
                             gradle("instruments show harp --kit gm-lite")),

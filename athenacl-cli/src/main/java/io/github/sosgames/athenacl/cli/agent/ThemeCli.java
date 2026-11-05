@@ -11,13 +11,17 @@ import io.github.sosgames.athenacl.adaptive.Themes;
 import io.github.sosgames.athenacl.cli.model.AtomicFiles;
 import io.github.sosgames.athenacl.cli.model.Config;
 import io.github.sosgames.athenacl.cli.model.ExitCode;
+import io.github.sosgames.athenacl.cli.model.Issue;
 import io.github.sosgames.athenacl.cli.model.KeyValue;
+import io.github.sosgames.athenacl.cli.model.Severity;
 import io.github.sosgames.athenacl.cli.model.TextPaths;
 import io.github.sosgames.athenacl.events.ControlEvent;
 import io.github.sosgames.athenacl.events.EventLog;
 import io.github.sosgames.athenacl.events.NoteEvent;
 import io.github.sosgames.athenacl.events.Score;
 import io.github.sosgames.athenacl.instruments.KitException;
+import io.github.sosgames.athenacl.instruments.KitSession;
+import io.github.sosgames.athenacl.instruments.Kits;
 import io.github.sosgames.athenacl.instruments.ThemeMix;
 import io.github.sosgames.athenacl.render.SmfWriter;
 import io.github.sosgames.athenacl.render.loudness.StateLoudness;
@@ -48,11 +52,18 @@ final class ThemeCli {
     }
 
     static int render(AgentCli parent, Path themePath, Path timeline, String barWindow, List<String> at,
-                      long seed, Path outDir, String formats, String soundbank, Path cache, String debugMode) {
+                      long seed, Path outDir, String formats, String soundbank, Path cache, String debugMode,
+                      String kit) {
         parent.commandName = "render";
         Loaded loaded = load(parent, themePath, timeline, at);
         if (loaded == null) {
             return parentCode;
+        }
+        try {
+            loaded = withKit(loaded, themePath, kit);
+        } catch (IOException e) {
+            return parent.fail(ExitCode.RUNTIME, "IO_ERROR", "--kit", e.getMessage(),
+                    "Check that the theme file is readable.");
         }
         BarRange range = null;
         if (barWindow != null) {
@@ -100,12 +111,39 @@ final class ThemeCli {
         for (Director.BarInfo bar : full.bars()) {
             stateByBar.add(bar.state());
         }
+        List<KitSession.Notice> notices;
+        try {
+            notices = peekKits(loaded.theme, cache);
+        } catch (KitException e) {
+            KitException.Issue issue = e.issues().get(0);
+            return parent.fail(ExitCode.INVALID_INPUT, issue.code(), issue.path(), issue.message(), issue.fix());
+        } catch (IOException e) {
+            return parent.fail(ExitCode.RUNTIME, "IO_ERROR", "--kit", e.getMessage(),
+                    "Check that the kit file and the soundfont cache are readable.");
+        }
         Map<String, byte[]> bodies = new LinkedHashMap<>();
         try {
             for (String format : requested) {
                 byte[] body;
                 if ("wav".equals(format) && !loaded.theme.kits().isEmpty()) {
-                    body = ThemeMix.wav(loaded.theme, score, stateByBar, seed);
+                    try {
+                        ThemeMix.Mix mixed = ThemeMix.mix(loaded.theme, score, stateByBar, seed, cache);
+                        body = mixed.wav();
+                        if (!mixed.notices().isEmpty()) {
+                            notices = mixed.notices();
+                        }
+                    } catch (KitException e) {
+                        if (!KitSession.recoverable(e) || notices.isEmpty()) {
+                            KitException.Issue issue = e.issues().get(0);
+                            return parent.fail(ExitCode.INVALID_INPUT, issue.code(), issue.path(),
+                                    issue.message(), issue.fix());
+                        }
+                        body = RenderCommand.body(format, score, selection.file());
+                        if (loaded.theme.loudness() != null) {
+                            body = StateLoudness.fit(body, score.bpm(), score.barTicks(), stateByBar,
+                                    loaded.theme.loudness().reference(), loaded.theme.loudness().offsets());
+                        }
+                    }
                 } else {
                     body = RenderCommand.body(format, score, selection.file());
                     if ("wav".equals(format) && loaded.theme.loudness() != null) {
@@ -115,9 +153,6 @@ final class ThemeCli {
                 }
                 bodies.put(format, body);
             }
-        } catch (KitException e) {
-            KitException.Issue issue = e.issues().get(0);
-            return parent.fail(ExitCode.INVALID_INPUT, issue.code(), issue.path(), issue.message(), issue.fix());
         } catch (MidiUnavailableException e) {
             return parent.fail(ExitCode.ENVIRONMENT, "GERVILL_ABSENT", "gervill",
                     "this JDK cannot open an offline Gervill stream",
@@ -172,6 +207,7 @@ final class ThemeCli {
         if (!loaded.theme.kits().isEmpty()) {
             fields.put("kit", String.join(",", loaded.theme.kits()));
         }
+        putNotice(fields, notices);
         fields.put("dryRun", Boolean.toString(parent.dryRun));
         fields.put("changed", Boolean.toString(changed));
         DebugMode.fields(fields, null, debugMode, score.notes().size());
@@ -179,8 +215,59 @@ final class ThemeCli {
         payload.put("files", requested.size() + 1);
         payload.put("states", full.stateList());
         payload.put("transitions", full.transitions().size());
+        if (!notices.isEmpty()) {
+            payload.put("warning", "KIT_SOURCE_MISSING");
+            payload.put("source", notices.get(0).source());
+            payload.put("fallback", notices.get(0).fallback());
+        }
+        List<Issue> warnings = new ArrayList<>(RenderCommand.warnings(selection));
+        warnings.addAll(kitWarnings(notices));
         return parent.finish(ExitCode.OK, KeyValue.line(fields), "athenacl.result.render/1",
-                payload, RenderCommand.warnings(selection), List.of());
+                payload, warnings, List.of());
+    }
+
+    private static Loaded withKit(Loaded loaded, Path themePath, String kit) throws IOException {
+        Map<String, Theme> alternates = new LinkedHashMap<>();
+        for (Map.Entry<String, Theme> entry : loaded.alternates().entrySet()) {
+            alternates.put(entry.getKey(), PlaybackKit.apply(entry.getValue(), Path.of(entry.getKey()), kit));
+        }
+        return new Loaded(PlaybackKit.apply(loaded.theme(), themePath, kit), loaded.controls(), alternates);
+    }
+
+    private static List<KitSession.Notice> peekKits(Theme theme, Path cache) throws IOException, KitException {
+        List<KitSession.Notice> notices = new ArrayList<>();
+        for (String id : theme.kits()) {
+            notices.addAll(KitSession.peek(Kits.find(id), SoundbankPaths.cache(cache)));
+        }
+        return notices;
+    }
+
+    private static void putNotice(Map<String, String> fields, List<KitSession.Notice> notices) {
+        if (notices == null || notices.isEmpty()) {
+            return;
+        }
+        KitSession.Notice notice = notices.get(0);
+        fields.put("warning", "KIT_SOURCE_MISSING");
+        fields.putIfAbsent("kit", notice.kit());
+        fields.put("source", notice.source());
+        if (notice.fallback() != null && !notice.fallback().isBlank()) {
+            fields.put("fallback", notice.fallback());
+        }
+        fields.put("hint", notice.hint());
+    }
+
+    private static List<Issue> kitWarnings(List<KitSession.Notice> notices) {
+        if (notices.isEmpty()) {
+            return List.of();
+        }
+        KitSession.Notice notice = notices.get(0);
+        return List.of(new Issue(
+                "KIT_SOURCE_MISSING",
+                Severity.WARNING,
+                "/sources/" + notice.source(),
+                "soundfont for " + notice.source() + " is not installed",
+                notice.hint(),
+                "docs/soundbanks.md"));
     }
 
     private static void phraseFiles(Path outDir, Theme theme, Director.Performance performance) throws IOException {

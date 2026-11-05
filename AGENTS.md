@@ -121,7 +121,7 @@ gradlew.bat :athenacl-cli:agentCli --args="debug probe flute --kit gm-lite --pit
 | motif | You want `motif generate` to grow a short idea, `motif transform` to turn it over, or `motif import` to read a MIDI melody. |
 | melody | You want `melody generate` to rank hook candidates, `melody score` to rate a MIDI line, `melody rate` to write an A/B row, or `melody fit` to turn ratings into weights. `melody score --progression harmony.json` reads that file's key and roman numerals. |
 | adapt | You want the scheduler snapshot: `state=`, `intensity=`, `bar=`, `sched.lookaheadMs=`, and `cpu.msPerBar=`. |
-| instruments | You want `instruments list`, `show`, `audition`, or `compare` for a named instrument in a kit. |
+| instruments | You want `instruments list`, `show`, `audition`, or `compare` for a named instrument in a kit. `gm-full` is the default. `gm-lite` is the GeneralUser fallback. |
 | kit | You want `kit validate` to check sources, licenses, and slots, `kit describe` to print a resolved descriptor, `kit tag` to write declared fields, `kit scan` to list every preset in a soundfont, or `kit lint` to check descriptor rules. `kit analyze`, `kit fit`, and `kit compat` stay off unless `analysis.enabled` is true. |
 | ensemble | You want `ensemble select` to fill each role from declared descriptors. The same seed picks the same instruments. `--explain` shows the candidates and the seeded choice. |
 | credits | You want `credits` to write `CREDITS.md` for the soundfonts a theme uses. |
@@ -255,12 +255,13 @@ Blocks are split by a line that is only `---`. Blank lines and `#` comments are 
 | stdout-contains-capture | A later block's stdout must contain the captured value. |
 | file-exists / file-absent | Path relative to the repo. `file-absent` may be a directory. |
 | delete-before | Delete this path before the command. Must stay under `build/` and must not be `build` itself. |
+| env | `KEY=VALUE` passed to that command. A later `stdout-same-as` uses the same variables. An empty value clears one the parent process had set. |
 
 `checks=` and `failed=` are the runner's last line.
 
 ## Later-layer rules (not wired in L0a)
 
-Config uses the same triple as jvm-mw: a `local.properties` key, a `-D` property, and an env var. The soundbank path is `athenacl.soundbank`, `-Dathenacl.soundbank`, `ATHENACL_SOUNDBANK`. Debug knobs will be `athenacl.debug.NAME`, `-Dathenacl.debug.NAME`, `ATHENACL_DEBUG_NAME`. Do not invent a second scheme. Debug knobs are not read yet.
+Config uses the same triple as jvm-mw: a `local.properties` key, a `-D` property, and an env var. The soundbank path is `athenacl.soundbank`, `-Dathenacl.soundbank`, `ATHENACL_SOUNDBANK`. The default kit is `kit.default` in `-Dkit.default`, `~/.athenaclrc`, or `local.properties`, and `ATHENACL_KIT` beats that file. `--kit` beats the environment. The built-in kit is `gm-full`. `ATHENACL_RC` points at a different rc file. Debug knobs will be `athenacl.debug.NAME`, `-Dathenacl.debug.NAME`, `ATHENACL_DEBUG_NAME`. Do not invent a second scheme. Debug knobs are not read yet.
 
 Copyright for themes and presets: borrow style (genre, tempo, meter, mode, groove, instrumentation, common progression types). Do not copy a melody, a distinctive riff, or lyrics. This is guidance, not legal advice.
 
@@ -355,9 +356,9 @@ A preset turns hooks on unless the theme file has its own `hooks:` block, which 
 
 ## Instrument kits
 
-`instruments/gm-lite.yaml` is the default kit (GeneralUser GS). `instruments/gm-full.yaml` extends it and plays every named instrument from MuseScore_General, falling back to GeneralUser when a patch is missing. `soundbank install musescore-general` downloads that SF2. An SF3 file is rejected with `SOUNDBANK_SF3_UNSUPPORTED` before Gervill opens it. `kit validate` checks the checksum, the license, and that two instruments did not receive the same slot. `instruments compare` prints `loudness.probe=` after each instrument is brought to about -20 LUFS, and `raw.deltaLu=` for the gap before that. `render --kit gm-full` puts each named instrument on its own slot.
+`instruments/gm-full.yaml` is the default kit (MuseScore_General). `instruments/gm-lite.yaml` is GeneralUser GS and the fallback when the MuseScore file is missing or its checksum does not match. That render exits 0 and prints `warning=KIT_SOURCE_MISSING` with `fallback=gm-lite` and `hint="athenacl soundbank install musescore-general"`. `soundbank install musescore-general` downloads the SF2. An SF3 file is rejected with `SOUNDBANK_SF3_UNSUPPORTED` before Gervill opens it. `kit validate` checks the checksum, the license, and that two instruments did not receive the same slot. `instruments compare` prints `loudness.probe=` after each instrument is brought to about -20 LUFS, and `raw.deltaLu=` for the gap before that. `render --kit gm-full` puts each named instrument on its own slot. See `docs/soundbanks.md`.
 
-`themes/fantasy-dungeon.yaml` names `instruments.kits: [gm-lite]` and the preset maps each layer to a kit instrument (`strings`, `piano`, `horn`, `flute`, `cello`, and the rest). A render of that theme normalizes those instruments, then trims each state onto the loudness contour. The event-log hash stays the program-change log, not the trim.
+`themes/fantasy-dungeon.yaml` names `instruments.kits: [gm-lite]` and keeps that pin. Change the list to `[gm-full]`, or pass `--kit gm-full`, to play it through MuseScore. The preset maps each layer to a kit instrument (`strings`, `piano`, `horn`, `flute`, `cello`, and the rest). A render of that theme normalizes those instruments, then trims each state onto the loudness contour. The event-log hash stays the program-change log, not the trim. `theme resolve` prints `kit=` and `source=` (`flag`, `env`, `rc`, `pin`, or `builtin`).
 
 A layer may also be a free name. `samples/themes/free-layers.yaml` pairs each name with a behaviour (`arpeggio`, `bass-line`, `drum-pattern`) and an instrument (`gm-lite:celesta`, `kit:gm-lite:drums.orchestral`, or `sf:generaluser/0/52`). The old names keep their channels and programs. A drum part uses MIDI channel 10. `kit scan generaluser` prints `presets=287 percussion=13` and one line per preset. `theme validate` on an unknown behaviour exits 3 with `THEME_UNKNOWN_BEHAVIOUR` and `Did you mean`. The window opens on a menu. Sounds lists every preset in every soundfont installed in the cache, ordered by soundfont then name, and hides the genres. Genres lists the tracks and hides the sounds. Back returns to the menu. A click plays that preset and shows its soundfont plus the descriptor (tags and class from the General MIDI table, or a declared note). Measured tone and level are filled in only when `analysis.enabled` is true.
 
@@ -375,7 +376,7 @@ Measured analysis stays in the tree and is off. `kit analyze` exits 2 with `anal
 
 Entering combat or danger waits for the next beat and drops notes already queued after that beat. Other states still wait for the bar. `render themes/fantasy-dungeon.yaml --timeline samples/timelines/ambush.json --seed 1 --out build/l6` lands on beat 3 of bar 4. `debug trace build/l6 --transitions` prints `quantize=beat`, `retracted=`, and `latency.ms=`. `debug check build/l6 --stuck-notes` prints `stuck=0`. `debug fuzz-transitions themes/fantasy-dungeon.yaml --runs 1000 --seed 1` prints `lateTransitions=0`.
 
-`adapt themes/fantasy-dungeon.yaml --seed 1` prints `state=`, `intensity=`, `bar=`, `sched.lookaheadMs=150`, `cpu.msPerBar=`, `kit=gm-lite`, and `instruments=`. `gradlew :athenacl-gdx:run` opens a window that plays the ambush, then a button for each other track and each genre preset. The window renders through `gm-full` (MuseScore_General). The combat theme's kit is rendered on a background thread and takes over at the next bar from bar 8. F3 writes `build/athenacl-snapshot.txt`. F4 hides the line.
+`adapt themes/fantasy-dungeon.yaml --seed 1` prints `state=`, `intensity=`, `bar=`, `sched.lookaheadMs=150`, `cpu.msPerBar=`, `kit=gm-lite`, and `instruments=`. That theme pins `gm-lite`. A fantasy or sci-fi theme that does not pin a kit prints the default, `gm-full`, unless `--kit`, `ATHENACL_KIT`, or `kit.default` says otherwise. `gradlew :athenacl-gdx:run` opens a window that plays the ambush, then a button for each other track and each genre preset. The window renders through that same default (`gm-full`, MuseScore_General). The combat theme's kit is rendered on a background thread and takes over at the next bar from bar 8. F3 writes `build/athenacl-snapshot.txt`. F4 hides the line.
 
 ## Overlays and wind-downs
 

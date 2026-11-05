@@ -197,9 +197,6 @@ public final class Themes {
         int motifEvery = motifEvery(root, errors);
         Theme.Hold hold = hold(root, states, errors);
         List<String> kits = kitIds;
-        if (kits.isEmpty() && ("fantasy".equals(presetId) || "scifi-space".equals(presetId))) {
-            kits = List.of("gm-lite");
-        }
         Map<String, Theme.OverlayDef> overlays = overlays(root, errors, warnings);
         int phraseBars = phraseBars(root, errors);
         int frameMs = root.path("clock").path("frameMs").asInt(0);

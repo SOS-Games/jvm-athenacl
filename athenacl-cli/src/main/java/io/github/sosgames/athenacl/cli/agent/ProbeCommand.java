@@ -25,7 +25,7 @@ public class ProbeCommand implements Callable<Integer> {
     @CommandLine.ParentCommand DebugCommand debug;
     @CommandLine.Parameters(index = "0", arity = "0..1", paramLabel = "<instrument>")
     String name;
-    @CommandLine.Option(names = "--kit", paramLabel = "<id>", defaultValue = "gm-lite")
+    @CommandLine.Option(names = "--kit", paramLabel = "<id>")
     String kitId;
     @CommandLine.Option(names = "--pitch", paramLabel = "<name>", defaultValue = "C4")
     String pitch;
@@ -59,7 +59,8 @@ public class ProbeCommand implements Callable<Integer> {
         try {
             String text = Experimental.call("probe",
                     new Class<?>[] {String.class, String.class, String.class, String.class, String.class},
-                    new Object[] {kitId, name, pitch, Integer.toString(midi), Integer.toString(velocity)});
+                    new Object[] {io.github.sosgames.athenacl.instruments.KitDefaults.id(kitId), name, pitch,
+                            Integer.toString(midi), Integer.toString(velocity)});
             return parent.finish(ExitCode.OK, text, "athenacl.result.kit/1",
                     new LinkedHashMap<>(), List.of(), List.of());
         } catch (KitException e) {

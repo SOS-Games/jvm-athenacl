@@ -88,7 +88,7 @@ public final class KitAnalysisCommands {
         String left;
         @CommandLine.Parameters(index = "1", arity = "0..1", paramLabel = "<instrument>")
         String right;
-        @CommandLine.Option(names = "--kit", paramLabel = "<id>", defaultValue = "gm-lite")
+        @CommandLine.Option(names = "--kit", paramLabel = "<id>")
         String kitId;
         @CommandLine.Option(names = "--registers", paramLabel = "<low..high,low..high>")
         String registers;
@@ -108,7 +108,8 @@ public final class KitAnalysisCommands {
             try {
                 String text = Experimental.call("compat",
                         new Class<?>[] {String.class, String.class, String.class, String.class},
-                        new Object[] {kitId, left, right, registers == null ? "" : registers});
+                        new Object[] {io.github.sosgames.athenacl.instruments.KitDefaults.id(kitId), left, right,
+                                registers == null ? "" : registers});
                 return parent.finish(ExitCode.OK, text, "athenacl.result.kit/1",
                         new LinkedHashMap<>(), List.of(), List.of());
             } catch (KitException e) {
@@ -132,7 +133,7 @@ public final class KitAnalysisCommands {
         String name;
         @CommandLine.Option(names = "--role", paramLabel = "<role>", required = true)
         String role;
-        @CommandLine.Option(names = "--kit", paramLabel = "<id>", defaultValue = "gm-lite")
+        @CommandLine.Option(names = "--kit", paramLabel = "<id>")
         String kitId;
 
         @Override
@@ -150,7 +151,7 @@ public final class KitAnalysisCommands {
             try {
                 String text = Experimental.call("fit",
                         new Class<?>[] {String.class, String.class, String.class},
-                        new Object[] {kitId, name, role});
+                        new Object[] {io.github.sosgames.athenacl.instruments.KitDefaults.id(kitId), name, role});
                 return parent.finish(ExitCode.OK, text, "athenacl.result.kit/1",
                         new LinkedHashMap<>(), List.of(), List.of());
             } catch (KitException e) {

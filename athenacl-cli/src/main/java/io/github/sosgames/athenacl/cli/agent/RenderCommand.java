@@ -100,7 +100,7 @@ public class RenderCommand implements Callable<Integer> {
         }
         if (Themes.looksLike(notes)) {
             return ThemeCli.render(parent, notes, timeline, barWindow, at, seed, outDir, formats, soundbank, cache,
-                    debugMode);
+                    debugMode, kit);
         }
         Groove parsedGroove = null;
         if (groove != null) {
@@ -152,15 +152,22 @@ public class RenderCommand implements Callable<Integer> {
             score = Swing.apply(score, parsedGroove);
         }
         List<SlotSpec> slots = null;
+        List<KitSession.Notice> kitNotices = List.of();
         if (kit != null) {
+            List<KitSession.Notice> peeked = List.of();
             try {
+                peeked = KitSession.peek(Kits.find(kit), SoundbankPaths.cache(cache));
                 KitSession session = KitSession.open(Kits.find(kit), SoundbankPaths.cache(cache), false);
+                kitNotices = session.notices().isEmpty() ? peeked : session.notices();
                 KitScore.Bound bound = KitScore.bind(notes, score, session);
                 score = bound.score();
                 slots = bound.used().stream().map(ProbeNormalizer::spec).toList();
             } catch (KitException e) {
-                KitException.Issue issue = e.issues().get(0);
-                return parent.fail(ExitCode.INVALID_INPUT, issue.code(), issue.path(), issue.message(), issue.fix());
+                if (!KitSession.recoverable(e) || peeked.isEmpty()) {
+                    KitException.Issue issue = e.issues().get(0);
+                    return parent.fail(ExitCode.INVALID_INPUT, issue.code(), issue.path(), issue.message(), issue.fix());
+                }
+                kitNotices = peeked;
             } catch (IOException e) {
                 return parent.fail(ExitCode.RUNTIME, "IO_ERROR", "--kit", e.getMessage(),
                         "Check that the kit file and the soundfont cache are readable.");
@@ -219,6 +226,14 @@ public class RenderCommand implements Callable<Integer> {
             fields.put("slots", Integer.toString(slots.size()));
             fields.put("kit", kit);
         }
+        if (!kitNotices.isEmpty()) {
+            KitSession.Notice notice = kitNotices.get(0);
+            fields.put("warning", "KIT_SOURCE_MISSING");
+            fields.putIfAbsent("kit", notice.kit());
+            fields.put("source", notice.source());
+            fields.put("fallback", notice.fallback());
+            fields.put("hint", notice.hint());
+        }
         Map<String, Object> data = new LinkedHashMap<>();
         data.put("files", requested.size());
         data.put("notes", score.notes().size());
@@ -233,8 +248,22 @@ public class RenderCommand implements Callable<Integer> {
             Swing.measure(score).ifPresent(measured -> data.put("swingMeasured", measured));
         }
         DebugMode.fields(fields, data, debugMode, score.notes().size());
+        List<Issue> warnings = new ArrayList<>(warnings(selection));
+        if (!kitNotices.isEmpty()) {
+            KitSession.Notice notice = kitNotices.get(0);
+            data.put("warning", "KIT_SOURCE_MISSING");
+            data.put("source", notice.source());
+            data.put("fallback", notice.fallback());
+            warnings.add(new Issue(
+                    "KIT_SOURCE_MISSING",
+                    Severity.WARNING,
+                    "/sources/" + notice.source(),
+                    "soundfont for " + notice.source() + " is not installed",
+                    notice.hint(),
+                    "docs/soundbanks.md"));
+        }
         return parent.finish(ExitCode.OK, KeyValue.line(fields), "athenacl.result.render/1",
-                data, warnings(selection), List.of());
+                data, warnings, List.of());
     }
 
     private Integer soundbankOnly(SoundbankResolver.Selection selection) {
@@ -306,7 +335,7 @@ public class RenderCommand implements Callable<Integer> {
                     "Check that build/ can be written.");
         }
         return ThemeCli.render(parent, scratch, timeline, window, at, seed, outDir, formats, soundbank, cache,
-                debugMode);
+                debugMode, kit);
     }
 
     static byte[] body(String format, Score score, Path soundbank)

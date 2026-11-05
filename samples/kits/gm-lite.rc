@@ -1,0 +1,2 @@
+# Layer-check fixture. Points the default kit at GeneralUser.
+kit.default=gm-lite

@@ -10,23 +10,23 @@ loudness:
 scale:
   tonic: {choose: [C, D, E], weights: [4, 1, 1], fallback: C}
   mode: {choose: [mixolydian, dorian, ionian], weights: [4, 1, 1], fallback: mixolydian}
-  leadingTone: {p: 0.2, fallback: false}
+  leadingTone: false
 harmony:
   style: modal
   progression:
-    generate: markov
-    model: major-functional
-    length: 4
-    fallback: [I, bVII, IV, I]
-    constraints: {startOn: I, endOn: [I]}
-  harmonicRhythm: {choose: [1, 2], weights: [3, 1], fallback: 1}
+    generate: grammar
+    templates: "I V ii IV|I ii V IV|I IV ii IV"
+    fallback: [I, V, ii, IV]
+    constraints: {startOn: I, endOn: [IV]}
+  harmonicRhythm: 1
   sevenths: none
+  cadences: {8: IV}
 cadence: {strength: weak, every: 8}
 drone: {enabled: false}
 voicing: {style: {choose: [close, open], weights: [2, 1], fallback: close}, voiceLead: true, maxLeap: 4}
 lead: {enabled: true, phrase: period, rhythmCells: {generate: po, po: basketGen, symbols: [lsS, sslL], count: 2, fallback: [lsS, sslL]}, register: [A4, E6]}
 hooks: {enabled: true, candidates: 64}
-tempo: {bpm: {range: [64, 88], step: 2, fallback: 76}}
+tempo: {bpm: {range: [80, 104], step: 2, fallback: 92}}
 layers: [bell, chords, pad, lead, bass, drums]
 programs: {bell: 108, chords: 107, pad: 48, lead: 73, bass: 43, drums: 0}
 instruments: {bell: kalimba, chords: koto, pad: strings, lead: flute, bass: cello, drums: drums.standard}

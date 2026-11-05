@@ -1,15 +1,23 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 package io.github.sosgames.athenacl.adaptive;
 
+import io.github.sosgames.athenacl.theory.Key;
+import io.github.sosgames.athenacl.theory.Progression;
+import io.github.sosgames.athenacl.theory.RomanNumeral;
 import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 import java.nio.file.Path;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -112,11 +120,67 @@ class SamplerTest {
     }
 
     @Test
+    void genresKeepDistinctProgressions() throws IOException {
+        for (int seed = 1; seed <= 8; seed++) {
+            Map<String, String> byProgression = new LinkedHashMap<>();
+            for (String genre : Presets.ids()) {
+                Composition drawn = sample(genre, seed);
+                List<String> chords = drawn.list("harmony.progression");
+                assertFalse(chords.isEmpty(), genre);
+                for (String token : chords) {
+                    assertDoesNotThrow(() -> RomanNumeral.parse(token), genre + " " + token);
+                }
+                String progression = String.join(",", chords);
+                String earlier = byProgression.put(progression, genre);
+                assertTrue(earlier == null, "seed " + seed + " " + genre + " shares " + progression + " with " + earlier);
+                assertBassMoves(genre, seed, drawn);
+                String lines = drawn.lines(false);
+                if ("fantasy".equals(genre)) {
+                    assertTrue(lines.contains("source=generated:markov(minor-functional)"), lines);
+                } else {
+                    assertTrue(lines.contains("source=generated:grammar"), genre + "\n" + lines);
+                    assertFalse(lines.contains("minor-functional"), genre);
+                }
+            }
+        }
+    }
+
+    @Test
     void fantasyRendersKeepTheLeadChecks() throws ThemeException {
         for (int seed = 1; seed <= 20; seed++) {
             Director.Performance played = Presets.play("fantasy", 16, seed);
             PhraseAnalysis.Report report = PhraseAnalysis.of(played.score());
             assertTrue(report.passes(), "seed " + seed + " " + report.line());
+        }
+    }
+
+    private static void assertBassMoves(String genre, int seed, Composition drawn) {
+        Key key = Key.parse(drawn.text("scale.tonic", "C") + " " + drawn.text("scale.mode", "aeolian"));
+        List<String> numerals = drawn.list("harmony.progression");
+        int rhythm = Math.max(1, drawn.number("harmony.harmonicRhythm", 1));
+        boolean leading = drawn.flag("scale.leadingTone", false);
+        boolean pedal = drawn.flag("harmony.pedal", false) || "pedal".equals(drawn.text("harmony.style", ""));
+        Map<Integer, String> cadences = new LinkedHashMap<>();
+        String prefix = "harmony.cadences.";
+        for (Map.Entry<String, Composition.Leaf> entry : drawn.leaves().entrySet()) {
+            if (!entry.getKey().startsWith(prefix)) {
+                continue;
+            }
+            String index = entry.getKey().substring(prefix.length());
+            if (!index.isEmpty() && index.chars().allMatch(Character::isDigit)) {
+                cadences.put(Integer.parseInt(index), entry.getValue().value());
+            }
+        }
+        Progression progression = Progression.of(key, numerals, rhythm, leading, pedal, cadences);
+        int bars = 16;
+        for (int start = 1; start <= bars; start += 8) {
+            Set<Integer> roots = new LinkedHashSet<>();
+            int end = Math.min(bars, start + 7);
+            for (int bar = start; bar <= end; bar++) {
+                roots.add(progression.at(bar).rootPc());
+            }
+            assertTrue(roots.size() >= 3, genre + " seed " + seed + " bars " + start + "-" + end
+                    + " roots=" + roots.size() + " rhythm=" + rhythm + " progression=" + String.join(",", numerals));
         }
     }
 

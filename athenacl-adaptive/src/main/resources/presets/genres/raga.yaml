@@ -10,23 +10,23 @@ loudness:
 scale:
   tonic: {choose: [C, D, E], weights: [4, 1, 1], fallback: C}
   mode: {choose: [phrygian-dominant, phrygian, aeolian], weights: [4, 1, 1], fallback: phrygian-dominant}
-  leadingTone: {p: 0.2, fallback: false}
+  leadingTone: false
 harmony:
   style: modal
   progression:
-    generate: markov
-    model: modal-phrygian
-    length: 4
-    fallback: [i, bII, V, i]
-    constraints: {startOn: i, endOn: [i]}
-  harmonicRhythm: {choose: [1, 2], weights: [3, 1], fallback: 1}
+    generate: grammar
+    templates: "I bII V I|I V iv I|I iv V I"
+    fallback: [I, bII, V, I]
+    constraints: {startOn: I, endOn: [I]}
+  harmonicRhythm: 2
   sevenths: none
+  cadences: {8: I}
 cadence: {strength: weak, every: 8}
 drone: {enabled: false}
 voicing: {style: {choose: [close, open], weights: [2, 1], fallback: close}, voiceLead: true, maxLeap: 4}
 lead: {enabled: true, phrase: period, rhythmCells: {generate: po, po: basketGen, symbols: [lsS, sslL], count: 2, fallback: [lsS, sslL]}, register: [A4, E6]}
 hooks: {enabled: true, candidates: 64}
-tempo: {bpm: {range: [68, 92], step: 2, fallback: 80}}
+tempo: {bpm: {range: [56, 80], step: 2, fallback: 68}}
 layers: [lead, drone, pad, harp, bass]
 programs: {lead: 104, drone: 49, pad: 48, harp: 75, bass: 43}
 instruments: {lead: sitar, drone: strings.slow, pad: strings, harp: panflute, bass: cello}

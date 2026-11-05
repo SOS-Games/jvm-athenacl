@@ -23,14 +23,11 @@ class BassMotionTest {
     void shippedPresetsMoveTheBass() throws Exception {
         for (String id : Presets.ids()) {
             Presets.Preset preset = Presets.get(id);
-            for (String state : preset.states().keySet()) {
-                String yaml = "id: " + id + "\npreset: " + id + "\nbars: 16\nmeter: \""
-                        + preset.meter() + "\"\n";
-                Theme theme = Themes.parse(id + ".yaml", yaml);
-                Director.Performance performance = Director.perform(theme,
-                        List.of(new Theme.Control(1, 1, state, 0.8)), 1);
-                assertMoves(id + "/" + state, theme, performance);
-            }
+            String yaml = "id: " + id + "\npreset: " + id + "\nbars: 16\nmeter: \""
+                    + preset.meter() + "\"\n";
+            Theme theme = Themes.parse(id + ".yaml", yaml);
+            Director.Performance performance = Director.perform(theme, List.of(), 1);
+            assertMoves(id, theme, performance);
         }
     }
 
@@ -52,6 +49,10 @@ class BassMotionTest {
             try {
                 theme = Themes.load(file);
             } catch (ThemeException | IllegalArgumentException e) {
+                continue;
+            }
+            if (theme.states().isEmpty()) {
+                // A theme with no states plays the genre. The preset loop already checks that pass.
                 continue;
             }
             Director.Performance performance = Director.perform(theme, theme.timeline(), 1);

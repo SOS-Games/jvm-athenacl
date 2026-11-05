@@ -10,9 +10,10 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * A theme the director can play without a game running. States name the music.
+ * A theme the director can play without a game running. States are optional.
+ * With none, {@code base} is the genre and the render lists no state names.
  * The timeline is the demo script used when a render does not pass {@code --timeline}.
- * An empty script stays on {@code hold}, or on the first state when hold is absent.
+ * An empty script stays on {@code hold}, or on {@code initial}, or on the first declared state.
  * {@code motif.every} is how many bars pass before the lead states the motif again.
  * {@code 1} plays it every bar.
  * {@code hooks} is empty when the theme has no hook block, and the lead then grows
@@ -41,7 +42,9 @@ public record Theme(
         HookSettings hooks,
         Map<String, OverlayDef> overlays,
         int frameMs,
-        int phraseBars) {
+        int phraseBars,
+        StateDef base,
+        String initial) {
 
     public Theme {
         states = Collections.unmodifiableMap(new LinkedHashMap<>(states));
@@ -53,23 +56,34 @@ public record Theme(
         overlays = overlays == null
                 ? Map.of()
                 : Collections.unmodifiableMap(new LinkedHashMap<>(overlays));
+        initial = initial == null || initial.isBlank() ? null : initial;
     }
 
     public Theme withBars(int bars) {
         return new Theme(id, bars, bpm, numerator, denominator, states, stingers, defaultQuantize, rules,
-                timeline, preset, loudness, warnings, motifEvery, hold, kits, hooks, overlays, frameMs, phraseBars);
+                timeline, preset, loudness, warnings, motifEvery, hold, kits, hooks, overlays, frameMs, phraseBars,
+                base, initial);
     }
 
     /** Same theme, with each state replaced. Sampling uses this so the key follows the seed. */
     public Theme withStates(Map<String, StateDef> states) {
         return new Theme(id, bars, bpm, numerator, denominator, states, stingers, defaultQuantize, rules,
-                timeline, preset, loudness, warnings, motifEvery, hold, kits, hooks, overlays, frameMs, phraseBars);
+                timeline, preset, loudness, warnings, motifEvery, hold, kits, hooks, overlays, frameMs, phraseBars,
+                base, initial);
     }
 
     /** Same theme, played through these kits. The window uses this to prefer the fuller soundfont. */
     public Theme withKits(List<String> kits) {
         return new Theme(id, bars, bpm, numerator, denominator, states, stingers, defaultQuantize, rules,
-                timeline, preset, loudness, warnings, motifEvery, hold, kits, hooks, overlays, frameMs, phraseBars);
+                timeline, preset, loudness, warnings, motifEvery, hold, kits, hooks, overlays, frameMs, phraseBars,
+                base, initial);
+    }
+
+    /** Same theme, with the genre base replaced after sampling. */
+    public Theme withBase(StateDef base) {
+        return new Theme(id, bars, bpm, numerator, denominator, states, stingers, defaultQuantize, rules,
+                timeline, preset, loudness, warnings, motifEvery, hold, kits, hooks, overlays, frameMs, phraseBars,
+                base, initial);
     }
 
     /** Instrument names for one state, in layer order. Empty when that state is missing. */
@@ -89,8 +103,23 @@ public record Theme(
         return states.get(id);
     }
 
+    /** The state a render starts on when nothing else names one. Empty when the theme has no states. */
     public String firstState() {
+        if (initial != null && states.containsKey(initial)) {
+            return initial;
+        }
+        if (states.isEmpty()) {
+            return "";
+        }
         return states.keySet().iterator().next();
+    }
+
+    /** Comma-separated declared state ids, or {@code (none)}. */
+    public String declared() {
+        if (states.isEmpty()) {
+            return "(none)";
+        }
+        return String.join(",", states.keySet());
     }
 
     public OverlayDef overlay(String id) {

@@ -67,6 +67,11 @@ public class FuzzCommand implements Callable<Integer> {
         }
         RandomSource rng = DefaultRandom.of(seed).fork("fuzz".hashCode());
         List<String> names = new ArrayList<>(loaded.states().keySet());
+        if (names.isEmpty()) {
+            return parent.fail(ExitCode.INVALID_INPUT, "THEME_UNKNOWN_STATE", "--state",
+                    "unknown state; declared: (none)",
+                    "Declare a state under states before fuzzing transitions.");
+        }
         int stuck = 0;
         int late = 0;
         for (int i = 0; i < runs; i++) {

@@ -274,7 +274,7 @@ public class RenderCommand implements Callable<Integer> {
                     "unknown preset " + genre,
                     "Known ids: " + String.join(", ", Presets.ids()) + ".");
         }
-        String stateName = state == null || state.isBlank() ? "peaceful" : state;
+        String stateName = state == null ? "" : state.trim();
         int bars = 16;
         String window = barWindow;
         if (barWindow != null) {
@@ -295,9 +295,13 @@ public class RenderCommand implements Callable<Integer> {
             return parent.fail(ExitCode.INVALID_INPUT, "INVALID_INPUT", "--bars", "bars must be 1 or more",
                     "Use a count such as 16.");
         }
-        String yaml = "id: " + genre + "\npreset: " + genre + "\nbars: " + bars
-                + "\nhold:\n  state: " + stateName + "\n  intensity: 0.5\n";
-        Path scratch = Path.of("build", "genre-" + genre + "-" + stateName + ".yaml");
+        String yaml = "id: " + genre + "\npreset: " + genre + "\nbars: " + bars + "\n";
+        if (!stateName.isEmpty()) {
+            yaml = yaml + "states:\n  " + stateName + ": {use: library:" + stateName + "}\n"
+                    + "hold:\n  state: " + stateName + "\n  intensity: 0.5\n";
+        }
+        String fileState = stateName.isEmpty() ? "genre" : stateName;
+        Path scratch = Path.of("build", "genre-" + genre + "-" + fileState + ".yaml");
         try {
             Files.createDirectories(scratch.getParent());
             Files.writeString(scratch, yaml);

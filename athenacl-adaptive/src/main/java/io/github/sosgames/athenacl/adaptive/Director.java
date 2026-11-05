@@ -17,9 +17,9 @@ import java.util.Map;
 
 /**
  * Offline director. It walks the musical clock from bar 1, applies state changes on the
- * grid their rule names, and asks the stock layers for notes. Combat and danger land on
- * the next beat and drop notes already queued after that beat. An overlay adds a layer
- * on top of the state. Leaving combat can play a wind-down, and a loudness jump past
+ * grid their rule names, and asks the stock layers for notes. A rule can land on the
+ * next beat and drop notes already queued after that beat. An overlay adds a layer
+ * on top of the state. A rule can play a wind-down, and a loudness jump past
  * the contour step writes a CC11 ramp. A theme change asked for on bar 8 is heard on
  * bar 9. A state can bring its own meter, and a transition can keep, flip, or
  * replace the key. The same seed and the same controls always
@@ -44,9 +44,10 @@ public final class Director {
         public String stateList() {
             List<String> names = new ArrayList<>();
             for (BarInfo bar : bars) {
-                if (!names.contains(bar.state())) {
-                    names.add(bar.state());
+                if (bar.state() == null || bar.state().isEmpty() || names.contains(bar.state())) {
+                    continue;
                 }
+                names.add(bar.state());
             }
             return String.join(",", names);
         }
@@ -344,7 +345,7 @@ public final class Director {
                                boolean resetIds, long eventTick, String bridge, Map<String, Double> overlays,
                                int[] stingerBar, Carry carry) {
         int every = theme.motifEvery();
-        Theme.StateDef raw = theme.state(stateId);
+        Theme.StateDef raw = music(theme, stateId);
         Theme.StateDef state = hear(theme, raw, stateId, changed, carry);
         double smoothed = intensity.apply(target, changed);
         if (state.tempo() != lastTempo) {
@@ -382,6 +383,18 @@ public final class Director {
             }
         }
         return degree;
+    }
+
+    /** The declared state, or the genre base when the theme named no states. */
+    private static Theme.StateDef music(Theme theme, String stateId) {
+        if (stateId == null || stateId.isEmpty()) {
+            return theme.base();
+        }
+        Theme.StateDef found = theme.state(stateId);
+        if (found != null) {
+            return found;
+        }
+        throw new IllegalStateException("no music for state " + stateId);
     }
 
     /** The key this bar sounds. A change reads the transition's policy. Later bars keep it. */
@@ -530,8 +543,8 @@ public final class Director {
         for (Theme.Control control : controls) {
             if (control.hasState() && theme.state(control.state()) == null) {
                 return new ThemeIssue("THEME_UNKNOWN_STATE", "/timeline",
-                        "unknown state " + control.state(),
-                        "Use a state declared under states, such as " + theme.firstState() + ".");
+                        "unknown state; declared: " + theme.declared(),
+                        "Declare " + control.state() + " under states, or drop that control.");
             }
             if (control.hasOverlay() && theme.overlay(control.overlay()) == null) {
                 return new ThemeIssue("THEME_UNKNOWN_OVERLAY", "/timeline",

@@ -452,6 +452,10 @@ public class MusicDemo extends ApplicationAdapter {
                     preset: %s
                     bars: 14
                     meter: "%s"
+                    states:
+                      peaceful: {use: library:peaceful}
+                      combat: {use: library:combat}
+                      partying: {use: library:partying}
                     timeline:
                       - {bar: 1, state: peaceful, intensity: 0.65}
                       - {bar: 5, state: combat, intensity: 1}

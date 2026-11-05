@@ -14,3 +14,4 @@ motif:
 states:
   partying:
     tempo: 120
+    loudness: 1.5

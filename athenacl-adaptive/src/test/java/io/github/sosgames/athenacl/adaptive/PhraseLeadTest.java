@@ -22,6 +22,9 @@ class PhraseLeadTest {
                 preset: fantasy
                 bars: 8
                 meter: "4/4"
+                states:
+                  peaceful: {use: library:peaceful}
+                initial: peaceful
                 """);
         Director.Performance performance = Director.perform(theme, List.of(), 1);
         List<NoteEvent> lead = lead(performance);

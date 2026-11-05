@@ -9,5 +9,7 @@ meter: "4/4"
 hold:
   state: trading
   intensity: 0.4
+states:
+  trading: {use: library:trading, loudness: -1.0}
 motif:
   every: 4

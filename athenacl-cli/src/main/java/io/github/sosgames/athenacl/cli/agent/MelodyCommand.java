@@ -463,15 +463,28 @@ public class MelodyCommand implements Callable<Integer> {
             try {
                 Theme loaded = Themes.load(theme);
                 String stateId = state == null || state.isBlank() ? loaded.firstState() : state;
-                if (loaded.state(stateId) == null) {
-                    failed[0] = parent.fail(ExitCode.INVALID_INPUT, "INVALID_INPUT", "--state",
-                            "unknown state " + stateId, "Use a state named in the theme.");
+                if (stateId.isEmpty()) {
+                    if (loaded.base() == null) {
+                        failed[0] = parent.fail(ExitCode.INVALID_INPUT, "THEME_UNKNOWN_STATE", "--state",
+                                "unknown state; declared: (none)",
+                                "Declare a state under states, or pass --key.");
+                        return null;
+                    }
+                    parsed = loaded.base().key();
+                    if (loaded.hooks() != null) {
+                        settings = loaded.hooks();
+                    }
+                } else if (loaded.state(stateId) == null) {
+                    failed[0] = parent.fail(ExitCode.INVALID_INPUT, "THEME_UNKNOWN_STATE", "--state",
+                            "unknown state; declared: " + loaded.declared(),
+                            "Use a state named in the theme.");
                     return null;
+                } else {
+                    if (loaded.hooks() != null) {
+                        settings = loaded.hooks().forState(stateId);
+                    }
+                    parsed = loaded.state(stateId).key();
                 }
-                if (loaded.hooks() != null) {
-                    settings = loaded.hooks().forState(stateId);
-                }
-                parsed = loaded.state(stateId).key();
             } catch (ThemeException e) {
                 ThemeIssue issue = e.issues().get(0);
                 failed[0] = parent.fail(ExitCode.INVALID_INPUT, issue.code(), issue.path(),

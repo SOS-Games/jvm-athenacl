@@ -1,0 +1,19 @@
+# The game names the states. Library files are only a starting point.
+id: custom-states
+genre: fantasy
+bars: 16
+meter: "4/4"
+initial: explore
+states:
+  explore: {}
+  stealth:
+    use: library:sneaking
+    modify:
+      drone: {enabled: true}
+    loudness: -1.5
+  boss:
+    use: library:combat
+    modify:
+      lead: {instrument: "gm-lite:trumpet"}
+    transition: {quantize: beat, retract: true}
+    loudness: 4.0

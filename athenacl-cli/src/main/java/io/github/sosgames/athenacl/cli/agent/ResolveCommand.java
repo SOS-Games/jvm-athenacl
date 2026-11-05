@@ -4,6 +4,10 @@ package io.github.sosgames.athenacl.cli.agent;
 import io.github.sosgames.athenacl.adaptive.Composition;
 import io.github.sosgames.athenacl.adaptive.Resolver;
 import io.github.sosgames.athenacl.adaptive.Sampler;
+import io.github.sosgames.athenacl.adaptive.Theme;
+import io.github.sosgames.athenacl.adaptive.ThemeException;
+import io.github.sosgames.athenacl.adaptive.ThemeIssue;
+import io.github.sosgames.athenacl.adaptive.Themes;
 import io.github.sosgames.athenacl.cli.model.ExitCode;
 import io.github.sosgames.athenacl.instruments.KitException;
 import io.github.sosgames.athenacl.instruments.analysis.Ensemble;
@@ -40,6 +44,29 @@ public class ResolveCommand implements Callable<Integer> {
     @CommandLine.Option(names = "--kit", paramLabel = "<id>")
     String kit;
 
+    /** Sentinel: the theme file does not declare the requested state. */
+    private static final Composition UNKNOWN_STATE = Composition.empty();
+
+    /**
+     * A theme file only resolves a state it declares. With no {@code --state}, the genre
+     * (and the theme's own modules) are resolved and no library state is applied.
+     * {@code --genre} and {@code --state} with no theme file still read the library.
+     */
+    private Composition resolve(String genre, String state, Path theme) throws IOException, ThemeException {
+        boolean asked = state != null && !state.isBlank();
+        if (theme != null && asked) {
+            Theme loaded = Themes.load(theme);
+            if (loaded.state(state) == null) {
+                return UNKNOWN_STATE;
+            }
+            Composition declared = loaded.state(state).composition();
+            if (declared != null) {
+                return declared;
+            }
+        }
+        return Resolver.resolveTheme(genre, asked ? state : "", theme);
+    }
+
     @Override
     public Integer call() {
         AgentCli parent = themeCommand.cli();
@@ -55,10 +82,25 @@ public class ResolveCommand implements Callable<Integer> {
         }
         Composition resolved;
         try {
-            resolved = Resolver.resolveTheme(genre, state, theme);
+            resolved = resolve(genre, state, theme);
+        } catch (ThemeException e) {
+            ThemeIssue issue = e.issues().get(0);
+            return parent.fail(ExitCode.INVALID_INPUT, issue.code(), issue.path(), issue.message(), issue.fix());
         } catch (IOException e) {
             return parent.fail(ExitCode.RUNTIME, "IO_ERROR", "--genre", e.getMessage(),
                     "Check presets/genres and presets/states.");
+        }
+        if (resolved == UNKNOWN_STATE) {
+            String declared = "(none)";
+            try {
+                Theme loaded = Themes.load(theme);
+                declared = loaded.declared();
+            } catch (IOException | ThemeException ignored) {
+                declared = "(none)";
+            }
+            return parent.fail(ExitCode.INVALID_INPUT, "THEME_UNKNOWN_STATE", "--state",
+                    "unknown state; declared: " + declared,
+                    "Declare the state under states, or drop --state.");
         }
         if (resolved == null) {
             return parent.fail(ExitCode.NOT_FOUND, "NOT_FOUND", "--genre",

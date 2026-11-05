@@ -13,3 +13,4 @@ motif:
 states:
   combat:
     tempo: 144
+    loudness: 4.0

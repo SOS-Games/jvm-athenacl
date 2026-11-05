@@ -1,0 +1,5 @@
+# Plays the fantasy genre and declares no states.
+id: genre-only
+genre: fantasy
+bars: 32
+meter: "4/4"

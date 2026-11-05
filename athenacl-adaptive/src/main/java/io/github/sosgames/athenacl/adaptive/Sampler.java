@@ -113,7 +113,8 @@ public final class Sampler {
         for (Map.Entry<String, Theme.StateDef> entry : theme.states().entrySet()) {
             states.put(entry.getKey(), apply(entry.getValue(), seed));
         }
-        return theme.withStates(states);
+        Theme.StateDef base = theme.base() == null ? null : apply(theme.base(), seed);
+        return theme.withStates(states).withBase(base);
     }
 
     private static Theme.StateDef apply(Theme.StateDef state, long seed) {

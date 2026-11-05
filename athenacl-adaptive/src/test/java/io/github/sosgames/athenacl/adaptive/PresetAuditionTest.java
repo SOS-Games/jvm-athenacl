@@ -58,6 +58,8 @@ class PresetAuditionTest {
                 id: fantasy
                 preset: fantasy
                 bars: 8
+                states:
+                  peaceful: {use: library:peaceful}
                 hold: {state: peaceful, intensity: 0.5}
                 """);
         Director.Performance performance = Director.perform(theme, List.of(), 1);
@@ -89,7 +91,8 @@ class PresetAuditionTest {
 
     private static Director.Performance play(String genre, String state, int bars) throws ThemeException {
         String yaml = "id: " + genre + "\npreset: " + genre + "\nbars: " + bars + "\n"
-                + "hold: {state: " + state + ", intensity: 0.5}\n";
+                + "states:\n  " + state + ": {use: library:" + state + "}\n"
+                + "hold:\n  state: " + state + "\n  intensity: 0.5\n";
         return Director.perform(Themes.parse(genre + ".yaml", yaml), List.of(), 1);
     }
 }

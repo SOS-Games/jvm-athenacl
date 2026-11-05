@@ -29,9 +29,21 @@ public final class Resolver {
     private static final Set<String> STATE_KEYS = Set.of(
             "scale", "harmony", "cadence", "drone", "voicing", "lead", "hooks",
             "instruments", "tempo", "density", "dynamics", "source", "ensemble", "layers", "programs",
-            "key", "stinger", "meter");
+            "key", "stinger", "meter", "use", "modify", "transition", "loudness");
 
     private Resolver() {
+    }
+
+    /** True when {@code presets/states} has this id for the genre, or as a shared library file. */
+    public static boolean library(String genreId, String stateId) throws IOException {
+        if (stateId == null || stateId.isBlank()) {
+            return false;
+        }
+        if (Composition.readResource("/presets/states/" + stateId + ".yaml") != null) {
+            return true;
+        }
+        return genreId != null && !genreId.isBlank()
+                && Composition.readResource("/presets/states/" + genreId + "/" + stateId + ".yaml") != null;
     }
 
     public static Composition genre(String id) throws IOException {
@@ -78,7 +90,7 @@ public final class Resolver {
         }
         if (theme != null && theme.isObject()) {
             String source = "theme:" + themePath;
-            composition = composition.merge(modulesOf(theme), source);
+            composition = composition.merge(themeModules(theme), source);
             JsonNode states = theme.get("states");
             if (stateId != null && !stateId.isBlank() && states != null && states.isObject()
                     && states.get(stateId) != null) {
@@ -148,7 +160,8 @@ public final class Resolver {
         return best == null ? "Use a module such as harmony." : "did you mean " + best;
     }
 
-    private static JsonNode modulesOf(JsonNode theme) {
+    /** Theme-level modules, without the keys that name structure rather than music. */
+    static JsonNode themeModules(JsonNode theme) {
         ObjectNode copy = (ObjectNode) theme.deepCopy();
         copy.remove("id");
         copy.remove("preset");
@@ -167,6 +180,7 @@ public final class Resolver {
         copy.remove("hold");
         copy.remove("clock");
         copy.remove("harmony");
+        copy.remove("initial");
         return copy;
     }
 

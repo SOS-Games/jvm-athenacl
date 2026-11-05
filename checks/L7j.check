@@ -1,0 +1,41 @@
+# L7j opt-in states. Directive list: AGENTS.md, section "Layer checks".
+
+name: a theme with no states plays the genre
+args: render samples/themes/genre-only.yaml --bars 32 --seed 1 --out build/l7j --formats events
+exit: 0
+delete-before: build/l7j
+stdout-contains: bars=32
+stdout-contains: states= transitions=
+file-exists: build/l7j/events.jsonl
+
+---
+name: the genre-only render has notes
+args: describe-music build/l7j/events.jsonl --bars 1-1
+exit: 0
+stdout-regex: notes=[1-9]
+
+---
+name: resolving a genre-only theme applies no state
+args: theme resolve samples/themes/genre-only.yaml
+exit: 0
+stdout-not-contains: from=state:
+
+---
+name: a state on a genre-only theme is rejected
+args: theme resolve samples/themes/genre-only.yaml --state combat
+exit: 3
+stdout-contains: error code=THEME_UNKNOWN_STATE
+stdout-contains: unknown state; declared: (none)
+
+---
+name: a declared state keeps the library and the theme edit
+args: theme resolve samples/themes/custom-states.yaml --state stealth
+exit: 0
+stdout-contains: drone.enabled=true
+stdout-contains: from=theme:samples/themes/custom-states.yaml/stealth (library:sneaking)
+
+---
+name: custom states validate
+args: theme validate samples/themes/custom-states.yaml
+exit: 0
+stdout-contains: states=3

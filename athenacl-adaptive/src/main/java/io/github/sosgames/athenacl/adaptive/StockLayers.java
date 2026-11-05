@@ -42,6 +42,9 @@ public final class StockLayers {
         for (Theme.StateDef state : theme.states().values()) {
             HookCache.select(state.key(), seed, state.id(), hooks.forState(state.id()));
         }
+        if (theme.base() != null) {
+            HookCache.select(theme.base().key(), seed, theme.base().id(), hooks.forState(theme.base().id()));
+        }
     }
 
     static void stinger(Theme theme, Theme.StateDef state, Director.BarInfo bar, Theme.StingerDef stinger,

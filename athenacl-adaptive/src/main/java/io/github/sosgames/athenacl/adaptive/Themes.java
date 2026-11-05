@@ -3,6 +3,8 @@ package io.github.sosgames.athenacl.adaptive;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.JsonNodeFactory;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
 import io.github.sosgames.athenacl.motif.critic.MelodyCritic;
 import io.github.sosgames.athenacl.motif.hook.HookSettings;
@@ -24,6 +26,8 @@ import java.util.Set;
 
 /**
  * Reads a theme YAML file and checks that every state, layer, and transition target exists.
+ * A genre has no states of its own. A theme may declare none, and then it plays that genre.
+ * A declared state can say {@code use: library:<id>}, {@code modify:}, {@code transition:}, and {@code loudness}.
  * A bad {@code to} is {@code THEME_UNKNOWN_STATE} at a JSON pointer, so an agent can patch that field.
  */
 public final class Themes {
@@ -37,7 +41,8 @@ public final class Themes {
     public static boolean looksLike(Path path) {
         try {
             JsonNode root = YAML.readTree(Files.readString(path, StandardCharsets.UTF_8));
-            return root != null && (root.path("states").isObject() || root.path("preset").isTextual());
+            return root != null && (root.path("states").isObject() || root.path("preset").isTextual()
+                    || root.path("genre").isTextual());
         } catch (IOException e) {
             return false;
         }
@@ -45,10 +50,15 @@ public final class Themes {
 
     public static Theme load(Path path) throws IOException, ThemeException {
         String text = Files.readString(path, StandardCharsets.UTF_8);
-        return parse(path.getFileName().toString(), text);
+        String label = path.toString().replace('\\', '/');
+        return parse(path.getFileName().toString(), text, label);
     }
 
     public static Theme parse(String name, String yaml) throws ThemeException {
+        return parse(name, yaml, name);
+    }
+
+    public static Theme parse(String name, String yaml, String label) throws ThemeException {
         JsonNode root;
         try {
             root = YAML.readTree(yaml);
@@ -99,34 +109,33 @@ public final class Themes {
         }
         List<String> kitIds = kits(root);
         Map<String, Theme.StateDef> states = new LinkedHashMap<>();
-        if (preset != null) {
-            states.putAll(preset.states());
-        }
+        Map<String, Double> offsets = new LinkedHashMap<>();
+        List<Theme.Rule> stateRules = new ArrayList<>();
         JsonNode stateNode = root.get("states");
         if (stateNode != null && stateNode.isObject()) {
             var fields = stateNode.fields();
             while (fields.hasNext()) {
                 var entry = fields.next();
-                Theme.StateDef existing = states.get(entry.getKey());
-                if (existing == null) {
-                    states.put(entry.getKey(), stateDef(entry.getKey(), entry.getValue(), bpm, kitIds, errors));
-                } else {
-                    states.put(entry.getKey(), overlay(existing, entry.getValue(), kitIds, errors));
-                }
+                states.put(entry.getKey(), readState(label, entry.getKey(), entry.getValue(), presetId, bpm, meter,
+                        kitIds, errors, offsets, stateRules));
             }
         }
-        if (states.isEmpty()) {
-            errors.add(issue("THEME_STATES", "/states", "theme has no states",
-                    "Add at least one state, such as peaceful, or set preset: fantasy."));
+        Theme.StateDef base = null;
+        if (states.isEmpty() && preset != null) {
+            base = genreBase(label, presetId, meter, root, errors);
+        }
+        if (states.isEmpty() && presetId.isBlank()) {
+            errors.add(issue("THEME_STATES", "/states", "theme has no states and no genre",
+                    "Set genre to play that genre, or add a states map."));
+        }
+        String initial = root.path("initial").asText("").trim();
+        if (!initial.isEmpty() && !states.containsKey(initial)) {
+            errors.add(issue("THEME_UNKNOWN_STATE", "/initial",
+                    "unknown state; declared: " + declared(states),
+                    "Set initial to a state under states."));
+            initial = "";
         }
         Map<String, Theme.StingerDef> stingers = new LinkedHashMap<>();
-        if (preset != null) {
-            for (Theme.StateDef state : preset.states().values()) {
-                if (state.stinger() != null) {
-                    stingers.putIfAbsent(state.stinger(), new Theme.StingerDef(state.stinger(), "C5", "1/8"));
-                }
-            }
-        }
         JsonNode stingerNode = root.get("stingers");
         if (stingerNode != null && stingerNode.isObject()) {
             var fields = stingerNode.fields();
@@ -164,18 +173,7 @@ public final class Themes {
                 rules.add(rule(ruleNode.get(i), i, states, errors));
             }
         }
-        if (rules.isEmpty()) {
-            List<String> urgent = new ArrayList<>();
-            if (states.containsKey("combat")) {
-                urgent.add("combat");
-            }
-            if (states.containsKey("danger")) {
-                urgent.add("danger");
-            }
-            if (!urgent.isEmpty()) {
-                rules.add(new Theme.Rule("*", urgent, Quantize.BEAT, true));
-            }
-        }
+        rules.addAll(stateRules);
         List<Theme.Control> timeline = new ArrayList<>();
         JsonNode timelineNode = root.get("timeline");
         if (timelineNode != null && timelineNode.isArray()) {
@@ -183,7 +181,12 @@ public final class Themes {
                 timeline.add(control(timelineNode.get(i), "/timeline/" + i, states, errors));
             }
         }
-        LoudnessContour loudness = preset == null ? null : preset.loudness();
+        LoudnessContour loudness = null;
+        if (preset != null) {
+            loudness = new LoudnessContour(preset.loudness().reference(), offsets, preset.loudness().maxSpread());
+        } else if (!offsets.isEmpty()) {
+            loudness = new LoudnessContour(-23, offsets, 6);
+        }
         if (loudness != null) {
             double spread = loudness.spread();
             if (spread > 9) {
@@ -213,7 +216,204 @@ public final class Themes {
         }
         return new Theme(id, bars, bpm, numerator, denominator, states, stingers, quantize, rules, timeline,
                 presetId.isBlank() ? null : presetId, loudness, warnings, motifEvery, hold, kits, hooks(root, preset),
-                overlays, frameMs, phraseBars);
+                overlays, frameMs, phraseBars, base, initial);
+    }
+
+    /**
+     * One declared state. {@code use: library:<id>} starts from that library file.
+     * A state that only sets {@code loudness} or {@code transition} stays on the genre.
+     * A score written with {@code key} and {@code layers} stays as written when it does not name a library.
+     */
+    private static Theme.StateDef readState(String label, String id, JsonNode body, String genreId, int bpm,
+                                            String meter, List<String> kits, List<ThemeIssue> errors,
+                                            Map<String, Double> offsets, List<Theme.Rule> stateRules) {
+        if (body == null || !body.isObject()) {
+            errors.add(issue("THEME_STATES", "/states/" + id, "state " + id + " must be a map",
+                    "Use use, modify, transition, and loudness, or a key and layers."));
+            return Resolver.state(id, Composition.empty(), meter);
+        }
+        offsets.put(id, body.has("loudness") && body.get("loudness").isNumber()
+                ? body.get("loudness").asDouble() : 0);
+        Theme.Rule transition = stateTransition(id, body, statesFor(id), errors);
+        if (transition != null) {
+            stateRules.add(transition);
+        }
+        String explicit = explicitLibrary(id, body, errors);
+        if (body.has("use") && explicit.isEmpty()) {
+            return Resolver.state(id, Composition.empty(), meter);
+        }
+        try {
+            if (!explicit.isEmpty()) {
+                return libraryState(label, id, explicit, genreId, meter, body, errors);
+            }
+            if (body.has("layers") && body.get("layers").isObject()) {
+                return stateDef(id, body, bpm, kits, errors);
+            }
+            if (genreId != null && !genreId.isBlank() && musical(body) && Resolver.library(genreId, id)) {
+                return libraryState(label, id, id, genreId, meter, body, errors);
+            }
+            if (scoreShaped(body)) {
+                return stateDef(id, body, bpm, kits, errors);
+            }
+            return patched(label, id, genreBaseComposition(genreId), meter, body, errors, false);
+        } catch (IOException e) {
+            errors.add(issue("THEME_STATES", "/states/" + id, e.getMessage(),
+                    "Check presets/genres and presets/states."));
+            return Resolver.state(id, Composition.empty(), meter);
+        }
+    }
+
+    /** The genre document, with the theme's own modules merged on top. Empty when there is no genre. */
+    private static Theme.StateDef genreBase(String label, String genreId, String meter, JsonNode root,
+                                           List<ThemeIssue> errors) {
+        try {
+            Composition composition = genreBaseComposition(genreId);
+            if (composition == null) {
+                errors.add(issue("THEME_UNKNOWN_PRESET", "/genre", "unknown genre " + genreId,
+                        "Use a genre such as fantasy."));
+                return Resolver.state("", Composition.empty(), meter);
+            }
+            composition = Sampler.materialize(composition.merge(Resolver.themeModules(root), "theme:" + label));
+            return Resolver.state("", composition, meter);
+        } catch (IOException e) {
+            errors.add(issue("THEME_STATES", "/genre", e.getMessage(),
+                    "Check presets/genres."));
+            return Resolver.state("", Composition.empty(), meter);
+        }
+    }
+
+    private static Composition genreBaseComposition(String genreId) throws IOException {
+        if (genreId == null || genreId.isBlank()) {
+            return Composition.empty();
+        }
+        Composition genre = Resolver.genre(genreId);
+        return genre == null ? Composition.empty() : genre;
+    }
+
+    private static Theme.StateDef libraryState(String label, String id, String libraryId, String genreId,
+                                              String meter, JsonNode body, List<ThemeIssue> errors)
+            throws IOException {
+        if (!Resolver.library(genreId, libraryId)) {
+            errors.add(issue("THEME_UNKNOWN_STATE", "/states/" + id + "/use",
+                    "unknown library state " + libraryId,
+                    "Use a file under presets/states."));
+            return Resolver.state(id, Composition.empty(), meter);
+        }
+        if (genreId == null || genreId.isBlank()) {
+            errors.add(issue("THEME_UNKNOWN_PRESET", "/genre", "library state " + libraryId + " needs a genre",
+                    "Set genre so the library state has a genre to merge."));
+            return Resolver.state(id, Composition.empty(), meter);
+        }
+        Composition composition = Resolver.resolve(genreId, libraryId, "", null);
+        if (composition == null) {
+            errors.add(issue("THEME_UNKNOWN_PRESET", "/genre", "unknown genre " + genreId,
+                    "Use a genre such as fantasy."));
+            composition = Composition.empty();
+        }
+        return patched(label, id, composition, meter, body, errors, true);
+    }
+
+    private static Theme.StateDef patched(String label, String id, Composition composition, String meter,
+                                         JsonNode body, List<ThemeIssue> errors, boolean library) {
+        JsonNode patch = patchOf(body);
+        if (patch != null) {
+            errors.addAll(Resolver.unknownKeys(id, patch));
+            String source = "theme:" + label + "/" + id;
+            if (library) {
+                String libraryId = explicitLibrary(id, body, List.of());
+                if (libraryId.isEmpty()) {
+                    libraryId = id;
+                }
+                source = source + " (library:" + libraryId + ")";
+            }
+            composition = Sampler.materialize(composition.merge(patch, source));
+        }
+        return Resolver.state(id, composition, meter);
+    }
+
+    /** {@code use: library:<id>}, or empty when the field is absent or not that shape. */
+    private static String explicitLibrary(String id, JsonNode body, List<ThemeIssue> errors) {
+        if (body == null || !body.has("use")) {
+            return "";
+        }
+        String use = body.get("use").asText("").trim();
+        String prefix = "library:";
+        if (!use.startsWith(prefix) || use.substring(prefix.length()).isBlank()) {
+            errors.add(issue("THEME_UNKNOWN_STATE", "/states/" + id + "/use", "use " + use,
+                    "Use library:<id>."));
+            return "";
+        }
+        return use.substring(prefix.length()).trim();
+    }
+
+    private static boolean musical(JsonNode body) {
+        var fields = body.fields();
+        while (fields.hasNext()) {
+            String key = fields.next().getKey();
+            if (!key.equals("loudness") && !key.equals("transition") && !key.equals("use") && !key.equals("modify")) {
+                return true;
+            }
+        }
+        return body.has("modify") && body.get("modify").isObject() && body.get("modify").size() > 0;
+    }
+
+    /** A hand-written state: a key, a layer list, a stinger, a meter, or a plain tempo. */
+    private static boolean scoreShaped(JsonNode body) {
+        if (body.has("layers") && body.get("layers").isObject()) {
+            return true;
+        }
+        return body.has("key") || body.has("stinger") || body.has("meter")
+                || (body.has("layers") && body.get("layers").isArray())
+                || (body.has("tempo") && body.get("tempo").isNumber());
+    }
+
+    /** Module fields to merge. A bare tempo number is {@code tempo.bpm}. */
+    private static JsonNode patchOf(JsonNode body) {
+        ObjectNode patch = JsonNodeFactory.instance.objectNode();
+        JsonNode modify = body.get("modify");
+        if (modify != null && modify.isObject()) {
+            modify.fields().forEachRemaining(entry -> patch.set(entry.getKey(), entry.getValue()));
+        }
+        body.fields().forEachRemaining(entry -> {
+            String key = entry.getKey();
+            if (key.equals("use") || key.equals("modify") || key.equals("transition") || key.equals("loudness")) {
+                return;
+            }
+            patch.set(key, entry.getValue());
+        });
+        if (patch.has("tempo") && patch.get("tempo").isNumber()) {
+            int bpm = patch.get("tempo").asInt();
+            ObjectNode tempo = patch.putObject("tempo");
+            tempo.put("bpm", bpm);
+        }
+        return patch.size() == 0 ? null : patch;
+    }
+
+    /** {@code transition:} on a state is a rule into that state. It does not look at the state's name. */
+    private static Theme.Rule stateTransition(String id, JsonNode body, Map<String, Theme.StateDef> states,
+                                             List<ThemeIssue> errors) {
+        JsonNode node = body.get("transition");
+        if (node == null || node.isNull()) {
+            return null;
+        }
+        if (!node.isObject()) {
+            errors.add(issue("THEME_QUANTIZE", "/states/" + id + "/transition", "transition must be a map",
+                    "Use quantize, retract, bridge, and crossfadeBars."));
+            return null;
+        }
+        ObjectNode ruleBody = JsonNodeFactory.instance.objectNode();
+        ruleBody.put("from", "*");
+        ruleBody.put("to", id);
+        node.fields().forEachRemaining(entry -> ruleBody.set(entry.getKey(), entry.getValue()));
+        return rule(ruleBody, 0, states, errors);
+    }
+
+    /** A one-entry map so a transition rule can name the state it enters while that state is still being read. */
+    private static Map<String, Theme.StateDef> statesFor(String id) {
+        Map<String, Theme.StateDef> states = new LinkedHashMap<>();
+        states.put(id, new Theme.StateDef(id, io.github.sosgames.athenacl.theory.Key.parse("C major"), 120,
+                List.of("pad"), null));
+        return states;
     }
 
     /** {@code overlays:} add a layer on top of the state. Extra loudness is capped at 1 LU. */
@@ -284,13 +484,14 @@ public final class Themes {
         }
         if (!node.isObject()) {
             errors.add(issue("THEME_HOLD", "/hold", "hold must be a map",
-                    "Use hold.state and hold.intensity, such as combat at 0.8."));
+                    "Use hold.state and hold.intensity, with intensity from 0 to 1."));
             return null;
         }
         String state = node.path("state").asText("").trim();
         if (state.isEmpty() || !states.containsKey(state)) {
-            errors.add(issue("THEME_UNKNOWN_STATE", "/hold/state", "unknown state " + state,
-                    "Use a state declared under states, such as " + example(states) + "."));
+            errors.add(issue("THEME_UNKNOWN_STATE", "/hold/state",
+                    "unknown state; declared: " + declared(states),
+                    "Set hold.state to a state under states."));
             return null;
         }
         double level = node.has("intensity") ? intensity(node.get("intensity").asDouble()) : 0.8;
@@ -538,8 +739,9 @@ public final class Themes {
         String path = "/transitions/rules/" + index;
         String from = body.path("from").asText("*");
         if (!"*".equals(from) && !states.containsKey(from)) {
-            issues.add(issue("THEME_UNKNOWN_STATE", path + "/from", "unknown state " + from,
-                    "Use a state declared under states, such as " + example(states) + "."));
+            issues.add(issue("THEME_UNKNOWN_STATE", path + "/from",
+                    "unknown state; declared: " + declared(states),
+                    "Use a state declared under states."));
         }
         List<String> to = new ArrayList<>();
         JsonNode toNode = body.get("to");
@@ -551,16 +753,18 @@ public final class Themes {
                 String name = toNode.get(j).asText("");
                 to.add(name);
                 if (!"*".equals(name) && !states.containsKey(name)) {
-                    issues.add(issue("THEME_UNKNOWN_STATE", path + "/to/" + j, "unknown state " + name,
-                            "Use a state declared under states, such as " + example(states) + "."));
+                    issues.add(issue("THEME_UNKNOWN_STATE", path + "/to/" + j,
+                            "unknown state; declared: " + declared(states),
+                            "Use a state declared under states."));
                 }
             }
         } else {
             String name = toNode.asText("");
             to.add(name);
             if (!"*".equals(name) && !states.containsKey(name)) {
-                issues.add(issue("THEME_UNKNOWN_STATE", path + "/to", "unknown state " + name,
-                        "Use a state declared under states, such as " + example(states) + "."));
+                issues.add(issue("THEME_UNKNOWN_STATE", path + "/to",
+                        "unknown state; declared: " + declared(states),
+                        "Use a state declared under states."));
             }
         }
         Quantize quantize = Quantize.BAR;
@@ -590,12 +794,14 @@ public final class Themes {
         int beat = body.path("beat").asInt(1);
         String state = body.path("state").asText("");
         if (state.isBlank()) {
-            issues.add(issue("THEME_UNKNOWN_STATE", path + "/state", "control has no state",
+            issues.add(issue("THEME_UNKNOWN_STATE", path + "/state",
+                    "unknown state; declared: " + declared(states),
                     "Set state to one declared under states."));
-            state = states.isEmpty() ? "peaceful" : example(states);
+            state = states.isEmpty() ? "" : states.keySet().iterator().next();
         } else if (!states.containsKey(state)) {
-            issues.add(issue("THEME_UNKNOWN_STATE", path + "/state", "unknown state " + state,
-                    "Use a state declared under states, such as " + example(states) + "."));
+            issues.add(issue("THEME_UNKNOWN_STATE", path + "/state",
+                    "unknown state; declared: " + declared(states),
+                    "Use a state declared under states."));
         }
         double intensity = body.has("intensity") ? intensity(body.get("intensity").asDouble()) : 0.3;
         if (intensity < 0 || intensity > 1) {
@@ -652,11 +858,11 @@ public final class Themes {
         return node.asText();
     }
 
-    private static String example(Map<String, Theme.StateDef> states) {
+    private static String declared(Map<String, Theme.StateDef> states) {
         if (states.isEmpty()) {
-            return "peaceful";
+            return "(none)";
         }
-        return states.keySet().iterator().next();
+        return String.join(",", states.keySet());
     }
 
     static String layerList(List<String> layers) {
@@ -687,17 +893,11 @@ public final class Themes {
     }
 
     private static HookSettings presetHooks(Presets.Preset preset) {
-        if (preset == null || preset.states().isEmpty()) {
+        if (preset == null || preset.genre() == null) {
             return null;
         }
-        Composition composition = null;
-        for (Theme.StateDef state : preset.states().values()) {
-            if (state.composition() != null) {
-                composition = state.composition();
-                break;
-            }
-        }
-        if (composition == null || !composition.flag("hooks.enabled", false)) {
+        Composition composition = preset.genre();
+        if (!composition.flag("hooks.enabled", false)) {
             return null;
         }
         return HookSettings.defaults().withCandidates(composition.number("hooks.candidates", 64));

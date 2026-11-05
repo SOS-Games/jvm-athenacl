@@ -9,5 +9,7 @@ meter: "4/4"
 hold:
   state: combat
   intensity: 1
+states:
+  combat: {use: library:combat, loudness: 4.0}
 motif:
   every: 1

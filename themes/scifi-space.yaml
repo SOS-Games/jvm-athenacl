@@ -7,3 +7,11 @@ bpm: 100
 meter: "4/4"
 motif:
   every: 4
+initial: peaceful
+states:
+  peaceful: {use: library:peaceful, loudness: -1.0}
+  sneaking: {use: library:sneaking, loudness: -1.5}
+  combat: {use: library:combat, loudness: 4.0}
+  danger: {use: library:danger, loudness: 2.0}
+  trading: {use: library:trading, loudness: -1.0}
+  partying: {use: library:partying, loudness: 1.5}

@@ -25,6 +25,9 @@ public final class HarmonyNote {
         int count = 0;
         for (Director.BarInfo bar : bars) {
             Theme.StateDef state = theme.states().get(bar.state());
+            if (state == null && (bar.state() == null || bar.state().isEmpty())) {
+                state = theme.base();
+            }
             if (state == null) {
                 continue;
             }

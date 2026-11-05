@@ -873,7 +873,8 @@ public final class Themes {
 
     /**
      * A {@code hooks:} block on the theme replaces the preset. With no block, a preset that
-     * turns hooks on supplies the default 64 candidates.
+     * turns hooks on supplies the default 64 candidates. Playing the genre base does not
+     * ask that critic. A named state still does.
      */
     private static HookSettings hooks(JsonNode root, Presets.Preset preset) {
         JsonNode node = root.get("hooks");

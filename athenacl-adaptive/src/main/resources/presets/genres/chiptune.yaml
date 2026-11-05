@@ -49,3 +49,17 @@ density:
   taiko: {step: 2, minVelocity: 0}
   brass: {stab: false}
   drums: {fill: false}
+# Genre-base arrangement. A library state ignores this.
+groove:
+  pad: "off"
+  bell: "off"
+  arp: "x.x.x.x.x.x.x.x."
+  arpDur: "1/16"
+  arpDegrees: [0, 4, 7, 4, 7, 11, 7, 4]
+  bass: "x...x...x...x..."
+  bassDur: "1/8"
+  drums: "on"
+  kick: "x...x...x...x..."
+  snare: "....x.......x..."
+  hat: "x.x.x.x.x.x.x.x."
+  lead: [quarter, lsS]

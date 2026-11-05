@@ -384,7 +384,10 @@ public final class PhraseLead {
     }
 
     private static List<String> cells(Theme.StateDef state) {
-        List<String> named = state.composition() == null ? List.of() : state.composition().list("lead.rhythmCells");
+        List<String> groove = GenreBed.leadCells(state);
+        List<String> named = !groove.isEmpty()
+                ? groove
+                : state.composition() == null ? List.of() : state.composition().list("lead.rhythmCells");
         List<String> known = new ArrayList<>();
         for (String name : named) {
             if (LIBRARY.cells.containsKey(name)) {

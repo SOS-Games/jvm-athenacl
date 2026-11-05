@@ -23,9 +23,11 @@ import java.util.Map;
  * window matches the full render.
  * Combat keeps a trumpet, taiko on every beat, horn stabs, and a kick-snare drum pattern.
  * A pad stacks the chord of this bar. The bass plays that chord's root, unless the state asked for a pedal.
- * When the theme has {@code hooks:}, the lead's idea is the critic's pick. That pick is
- * made once per state, before the bar loop. A theme without the block still calls
- * {@code MotifGenerator}, so L7's notes stay the same.
+ * When the theme has {@code hooks:}, a named state uses the critic's pick. That pick is
+ * made once per state, before the bar loop. The genre base, the stream a preset button
+ * plays, does not ask the critic: one global score was pulling every lead toward the
+ * same arch. That base reads {@code groove:} instead of the shared whole-note pad.
+ * A theme without the block still calls {@code MotifGenerator}, so L7's notes stay the same.
  * {@code arp} is an even grid: eighths, or sixteenths when the state asks for sixteen steps.
  * A {@code source.arp.po} sieve keeps some of those steps and drops the rest. {@code bell} is a slow celesta.
  */
@@ -41,9 +43,6 @@ public final class StockLayers {
         }
         for (Theme.StateDef state : theme.states().values()) {
             HookCache.select(state.key(), seed, state.id(), hooks.forState(state.id()));
-        }
-        if (theme.base() != null) {
-            HookCache.select(theme.base().key(), seed, theme.base().id(), hooks.forState(theme.base().id()));
         }
     }
 
@@ -82,6 +81,9 @@ public final class StockLayers {
                    Director.Ids ids, List<Director.Played> notes, int leadDegree, boolean drumsOn,
                    int held, int every) {
         for (LayerSpec spec : state.specs()) {
+            if (takeBed(state, spec, info, start, seed, ids, notes)) {
+                continue;
+            }
             switch (spec.behaviour()) {
                 case "chord-pad" -> {
                     if ("chords".equals(spec.name())) {
@@ -108,6 +110,135 @@ public final class StockLayers {
         return leadDegree;
     }
 
+    /**
+     * Genre-base groove. Returns true when this layer should not also run the shared player.
+     * {@code off} writes nothing. A grid writes those hits. {@code hold} and {@code on} return
+     * false so the old player still runs.
+     */
+    private static boolean takeBed(Theme.StateDef state, LayerSpec spec, Director.BarInfo info, long start,
+                                   long seed, Director.Ids ids, List<Director.Played> notes) {
+        if (!GenreBed.applies(state)) {
+            return false;
+        }
+        if ("drums".equals(spec.name())) {
+            String mode = GenreBed.mode(state, "drums");
+            if ("off".equals(mode)) {
+                return true;
+            }
+            if (GenreBed.anyLane(state)) {
+                paintLanes(state, spec, info, start, seed, ids, notes);
+                return true;
+            }
+            return false;
+        }
+        String mode = GenreBed.mode(state, spec.name());
+        if (mode.isEmpty() || "hold".equals(mode) || "on".equals(mode)) {
+            return false;
+        }
+        if ("off".equals(mode)) {
+            return true;
+        }
+        if (!GenreBed.isPattern(mode)) {
+            return false;
+        }
+        paintPattern(state, spec, info, start, seed, ids, notes, mode);
+        return true;
+    }
+
+    private static void paintLanes(Theme.StateDef state, LayerSpec spec, Director.BarInfo info, long start,
+                                   long seed, Director.Ids ids, List<Director.Played> notes) {
+        paintLane(state, spec, info, start, seed, ids, notes, GenreBed.lane(state, "kick"), 36, 110);
+        paintLane(state, spec, info, start, seed, ids, notes, GenreBed.lane(state, "snare"), 38, 104);
+        paintLane(state, spec, info, start, seed, ids, notes, GenreBed.lane(state, "hat"), 42, 78);
+    }
+
+    private static void paintLane(Theme.StateDef state, LayerSpec spec, Director.BarInfo info, long start,
+                                  long seed, Director.Ids ids, List<Director.Played> notes, String pattern,
+                                  int midi, int velocity) {
+        if (!GenreBed.isPattern(pattern)) {
+            return;
+        }
+        long cell = step(state, pattern);
+        for (int i = 0; i < pattern.length(); i++) {
+            char mark = pattern.charAt(i);
+            if (mark != 'x' && mark != 'X') {
+                continue;
+            }
+            long id = ids.take();
+            notes.add(played(id, start + i * cell, "1/16", midi, PitchName.name(midi), velocity,
+                    spec.channel(), spec.name(), info, seed, state.id(), "drum-grid"));
+        }
+    }
+
+    private static void paintPattern(Theme.StateDef state, LayerSpec spec, Director.BarInfo info, long start,
+                                     long seed, Director.Ids ids, List<Director.Played> notes, String pattern) {
+        long cell = step(state, pattern);
+        String dur = GenreBed.duration(state, spec.name());
+        int[] degrees = GenreBed.degrees(state, spec.name());
+        if (degrees.length == 0) {
+            degrees = new int[] {0, 4, 7};
+        }
+        int cursor = 0;
+        long barTicks = GenreBed.barTicks(state);
+        for (int i = 0; i < pattern.length(); i++) {
+            char mark = pattern.charAt(i);
+            if (mark != 'x' && mark != 'X') {
+                continue;
+            }
+            long at = start + i * cell;
+            String written = hitDuration(dur, cell, barTicks - i * cell);
+            if ("bass-line".equals(spec.behaviour())) {
+                hit(ids, notes, info, seed, state, at, written, bassMidi(state, info), velocity(info.intensity()),
+                        spec, "root");
+            } else if ("chord-pad".equals(spec.behaviour()) || "brass".equals(spec.name())) {
+                for (int midi : voicing(state, info.bar())) {
+                    hit(ids, notes, info, seed, state, at, written, midi, velocity(info.intensity()), spec, "chord");
+                }
+            } else if ("taiko".equals(spec.name()) || "ostinato".equals(spec.behaviour())) {
+                hit(ids, notes, info, seed, state, at, written, 45, velocity(info.intensity()), spec, "taiko");
+            } else {
+                int degree = degrees[cursor % degrees.length];
+                cursor++;
+                int midi = harmony(state, info.bar()).midi(degree, 5);
+                hit(ids, notes, info, seed, state, at, written, midi, velocity(info.intensity()), spec, "arp");
+            }
+        }
+    }
+
+    private static void hit(Director.Ids ids, List<Director.Played> notes, Director.BarInfo info, long seed,
+                            Theme.StateDef state, long at, String duration, int midi, int velocity,
+                            LayerSpec spec, String why) {
+        long id = ids.take();
+        notes.add(played(id, at, duration, midi, PitchName.name(midi), velocity,
+                spec.channel(), spec.name(), info, seed, state.id(), why));
+    }
+
+    private static long step(Theme.StateDef state, String pattern) {
+        long barTicks = GenreBed.barTicks(state);
+        if (pattern == null || pattern.isEmpty() || barTicks <= 0) {
+            return TimeBase.PPQ;
+        }
+        return Math.max(1, barTicks / pattern.length());
+    }
+
+    /** The written length of one hit, shortened when it would cross the next bar. */
+    private static String hitDuration(String dur, long cell, long room) {
+        long length = dur == null || dur.isBlank() ? cell : TimeBase.durationTicks(dur);
+        if (length > room) {
+            length = Math.max(1, room);
+            return length + "/" + (TimeBase.PPQ * 4L);
+        }
+        if (dur == null || dur.isBlank()) {
+            return length + "/" + (TimeBase.PPQ * 4L);
+        }
+        return dur;
+    }
+
+    private static int bassMidi(Theme.StateDef state, Director.BarInfo info) {
+        Progression.Chord chord = harmony(state, info.bar());
+        return chord.pedal() ? 12 * 3 + state.key().tonicPc() : chord.rootMidi(2);
+    }
+
     private static void pad(Theme.StateDef state, Director.BarInfo info, long start, long seed,
                             Director.Ids ids, List<Director.Played> notes, LayerSpec spec) {
         for (int midi : voicing(state, info.bar())) {
@@ -119,8 +250,7 @@ public final class StockLayers {
 
     private static void bass(Theme.StateDef state, Director.BarInfo info, long start, long seed,
                              Director.Ids ids, List<Director.Played> notes, LayerSpec spec) {
-        Progression.Chord chord = harmony(state, info.bar());
-        int midi = chord.pedal() ? 12 * 3 + state.key().tonicPc() : chord.rootMidi(2);
+        int midi = bassMidi(state, info);
         int step = count(state, "density.bass.step", 2);
         for (int beat = 0; beat < 4; beat += step) {
             long id = ids.take();
@@ -133,7 +263,8 @@ public final class StockLayers {
                              Director.Ids ids, List<Director.Played> notes, int held, int every, LayerSpec spec) {
         Motif motif;
         HookCache.HookChoice choice = null;
-        if (theme.hooks() != null) {
+        boolean genreBase = state.id() == null || state.id().isBlank();
+        if (theme.hooks() != null && !genreBase) {
             choice = HookCache.select(state.key(), seed, state.id(), theme.hooks().forState(state.id()));
             motif = choice.motif();
         } else {

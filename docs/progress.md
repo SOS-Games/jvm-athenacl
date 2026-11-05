@@ -42,7 +42,7 @@ A note list such as `samples/notes/c-major-scale.yaml` renders to `score.mid`, `
 
 ## L1b — Instrument kits
 
-`gradlew layerCheck -Player=L1b` passes (10 checks). `instruments/gm-lite.yaml` names instruments in GeneralUser GS. `instruments/gm-full.yaml` extends it with MuseScore_General (`soundbank install musescore-general`). Kits can set gain, transpose, key range, and fallbacks. Several soundfonts load into one synth, each instrument on an engine-assigned slot, and only the instruments in use are loaded. Each instrument is normalized to about -20 LUFS. `kit validate` checks checksums, licenses, and SF3. `credits` writes `CREDITS.md` for the sources a theme actually uses.
+`gradlew layerCheck -Player=L1b` passes (10 checks). `instruments/gm-lite.yaml` names instruments in GeneralUser GS. `instruments/gm-full.yaml` extends it with MuseScore_General (`soundbank install musescore-general`). `instruments/gm-plus.yaml` is an opt-in overlay: FreePats upright piano and Spanish classical guitar, with an optional CC BY YDP grand, falling through to `gm-full`. Kits can set gain, transpose, key range, and fallbacks. Several soundfonts load into one synth, each instrument on an engine-assigned slot, and only the instruments in use are loaded. Each instrument is normalized to about -20 LUFS. `kit validate` checks checksums, licenses, and SF3. `credits` writes `CREDITS.md` for the sources a theme actually uses.
 
 ## L6 — Beat switches
 

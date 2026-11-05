@@ -1,0 +1,82 @@
+# Opt-in overlay. The default kit stays gm-full. A theme pins this with instruments.kits: [gm-plus].
+# piano and nylon play FreePats when those banks are installed, and fall through to gm-full otherwise.
+# piano.grand is the optional YDP Grand (CC BY 3.0). A missing file falls through with no warning.
+kit: gm-plus
+version: 1
+extends: gm-full
+sources:
+  upright:
+    id: freepats-upright-kw
+    format: sf2
+    sha256: d9f5157720963671906727ca2e12b3293fd822c831bb0de477dd1c5f3ad37108
+    license:
+      spdx: CC0-1.0
+      url: "https://creativecommons.org/publicdomain/zero/1.0/"
+      attribution: "Upright Piano KW by Gonzalo and Roberto for FreePats"
+      redistribute: true
+      commercial: true
+      file: licenses/FreePats-UprightPianoKW-CC0.txt
+  guitar:
+    id: freepats-spanish-guitar
+    format: sf2
+    sha256: 0d4c08ea8c1c8924b3829084b0c8778f6d6b906f331e44fde51bc159f76b03b9
+    license:
+      spdx: CC0-1.0
+      url: "https://creativecommons.org/publicdomain/zero/1.0/"
+      attribution: "Spanish Classical Guitar by Roberto for FreePats"
+      redistribute: true
+      commercial: true
+      file: licenses/FreePats-SpanishClassicalGuitar-CC0.txt
+  ydp:
+    id: freepats-ydp-grand
+    format: sf2
+    sha256: 8757076aecf80abdad1e8f8f6168370399b06f94481796986e6e75ceca09ad21
+    optional: true
+    license:
+      spdx: CC-BY-3.0
+      url: "https://creativecommons.org/licenses/by/3.0/"
+      attribution: "Zenph Studios YDP samples, SF2 by Roberto for FreePats"
+      redistribute: true
+      commercial: true
+      file: licenses/FreePats-YDP-Grand-CC-BY-3.0.txt
+instruments:
+  piano:
+    source: upright
+    bank: 0
+    program: 0
+    fallback: [gm-full:piano, gm-lite:piano]
+    roles: [lead, pad, arp]
+    tags: [warm, soft, percussive]
+    class: pitched-percussive
+    register: {low: 21, high: 108, sweetLow: 48, sweetHigh: 84}
+    notes: "FreePats Upright Piano KW (CC0). Falls through to the MuseScore acoustic grand."
+  nylon:
+    source: guitar
+    bank: 0
+    program: 0
+    fallback: [gm-full:nylon, gm-lite:nylon]
+    roles: [lead, arp]
+    tags: [plucky, soft, warm]
+    class: pitched-percussive
+    register: {low: 40, high: 84, sweetLow: 52, sweetHigh: 76}
+    notes: "FreePats Spanish classical guitar (CC0). The themes call this nylon."
+  guitar.nylon:
+    source: guitar
+    bank: 0
+    program: 0
+    fallback: [gm-full:nylon, gm-lite:nylon]
+    roles: [lead, arp]
+    tags: [plucky, soft, warm]
+    class: pitched-percussive
+    register: {low: 40, high: 84, sweetLow: 52, sweetHigh: 76}
+    notes: "Same Spanish classical guitar as nylon."
+  piano.grand:
+    source: ydp
+    bank: 0
+    program: 0
+    fallback: [gm-full:piano, gm-lite:piano]
+    roles: [lead, pad, arp]
+    tags: [bright, percussive]
+    class: pitched-percussive
+    register: {low: 21, high: 108, sweetLow: 48, sweetHigh: 84}
+    notes: "Zenph Studios YDP samples, SF2 by Roberto for FreePats (CC BY 3.0)."

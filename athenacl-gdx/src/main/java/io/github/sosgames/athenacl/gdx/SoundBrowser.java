@@ -273,6 +273,15 @@ final class SoundBrowser {
         if ("musescore-general".equals(id)) {
             return "MuseScore General";
         }
+        if ("freepats-upright-kw".equals(id)) {
+            return "FreePats Upright Piano KW";
+        }
+        if ("freepats-spanish-guitar".equals(id)) {
+            return "FreePats Spanish Classical Guitar";
+        }
+        if ("freepats-ydp-grand".equals(id)) {
+            return "FreePats YDP Grand";
+        }
         return id;
     }
 

@@ -1,0 +1,6 @@
+{"id":"scan-upright","cmd":"kit scan freepats-upright-kw"}
+{"id":"scan-guitar","cmd":"kit scan freepats-spanish-guitar"}
+{"id":"scan-ydp","cmd":"kit scan freepats-ydp-grand"}
+{"id":"probe-upright","cmd":"render samples/notes/c-major-scale.yaml --soundbank freepats-upright-kw --out build/soundbank-smoke/upright --formats wav"}
+{"id":"probe-guitar","cmd":"render samples/notes/c-major-scale.yaml --soundbank freepats-spanish-guitar --out build/soundbank-smoke/guitar --formats wav"}
+{"id":"probe-ydp","cmd":"render samples/notes/c-major-scale.yaml --soundbank freepats-ydp-grand --out build/soundbank-smoke/ydp --formats wav"}

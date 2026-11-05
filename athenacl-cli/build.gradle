@@ -88,6 +88,28 @@ tasks.register('layerCheck', JavaExec) {
   }
 }
 
+tasks.register('fetchSoundbanks', JavaExec) {
+  group = 'athenacl'
+  description = 'Download catalog soundbanks into the cache. Not part of layerCheck.'
+  dependsOn tasks.named('classes')
+  classpath = sourceSets.main.runtimeClasspath
+  mainClass = agentMain
+  workingDir = rootProject.projectDir
+  jvmArgs = cliJvmArgs
+  args 'batch', 'checks/manual/fetch-soundbanks.jsonl'
+}
+
+tasks.register('soundbankSmoke', JavaExec) {
+  group = 'athenacl'
+  description = 'Install catalog soundbanks, scan the FreePats banks, and render a scale through each. Not part of layerCheck.'
+  dependsOn tasks.named('fetchSoundbanks')
+  classpath = sourceSets.main.runtimeClasspath
+  mainClass = agentMain
+  workingDir = rootProject.projectDir
+  jvmArgs = cliJvmArgs
+  args 'batch', 'checks/manual/soundbank-smoke.jsonl'
+}
+
 tasks.register('analysisCheck', JavaExec) {
   group = 'athenacl'
   description = 'Run the experimental analyzer checks. Sets analysis.enabled.'

@@ -1,0 +1,5 @@
+{"id":"generaluser","cmd":"soundbank install generaluser"}
+{"id":"musescore","cmd":"soundbank install musescore-general"}
+{"id":"upright","cmd":"soundbank install freepats-upright-kw"}
+{"id":"guitar","cmd":"soundbank install freepats-spanish-guitar"}
+{"id":"ydp","cmd":"soundbank install freepats-ydp-grand"}

@@ -41,4 +41,16 @@ tasks.register('analysisCheck') {
   dependsOn ':athenacl-instruments:analysisTest', ':athenacl-cli:analysisCheck'
 }
 
+tasks.register('fetchSoundbanks') {
+  group = 'athenacl'
+  description = 'Download catalog soundbanks into the cache. Not part of layerCheck.'
+  dependsOn ':athenacl-cli:fetchSoundbanks'
+}
+
+tasks.register('soundbankSmoke') {
+  group = 'athenacl'
+  description = 'Install catalog soundbanks, scan the FreePats banks, and render a scale through each. Not part of layerCheck.'
+  dependsOn ':athenacl-cli:soundbankSmoke'
+}
+
 eclipse.project.name = 'jvm-athenacl-parent'

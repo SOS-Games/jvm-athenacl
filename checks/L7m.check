@@ -1,0 +1,123 @@
+# L7m gm-plus overlay. Does not download a soundfont.
+# Directive list: AGENTS.md, section "Layer checks".
+
+name: upright dry-run does not write
+args: soundbank install freepats-upright-kw --dry-run --cache build/l7m/banks
+exit: 0
+delete-before: build/l7m
+stderr-empty
+stdout-contains: action=download size=57377848 sha256=d9f5157720963671906727ca2e12b3293fd822c831bb0de477dd1c5f3ad37108
+stdout-contains: archiveSize=28832466 archiveSha256=17c084c6e4205233dc49b34e4bc44a9b2d7c7a2c02b04729ecda77079b07c826
+stdout-contains: soundbank=freepats-upright-kw
+stdout-contains: license=CC0-1.0
+stdout-contains: dryRun=true
+file-absent: build/l7m/banks
+
+---
+name: guitar dry-run
+args: soundbank install freepats-spanish-guitar --dry-run --cache build/l7m/banks
+exit: 0
+stderr-empty
+stdout-contains: action=download size=19822546 sha256=0d4c08ea8c1c8924b3829084b0c8778f6d6b906f331e44fde51bc159f76b03b9
+stdout-contains: archiveSize=9990750 archiveSha256=8c192f1fc640a553199a4a43a17ae12354a6a05e3d6aad79bd43b5d29314ff51
+stdout-contains: license=CC0-1.0
+stdout-contains: dryRun=true
+file-absent: build/l7m/banks
+
+---
+name: ydp dry-run names the CC-BY license
+args: soundbank install freepats-ydp-grand --dry-run --cache build/l7m/banks
+exit: 0
+stderr-empty
+stdout-contains: action=download size=118398836 sha256=8757076aecf80abdad1e8f8f6168370399b06f94481796986e6e75ceca09ad21
+stdout-contains: archiveSize=36737684 archiveSha256=d243dc3e182a60df2a16e92828c1821cf3eb5748b45e2e2bdcfa9cf7af056026
+stdout-contains: license=CC-BY-3.0
+stdout-contains: dryRun=true
+file-absent: build/l7m/banks
+
+---
+name: list shows the freepats banks absent
+args: soundbank list --cache build/l7m/empty
+exit: 0
+stderr-empty
+stdout-contains: soundbank=freepats-upright-kw status=absent
+stdout-contains: soundbank=freepats-spanish-guitar status=absent
+stdout-contains: soundbank=freepats-ydp-grand status=absent
+
+---
+name: missing banks still render
+args: render samples/notes/c-major-scale.yaml --kit gm-plus --seed 1 --out build/l7m/a --formats events --cache build/l7m/empty
+exit: 0
+stdout-contains: warning=KIT_SOURCE_MISSING
+stdout-contains: kit=gm-plus
+stdout-contains: fallback=gm-lite
+capture: hash hash=([0-9a-f]+)
+
+---
+name: the same seed hashes the same
+args: render samples/notes/c-major-scale.yaml --kit gm-plus --seed 1 --out build/l7m/b --formats events --cache build/l7m/empty
+exit: 0
+stdout-contains-capture: hash
+stdout-contains: warning=KIT_SOURCE_MISSING
+
+---
+name: piano descriptor is declared
+args: kit describe piano --kit gm-plus
+exit: 0
+stderr-empty
+stdout-contains: roles=lead,pad,arp source=declared
+stdout-contains: FreePats Upright Piano KW
+
+---
+name: nylon is the spanish guitar
+args: kit describe nylon --kit gm-plus
+exit: 0
+stderr-empty
+stdout-contains: tags=plucky,soft,warm source=declared
+stdout-contains: Spanish classical guitar
+
+---
+name: guitar.nylon is the same guitar
+args: kit describe guitar.nylon --kit gm-plus
+exit: 0
+stderr-empty
+stdout-contains: source=declared
+
+---
+name: piano.grand names the CC-BY credit
+args: kit describe piano.grand --kit gm-plus
+exit: 0
+stderr-empty
+stdout-contains: Zenph Studios YDP samples, SF2 by Roberto for FreePats
+
+---
+name: ensemble select accepts gm-plus
+args: ensemble select --genre fantasy --state sneaking --kit gm-plus --seed 1
+exit: 0
+stderr-empty
+stdout-contains: role=lead
+stdout-contains: seed=1/ensemble/lead
+stdout-not-contains: ensemble.fallback
+
+---
+name: another ensemble seed still selects
+args: ensemble select --genre fantasy --state sneaking --kit gm-plus --seed 20
+exit: 0
+stderr-empty
+stdout-contains: role=bass
+stdout-not-contains: ensemble.fallback
+
+---
+name: credits list the CC-BY attribution
+args: credits samples/kits/cc-by-theme.yaml --out build/l7m/credits --cache build/l7m/empty
+exit: 0
+stderr-empty
+stdout-contains: licenses=CC-BY-3.0
+file-exists: build/l7m/credits/CREDITS.md
+file-exists: build/l7m/credits/FreePats-YDP-Grand-CC-BY-3.0.txt
+
+---
+name: a source with no license is denied
+args: kit validate samples/kits/no-license.yaml --cache build/l7m/empty
+exit: 3
+stdout-contains: error code=KIT_LICENSE_DENIED

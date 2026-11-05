@@ -65,6 +65,7 @@ gradlew.bat :athenacl-cli:agentCli --args="athena run conformance/paths/c-major.
 gradlew.bat :athenacl-cli:agentCli --args="athena run conformance/demos/script02a.ath --out build/l14"
 gradlew.bat :athenacl-cli:agentCli --args="debug inspect build/l0/events.jsonl --where pitch=E4"
 gradlew.bat :athenacl-cli:agentCli --args="soundbank install generaluser --dry-run"
+gradlew.bat :athenacl-cli:agentCli --args="soundbank install freepats-upright-kw --dry-run"
 gradlew.bat :athenacl-cli:agentCli --args="describe instruments --soundbank generaluser"
 gradlew.bat :athenacl-cli:agentCli --args="analyze build/l0"
 gradlew.bat :athenacl-cli:agentCli --args="describe scale D-dorian"
@@ -111,7 +112,7 @@ gradlew.bat :athenacl-cli:agentCli --args="debug probe flute --kit gm-lite --pit
 | po | You want `po sample basketGen "oc,(1,2,3)" --n 6` to walk a basket and print `values=1,2,3,1,2,3`. |
 | athena | You want `athena run` to play a path or a LineGroove beat and check its MIDI against the golden file beside it, or `athena prompt --line` to resolve one command line. |
 | batch | You want `batch checks/batch.jsonl` to run each JSONL command in one process. `--stop-on-error` returns at the first failure. `--json` prints one object per command. |
-| soundbank | You want to install, list, or show GeneralUser GS or MuseScore_General. An `.sf3` file is rejected. |
+| soundbank | You want to install, list, or show GeneralUser GS, MuseScore_General, or a FreePats bank (`freepats-upright-kw`, `freepats-spanish-guitar`, `freepats-ydp-grand`). An `.sf3` file is rejected. |
 | describe | You want `describe scale`, `describe chord`, `describe instruments` (287 presets and 13 drum kits in GeneralUser GS), `describe pos --group value` (45 value generators), `describe pos --group omde` (36 wave and breakpoint generators), `describe pos --group rhythm` (13 rhythm generators), `describe textures` (14 texture modules), `describe setclass 3-11` (a Forte set class), `describe commands` (the first 55 athenaCL commands), or `describe commands --group b` (the other 48). |
 | analyze | You want EBU R128 integrated loudness and true peak for a WAV or a render directory. A swung render also prints `swing.measured=`. `analyze <dir> --by state` prints each state's offset from the contour. A motif render also prints `motif.reuse.per8bars=`. A directory with `events.jsonl` also prints `harmony.distinctRoots=`, `lead.overlaps=`, and the other phrase counts. `harmony.json` adds `harmony.style=`. |
 | theory | You want `theory progression` to voice-lead roman numerals, or `theory modulate` to plan a key change. |
@@ -292,7 +293,7 @@ The summary line also ends with `soundbank=`. A missing `--soundbank` file still
 
 ## Soundbanks and loudness
 
-`soundbank install generaluser` downloads GeneralUser GS into `~/.cache/athenacl-j/soundbanks/` (or `--cache <dir>`). The file is 32319396 bytes. The SHA-256 is pinned. `--dry-run` prints `action=download size=32319396 sha256=` and writes nothing. A second install prints `status=present changed=false`. `soundbank list` and `soundbank show generaluser` report that cache.
+`soundbank install generaluser` downloads GeneralUser GS into `~/.cache/athenacl-j/soundbanks/` (or `--cache <dir>`). The file is 32319396 bytes. The SHA-256 is pinned. `--dry-run` prints `action=download size=32319396 sha256=` and writes nothing. A second install prints `status=present changed=false`. `soundbank list` and `soundbank show generaluser` report that cache. `soundbank install freepats-upright-kw`, `freepats-spanish-guitar`, and `freepats-ydp-grand` download the FreePats archives, unpack the SF2, and check both pins. `--dry-run` also prints `archiveSize=` and `archiveSha256=`. `gradlew fetchSoundbanks` and `gradlew soundbankSmoke` are manual. `layerCheck` does not download them.
 
 `describe instruments --soundbank generaluser` prints `instruments=287 drumkits=13`.
 
@@ -356,7 +357,7 @@ A preset turns hooks on unless the theme file has its own `hooks:` block, which 
 
 ## Instrument kits
 
-`instruments/gm-full.yaml` is the default kit (MuseScore_General). `instruments/gm-lite.yaml` is GeneralUser GS and the fallback when the MuseScore file is missing or its checksum does not match. That render exits 0 and prints `warning=KIT_SOURCE_MISSING` with `fallback=gm-lite` and `hint="athenacl soundbank install musescore-general"`. `soundbank install musescore-general` downloads the SF2. An SF3 file is rejected with `SOUNDBANK_SF3_UNSUPPORTED` before Gervill opens it. `kit validate` checks the checksum, the license, and that two instruments did not receive the same slot. `instruments compare` prints `loudness.probe=` after each instrument is brought to about -20 LUFS, and `raw.deltaLu=` for the gap before that. `render --kit gm-full` puts each named instrument on its own slot. See `docs/soundbanks.md`.
+`instruments/gm-full.yaml` is the default kit (MuseScore_General). `instruments/gm-lite.yaml` is GeneralUser GS and the fallback when the MuseScore file is missing or its checksum does not match. That render exits 0 and prints `warning=KIT_SOURCE_MISSING` with `fallback=gm-lite` and `hint="athenacl soundbank install musescore-general"`. `instruments/gm-plus.yaml` is opt-in. It extends `gm-full` and replaces `piano` and `nylon` with the CC0 FreePats banks. `guitar.nylon` is the same guitar. `piano.grand` is the optional YDP Grand (CC BY 3.0); a missing file falls through with no warning. Pin it with `instruments.kits: [gm-plus]`. A render whose FreePats file is missing still exits 0 and falls through to MuseScore, then GeneralUser. `soundbank install musescore-general` downloads the SF2. An SF3 file is rejected with `SOUNDBANK_SF3_UNSUPPORTED` before Gervill opens it. `kit validate` checks the checksum, the license, and that two instruments did not receive the same slot. `instruments compare` prints `loudness.probe=` after each instrument is brought to about -20 LUFS, and `raw.deltaLu=` for the gap before that. `render --kit gm-full` puts each named instrument on its own slot. See `docs/soundbanks.md`.
 
 `themes/fantasy-dungeon.yaml` names `instruments.kits: [gm-full]`. The preset maps each layer to a kit instrument (`strings`, `piano`, `horn`, `flute`, `cello`, and the rest). A render of that theme normalizes those instruments, then trims each state onto the loudness contour. The event-log hash stays the program-change log, not the trim. `theme resolve` prints `kit=` and `source=` (`flag`, `env`, `rc`, `pin`, or `builtin`). A file that lists `instruments.kits` is `source=pin` and beats `ATHENACL_KIT` and `kit.default`. `--kit` beats the pin.
 

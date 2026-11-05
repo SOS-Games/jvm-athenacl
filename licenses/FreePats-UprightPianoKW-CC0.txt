@@ -1,0 +1,27 @@
+SPDX-License-Identifier: CC0-1.0
+
+Upright Piano KW
+Version 2022-02-21
+FreePats project — https://freepats.zenvoid.org/Piano/acoustic-grand-piano.html#UprightKW
+
+Upright Piano KW by Gonzalo and Roberto for FreePats.
+
+This sound bank has been created from a Kawai upright piano, located in a
+living room. Thanks to Inma Martínez de Miguel for kindly letting us access to
+her home to play and record the piano.
+
+It was recorded by Gonzalo <humanogonzalo@gmail.com> and Roberto
+<roberto@zenvoid.org> on January 2017, using a Zoom H1 portable recorder
+mounted on a tripod in front of the piano, approximately at the place where
+the head of a piano player would be.
+
+The raw recordings were cropped, edited, and processed by Roberto, using free
+software programs.
+
+Published under the terms of Creative Commons CC0 1.0 public domain dedication:
+https://creativecommons.org/publicdomain/zero/1.0/legalcode
+
+The installed file is UprightPianoKW-20220221.sf2, extracted from
+UprightPianoKW-SF2-20220221.7z. This is the full SF2, not the small edition.
+The soundfont is not stored in this repository. `soundbank install freepats-upright-kw`
+downloads it and checks the pinned SHA-256.

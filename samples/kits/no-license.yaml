@@ -1,0 +1,11 @@
+kit: no-license
+version: 1
+sources:
+  x:
+    format: sf2
+    license:
+      attribution: "no spdx"
+      redistribute: true
+      commercial: true
+instruments:
+  piano: {source: x, bank: 0, program: 0}

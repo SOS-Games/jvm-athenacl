@@ -27,7 +27,7 @@ gradlew.bat :athenacl-cli:agentCli --args="analyze build/l0"
 gradlew.bat :athenacl-cli:agentCli --args="describe scale D-dorian"
 ```
 
-Text output is `key=value`. `--json` prints one result document. Logs go to stderr. `soundbank install generaluser` downloads GeneralUser GS into the cache (`~/.cache/athenacl-j/soundbanks`, or `--cache`). The `.sf2` is not in git.
+Text output is `key=value`. `--json` prints one result document. Logs go to stderr. `soundbank install generaluser` downloads GeneralUser GS into the cache (`~/.cache/athenacl-j/soundbanks`, or `--cache`). The `.sf2` is not in git. The default kit is MuseScore_General (`gm-full`). `gm-plus` is an optional FreePats overlay; see [docs/soundbanks.md](docs/soundbanks.md).
 
 ```bat
 gradlew.bat test

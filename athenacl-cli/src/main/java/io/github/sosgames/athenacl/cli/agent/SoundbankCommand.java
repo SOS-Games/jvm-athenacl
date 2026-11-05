@@ -7,6 +7,7 @@ import io.github.sosgames.athenacl.cli.model.TextPaths;
 import io.github.sosgames.athenacl.render.soundbank.SoundbankCatalog;
 import io.github.sosgames.athenacl.render.soundbank.SoundbankInstaller;
 import io.github.sosgames.athenacl.render.soundbank.SoundbankPaths;
+import io.github.sosgames.athenacl.render.soundbank.SoundbankRejected;
 import picocli.CommandLine;
 
 import java.io.IOException;
@@ -30,7 +31,7 @@ public class SoundbankCommand implements Callable<Integer> {
         parent.commandName = "soundbank";
         return parent.fail(ExitCode.USAGE, "USAGE", "argv[1]",
                 "usage: soundbank install <id> | soundbank list | soundbank show <id>",
-                "Known ids: generaluser, musescore-general.");
+                "Known ids: " + SoundbankCatalog.knownIds() + ".");
     }
 
     AgentCli cli() {
@@ -51,11 +52,11 @@ public class SoundbankCommand implements Callable<Integer> {
             parent.commandName = "soundbank install";
             if (id == null || id.isBlank()) {
                 return parent.fail(ExitCode.USAGE, "USAGE", "argv[2]", "usage: soundbank install <id>",
-                        "Known ids: generaluser, musescore-general.");
+                        "Known ids: " + SoundbankCatalog.knownIds() + ".");
             }
             if (SoundbankCatalog.byId(id) == null) {
                 return parent.fail(ExitCode.NOT_FOUND, "NOT_FOUND", "argv[2]", "unknown soundbank " + id,
-                        "Known ids: generaluser, musescore-general.");
+                        "Known ids: " + SoundbankCatalog.knownIds() + ".");
             }
             try {
                 SoundbankInstaller.Plan plan = SoundbankInstaller.install(id, SoundbankPaths.cache(cache), parent.dryRun);
@@ -71,6 +72,8 @@ public class SoundbankCommand implements Callable<Integer> {
                 data.put("path", TextPaths.portable(plan.path()));
                 return parent.finish(ExitCode.OK, text, "athenacl.result.soundbank/1",
                         data, List.of(), List.of());
+            } catch (SoundbankRejected e) {
+                return parent.fail(ExitCode.INVALID_INPUT, e.code(), e.path(), e.getMessage(), e.fix());
             } catch (IOException e) {
                 return parent.fail(ExitCode.RUNTIME, "IO_ERROR", "argv[2]", e.getMessage(),
                         "Check the network and the cache directory, then run install again.");
@@ -82,7 +85,12 @@ public class SoundbankCommand implements Callable<Integer> {
         SoundbankCatalog.Entry entry = SoundbankCatalog.byId(plan.id());
         String license = entry == null || entry.license() == null ? "" : " license=" + entry.license();
         if (plan.dryRun() && "download".equals(plan.action())) {
+            String archive = "";
+            if (entry != null && entry.archived()) {
+                archive = " archiveSize=" + entry.archiveSize() + " archiveSha256=" + entry.archiveSha256();
+            }
             return "action=download size=" + plan.size() + " sha256=" + plan.sha256()
+                    + archive
                     + " soundbank=" + plan.id() + " status=" + plan.status() + " dryRun=true" + license;
         }
         if ("installed".equals(plan.status())) {
@@ -140,12 +148,12 @@ public class SoundbankCommand implements Callable<Integer> {
             parent.commandName = "soundbank show";
             if (id == null || id.isBlank()) {
                 return parent.fail(ExitCode.USAGE, "USAGE", "argv[2]", "usage: soundbank show <id>",
-                        "Known ids: generaluser, musescore-general.");
+                        "Known ids: " + SoundbankCatalog.knownIds() + ".");
             }
             SoundbankCatalog.Entry entry = SoundbankCatalog.byId(id);
             if (entry == null) {
                 return parent.fail(ExitCode.NOT_FOUND, "NOT_FOUND", "argv[2]", "unknown soundbank " + id,
-                        "Known ids: generaluser, musescore-general.");
+                        "Known ids: " + SoundbankCatalog.knownIds() + ".");
             }
             try {
                 Path file = SoundbankPaths.cache(cache).resolve(entry.fileName());
@@ -155,6 +163,10 @@ public class SoundbankCommand implements Callable<Integer> {
                 fields.put("file", entry.fileName());
                 fields.put("size", Long.toString(entry.size()));
                 fields.put("sha256", entry.sha256());
+                if (entry.archived()) {
+                    fields.put("archiveSize", Long.toString(entry.archiveSize()));
+                    fields.put("archiveSha256", entry.archiveSha256());
+                }
                 fields.put("status", present ? "present" : "absent");
                 fields.put("path", TextPaths.portable(file));
                 return parent.finish(ExitCode.OK, KeyValue.line(fields), "athenacl.result.soundbank/1",

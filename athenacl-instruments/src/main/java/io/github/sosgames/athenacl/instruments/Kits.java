@@ -130,7 +130,8 @@ public final class Kits {
                         license.path("attribution").asText(""),
                         license.path("redistribute").asBoolean(false),
                         license.path("commercial").asBoolean(false),
-                        license.path("file").asText("")));
+                        license.path("file").asText("")),
+                body.path("optional").asBoolean(false));
     }
 
     private static Kit.Instrument instrument(String name, JsonNode body) {

@@ -83,9 +83,10 @@ public final class CommandCatalog {
                     "athenacl.result.diff/1"),
             new CommandInfo(
                     "soundbank",
-                    "soundbank install downloads GeneralUser GS and checks the pinned SHA-256. list and show report the cache.",
+                    "soundbank install downloads a catalog bank and checks the pinned SHA-256. FreePats ids are freepats-upright-kw, freepats-spanish-guitar, and freepats-ydp-grand. list and show report the cache.",
                     List.of(
                             gradle("soundbank install generaluser --dry-run"),
+                            gradle("soundbank install freepats-upright-kw --dry-run"),
                             gradle("soundbank install generaluser")),
                     true,
                     "athenacl.result.soundbank/1"),
@@ -170,7 +171,7 @@ public final class CommandCatalog {
                     "athenacl.result.adapt/1"),
             new CommandInfo(
                     "instruments",
-                    "instruments list, show, audition, and compare named instruments from a kit. gm-full is the default. gm-lite is the GeneralUser fallback.",
+                    "instruments list, show, audition, and compare named instruments from a kit. gm-full is the default. gm-lite is the GeneralUser fallback. gm-plus is the opt-in FreePats overlay.",
                     List.of(
                             gradle("instruments list --kit gm-lite"),
                             gradle("instruments show harp --kit gm-lite")),

@@ -1,0 +1,43 @@
+SPDX-License-Identifier: CC-BY-3.0
+
+YDP Grand Piano
+Release 2016-08-04
+FreePats project — https://freepats.zenvoid.org/Piano/acoustic-grand-piano.html
+
+Attribution required: Zenph Studios YDP samples, SF2 by Roberto for FreePats.
+
+The grand piano YDP soundfont is free. It is built from the Zenph Studios
+Yamaha Disklavier Pro Piano Multisamples for OLPC. The soundfont and
+modifications to the original sound samples are produced by
+roberto@zenvoid.org for the FreePats project and published under a Creative
+Commons Attribution 3.0 license.
+
+  https://creativecommons.org/licenses/by/3.0/legalcode
+
+You may copy and redistribute this soundfont, including commercially, if you
+give appropriate credit, provide a link to the license, and indicate if you
+changed it.
+
+Zenph Studios Yamaha Disklavier Pro Piano Multisamples for OLPC
+
+  A collection of Grand Piano samples played by a Yamaha Disklavier Pro.
+  Performed by computer and specifically recorded for OLPC by Dr. Mikhail
+  Krishtal, Director of Music Research and Production, and his team at Zenph
+  Studios. They are included in the OLPC sound sample library.
+
+  Produced by Zenph Studios in Chapel Hill, North Carolina.
+  The main studio location is in Raleigh, North Carolina. http://zenph.com/
+
+Samples from the OLPC sound sample library were donated to Dr. Richard
+Boulanger at cSounds.com to support OLPC developers, students, XO users, and
+computer and electronic musicians. They are offered under CC BY 3.0.
+
+  http://wiki.laptop.org/go/Sound_samples
+  http://csounds.com/boulanger
+
+The installed file is YDP-GrandPiano-20160804.sf2, extracted from
+YDP-GrandPiano-SF2-20160804.tar.bz2. The soundfont is not stored in this
+repository. `soundbank install freepats-ydp-grand` downloads it and checks
+the pinned SHA-256. gm-plus names this instrument piano.grand. The source is
+optional: if the file is missing, that name falls through to MuseScore piano
+and this credit is not listed, because the bank was not used.

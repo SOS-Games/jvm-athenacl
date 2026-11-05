@@ -114,10 +114,15 @@ public final class Ensemble {
 
     /**
      * The ensemble a render should play. A genre that does not ask for auto returns null so the
-     * YAML names stay. A missing kit does the same. This does not open a synth.
+     * YAML names stay. A blank {@code state} is the genre base: playback keeps the instruments
+     * written on that genre (an 808 and a saw for hip-hop, guitars for rock). A declared state
+     * id still runs the auto search. A missing kit returns null. This does not open a synth.
      */
     public static Result forPlayback(Composition composition, String state, long seed) {
         if (composition == null || !"auto".equals(composition.text("ensemble.select", "fixed"))) {
+            return null;
+        }
+        if (state == null || state.isBlank()) {
             return null;
         }
         try {

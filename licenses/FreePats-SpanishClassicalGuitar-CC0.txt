@@ -1,0 +1,22 @@
+SPDX-License-Identifier: CC0-1.0
+
+Spanish classical guitar
+Version 2019-06-18
+FreePats project — https://freepats.zenvoid.org/Guitar/acoustic-guitar.html
+
+Spanish Classical Guitar by Roberto for FreePats.
+
+Sound samples recorded from a Spanish classical guitar on 2008. Created by
+roberto@zenvoid.org for the FreePats project.
+
+Recorded with an AKG Perception 120 microphone and processed using free
+software tools. The recording conditions were far from ideal, so several
+filters have been applied to reduce noise and improve sound.
+
+Published under the terms of Creative Commons CC0 1.0 public domain dedication:
+https://creativecommons.org/publicdomain/zero/1.0/legalcode
+
+The installed file is SpanishClassicalGuitar-20190618.sf2, extracted from
+SpanishClassicalGuitar-SF2-20190618.7z. The soundfont is not stored in this
+repository. `soundbank install freepats-spanish-guitar` downloads it and
+checks the pinned SHA-256.

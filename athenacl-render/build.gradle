@@ -1,5 +1,7 @@
 dependencies {
   api project(':athenacl-events')
+  implementation "org.apache.commons:commons-compress:$commonsCompressVersion"
+  implementation "org.tukaani:xz:$xzVersion"
   testImplementation "org.junit.jupiter:junit-jupiter:$junitVersion"
   testRuntimeOnly "org.junit.platform:junit-platform-launcher:$junitPlatformVersion"
 }

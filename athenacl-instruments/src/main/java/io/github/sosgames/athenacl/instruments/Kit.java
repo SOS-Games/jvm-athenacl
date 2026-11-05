@@ -7,7 +7,9 @@ import java.util.List;
 /**
  * A reusable set of named instruments drawn from one or more soundfonts.
  * {@code instruments/gm-full.yaml} is the default. It extends {@code gm-lite}, and a missing
- * MuseScore bank falls back to GeneralUser. A kit may extend another and override names.
+ * MuseScore bank falls back to GeneralUser. {@code gm-plus} extends {@code gm-full} and is
+ * opt-in: a theme pins it. A kit may extend another and override names. An optional source
+ * that is simply not installed falls through without a warning.
  */
 public record Kit(String id, List<Source> sources, List<Instrument> instruments) {
     public Kit {
@@ -33,13 +35,15 @@ public record Kit(String id, List<Source> sources, List<Instrument> instruments)
         return null;
     }
 
+    /** {@code optional} means a missing file falls through quietly. A bad checksum still warns. */
     public record Source(
             String key,
             String catalogId,
             Path path,
             String format,
             String sha256,
-            License license) {
+            License license,
+            boolean optional) {
     }
 
     public record License(

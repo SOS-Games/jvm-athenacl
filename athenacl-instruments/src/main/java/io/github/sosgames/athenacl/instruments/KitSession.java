@@ -27,6 +27,7 @@ import java.util.Set;
  * fallback list. SF3 is rejected before Gervill sees the file. Slots are assigned by sorted name
  * so two runs of the same kit get the same patches. A missing or mismatched {@code gm-full}
  * source is one {@link Notice} and still plays through {@code gm-lite} when that bank is present.
+ * A source marked {@code optional} that is simply absent falls through with no notice.
  */
 public final class KitSession {
     private final Kit kit;
@@ -129,6 +130,9 @@ public final class KitSession {
             if (state.sf3() || !recoverable(state.error())) {
                 throw state.error();
             }
+            if (quietAbsence(source, state.error())) {
+                continue;
+            }
             notices.add(noticeFor(kit, source));
         }
         return List.copyOf(notices);
@@ -186,6 +190,19 @@ public final class KitSession {
             throw new KitException(new KitException.Issue(
                     "KIT_EXTENDS_CYCLE", "/extends", "kit extends itself", "Remove the cycle in extends."));
         }
+        try {
+            return openInstruments(kit, cache, policy, stack);
+        } finally {
+            stack.remove(kit.id());
+        }
+    }
+
+    /**
+     * The stack only covers the kit currently being resolved. A later instrument may fall
+     * back into a kit an earlier instrument already opened, and that is not a cycle.
+     */
+    private static KitSession openInstruments(Kit kit, Path cache, LicensePolicy policy, Set<String> stack)
+            throws IOException, KitException {
         Map<String, SourceState> sources = new LinkedHashMap<>();
         for (Kit.Source source : kit.sources()) {
             sources.put(source.key(), inspect(source, cache, policy));
@@ -241,7 +258,7 @@ public final class KitSession {
                 fallbacks++;
                 if (!state.ok() && noted.add(instrument.source())) {
                     Kit.Source source = kit.source(instrument.source());
-                    if (source != null) {
+                    if (source != null && !quietAbsence(source, state.error())) {
                         notices.add(noticeFor(kit, source));
                     }
                 }
@@ -344,6 +361,12 @@ public final class KitSession {
             return null;
         }
         return SoundbankPaths.cache(cache).resolve(entry.fileName());
+    }
+
+    /** A missing optional bank is a quiet fallback. A bad checksum still reports. */
+    private static boolean quietAbsence(Kit.Source source, KitException error) {
+        return source.optional() && error != null && !error.issues().isEmpty()
+                && "KIT_SOURCE_MISSING".equals(error.issues().get(0).code());
     }
 
     /** True when some instrument on this source can fall back, so a missing file is a warning. */

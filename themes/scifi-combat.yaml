@@ -1,10 +1,9 @@
-# The space fight, held. Sixteenth-note arp and an 808 kit. Tempo stays at 100.
+# The space fight, held. Sixteenth-note arp and an 808 kit. Tempo stays with the genre draw.
 id: scifi-combat
 preset: scifi-space
 instruments:
   kits: [gm-full]
 bars: 14
-bpm: 100
 meter: "4/4"
 hold:
   state: combat

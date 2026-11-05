@@ -1,5 +1,5 @@
 scale: {tonic: E, mode: phrygian, leadingTone: false}
-tempo: {bpm: 96}
+tempo: {relative: 1}
 harmony: {style: modal, progression: [i, bII, bIII, bII]}
 layers: [drone, pad, bass, brass, taiko]
 programs: {drone: 49, pad: 52, bass: 43, brass: 60, taiko: 116}

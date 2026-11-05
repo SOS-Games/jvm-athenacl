@@ -72,7 +72,7 @@ A note list such as `samples/notes/c-major-scale.yaml` renders to `score.mid`, `
 
 `gradlew layerCheck -Player=L9` passes (6 checks).
 
-`themes/scifi-space.yaml` is the space preset: Lydian pads, a synth bass, and an arp on the eighth-note grid. Combat stays at 100 bpm and doubles that arp into sixteenths, with an 808 kit. Trading uses celesta. There is no whole-tone scale, so the raised fourth stands in for it. `describe-music` prints `arp.grid=` and `programs=`. `render themes/fantasy-dungeon.yaml --at "8 theme themes/scifi-space.yaml"` prints `themeSwitch.bar=9`. The window still swaps the combat kit on its own. Ambush, Dungeon, Combat, Party, Trading, Space, and Space combat buttons each start that piece from the beginning, with the track length and how far through it you are. `themes/fantasy-party.yaml` holds the tavern, `themes/fantasy-trading.yaml` holds the market, and `themes/scifi-combat.yaml` holds the space fight.
+`themes/scifi-space.yaml` is the space preset: Lydian pads, a synth bass, and an arp on the eighth-note grid. Combat keeps the drawn tempo and doubles that arp into sixteenths, with an 808 kit. Trading uses celesta. There is no whole-tone scale, so the raised fourth stands in for it. `describe-music` prints `arp.grid=` and `programs=`. `render themes/fantasy-dungeon.yaml --at "8 theme themes/scifi-space.yaml"` prints `themeSwitch.bar=9`. The window still swaps the combat kit on its own. Ambush, Dungeon, Combat, Party, Trading, Space, and Space combat buttons each start that piece from the beginning, with the track length and how far through it you are. `themes/fantasy-party.yaml` holds the tavern, `themes/fantasy-trading.yaml` holds the market, and `themes/scifi-combat.yaml` holds the space fight.
 
 ## L10 — Harmony and meter
 
@@ -180,7 +180,7 @@ L22 starts with `batch`. A JSONL file lists commands, and this process runs each
 
 ## L7h — Seeded parameter sampling
 
-A genre no longer has to name one key, one progression, and one tempo. `scale`, `tempo`, `harmony`, `voicing`, and `lead` can be a choice, a range, a probability, or a generator (Markov, grammar, sieve, or an athenaCL parameter object). `theme resolve --seed 1` draws them and prints `source=sampled`, `source=generated`, or `source=pin`, plus the seed path `1/s1/…`. The same seed draws the same values. A `pin:` on the game theme replaces any draw. With no seed, each field keeps the `fallback`, which is the value that genre used before. No golden MIDI file changed. Note hashes move where a render used to inherit a fixed genre tempo, key, or progression and now draws one.
+A genre no longer has to name one key, one progression, and one tempo. `scale`, `tempo`, `harmony`, `voicing`, and `lead` can be a choice, a range, a probability, or a generator (Markov, grammar, sieve, or an athenaCL parameter object). `theme resolve --seed 1` draws them and prints `source=sampled`, `source=generated`, or `source=pin`, plus the seed path `1/s1/…`. The same seed draws the same values. A `pin:` on the game theme replaces any draw. With no seed, each field keeps the `fallback`, which is the value that genre used before. State files scale `tempo.bpm` with `relative` instead of pinning a bpm, so two seeds can land on different tempos inside the genre range. A theme omits `bpm` and the opening state follows that draw. `themes/fantasy-combat.yaml` still pins 144. No golden MIDI file changed. Note hashes move where a render used to inherit a fixed genre tempo, key, or progression and now draws one.
 
 ## L7f — Ensemble selection
 

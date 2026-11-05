@@ -114,7 +114,11 @@ public final class Sampler {
             states.put(entry.getKey(), apply(entry.getValue(), seed));
         }
         Theme.StateDef base = theme.base() == null ? null : apply(theme.base(), seed);
-        return theme.withStates(states).withBase(base);
+        Theme sampled = theme.withStates(states).withBase(base);
+        if (!sampled.bpmPinned()) {
+            sampled = sampled.withBpm(sampled.openingTempo());
+        }
+        return sampled;
     }
 
     private static Theme.StateDef apply(Theme.StateDef state, long seed) {

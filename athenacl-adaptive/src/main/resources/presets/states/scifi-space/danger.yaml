@@ -1,5 +1,5 @@
 scale: {tonic: E, mode: lydian, leadingTone: false}
-tempo: {bpm: 108}
+tempo: {relative: 1.08}
 layers: [pad, arp, bass, lead]
 programs: {pad: 99, arp: 80, bass: 38, lead: 80}
 instruments: {pad: fx.atmosphere, arp: lead.square, bass: bass.synth, lead: lead.square}

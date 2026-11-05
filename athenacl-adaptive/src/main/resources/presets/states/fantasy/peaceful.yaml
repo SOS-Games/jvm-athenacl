@@ -1,5 +1,5 @@
 scale: {tonic: A, mode: ionian, leadingTone: true}
-tempo: {bpm: 84}
+tempo: {relative: 0.875}
 harmony: {progression: [I, vi, IV, V], harmonicRhythm: 1}
 voicing: {style: close}
 lead: {rhythmCells: [lsS, sslL, dotted]}

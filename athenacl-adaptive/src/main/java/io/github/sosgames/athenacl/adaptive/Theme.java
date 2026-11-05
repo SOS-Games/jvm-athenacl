@@ -21,11 +21,15 @@ import java.util.Map;
  * {@code overlays} add a layer on top of the current state, such as {@code lowHealth}.
  * {@code frameMs} is 0 unless the theme snaps requests to a fixed frame before the musical grid.
  * {@code phraseBars} is how often a chord phrase cadences. It is 4 unless the theme says otherwise.
+ * An omitted {@code bpm} follows the opening state's tempo, including a seed draw.
+ * A number written on {@code bpm} keeps that score clock. It does not freeze a state's draw.
+ * A state pins the music with {@code tempo: {bpm:}} or {@code pin:}; {@code tempo: {relative:}} scales the genre range.
  */
 public record Theme(
         String id,
         int bars,
         int bpm,
+        boolean bpmPinned,
         int numerator,
         int denominator,
         Map<String, StateDef> states,
@@ -60,30 +64,61 @@ public record Theme(
     }
 
     public Theme withBars(int bars) {
-        return new Theme(id, bars, bpm, numerator, denominator, states, stingers, defaultQuantize, rules,
+        return new Theme(id, bars, bpm, bpmPinned, numerator, denominator, states, stingers, defaultQuantize, rules,
                 timeline, preset, loudness, warnings, motifEvery, hold, kits, hooks, overlays, frameMs, phraseBars,
                 base, initial);
     }
 
     /** Same theme, with each state replaced. Sampling uses this so the key follows the seed. */
     public Theme withStates(Map<String, StateDef> states) {
-        return new Theme(id, bars, bpm, numerator, denominator, states, stingers, defaultQuantize, rules,
+        return new Theme(id, bars, bpm, bpmPinned, numerator, denominator, states, stingers, defaultQuantize, rules,
                 timeline, preset, loudness, warnings, motifEvery, hold, kits, hooks, overlays, frameMs, phraseBars,
                 base, initial);
     }
 
     /** Same theme, played through these kits. The window uses this to prefer the fuller soundfont. */
     public Theme withKits(List<String> kits) {
-        return new Theme(id, bars, bpm, numerator, denominator, states, stingers, defaultQuantize, rules,
+        return new Theme(id, bars, bpm, bpmPinned, numerator, denominator, states, stingers, defaultQuantize, rules,
                 timeline, preset, loudness, warnings, motifEvery, hold, kits, hooks, overlays, frameMs, phraseBars,
                 base, initial);
     }
 
     /** Same theme, with the genre base replaced after sampling. */
     public Theme withBase(StateDef base) {
-        return new Theme(id, bars, bpm, numerator, denominator, states, stingers, defaultQuantize, rules,
+        return new Theme(id, bars, bpm, bpmPinned, numerator, denominator, states, stingers, defaultQuantize, rules,
                 timeline, preset, loudness, warnings, motifEvery, hold, kits, hooks, overlays, frameMs, phraseBars,
                 base, initial);
+    }
+
+    /** Same theme, with the score clock set. A written {@code bpm} stays pinned; a fill from the opening state does not. */
+    public Theme withBpm(int bpm) {
+        return new Theme(id, bars, bpm, bpmPinned, numerator, denominator, states, stingers, defaultQuantize, rules,
+                timeline, preset, loudness, warnings, motifEvery, hold, kits, hooks, overlays, frameMs, phraseBars,
+                base, initial);
+    }
+
+    /**
+     * Tempo of the state a render starts on. Hold wins, then {@code initial} or the first state,
+     * then the genre base. Used when the theme file does not write {@code bpm}.
+     */
+    public int openingTempo() {
+        if (hold != null) {
+            StateDef held = states.get(hold.state());
+            if (held != null) {
+                return held.tempo();
+            }
+        }
+        String start = firstState();
+        if (!start.isEmpty()) {
+            StateDef state = states.get(start);
+            if (state != null) {
+                return state.tempo();
+            }
+        }
+        if (base != null) {
+            return base.tempo();
+        }
+        return bpm > 0 ? bpm : 120;
     }
 
     /** Instrument names for one state, in layer order. Empty when that state is missing. */

@@ -1,2 +1,2 @@
 scale: {tonic: E, mode: mixolydian, leadingTone: false}
-tempo: {bpm: 112}
+tempo: {relative: 0.875}

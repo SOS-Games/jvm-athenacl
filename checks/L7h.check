@@ -26,6 +26,31 @@ name: a pin beats the sample
 args: theme resolve samples/themes/pinned.yaml --seed 7
 exit: 0
 stdout-contains: scale.tonic=D source=pin:
+stdout-contains: tempo.bpm=92 source=pin:
+
+---
+name: fantasy tempo is drawn from the range
+args: theme resolve --genre fantasy --seed 1
+exit: 0
+stdout-contains: tempo.bpm=96 source=sampled:genre:fantasy range[84,108] seed=1/s1/tempo.bpm
+
+---
+name: a second seed draws a different tempo
+args: theme resolve --genre fantasy --seed 2
+exit: 0
+stdout-contains: tempo.bpm=106 source=sampled:genre:fantasy range[84,108] seed=2/s1/tempo.bpm
+
+---
+name: sneaking scales the drawn tempo
+args: theme resolve --genre fantasy --state sneaking --seed 1
+exit: 0
+stdout-contains: tempo.bpm=77 source=sampled:genre:fantasy range[84,108]*state:sneaking relative=0.8 seed=1/s1/tempo.bpm
+
+---
+name: the dungeon theme does not freeze tempo
+args: theme resolve themes/fantasy-dungeon.yaml --seed 1
+exit: 0
+stdout-contains: tempo.bpm=96 source=sampled:genre:fantasy range[84,108] seed=1/s1/tempo.bpm
 
 ---
 name: fantasy still plays

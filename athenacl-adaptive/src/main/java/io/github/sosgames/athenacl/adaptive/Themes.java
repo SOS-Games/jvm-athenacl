@@ -92,7 +92,8 @@ public final class Themes {
             errors.add(issue("THEME_BARS", "/bars", "bars must be 1 or more", "Set bars to 16 or more."));
             bars = 1;
         }
-        int bpm = root.path("bpm").asInt(120);
+        boolean bpmPinned = root.has("bpm");
+        int bpm = bpmPinned ? root.path("bpm").asInt(120) : 120;
         int numerator = 4;
         int denominator = 4;
         String meter = root.path("meter").asText("4/4");
@@ -211,9 +212,13 @@ public final class Themes {
         if (!errors.isEmpty()) {
             throw new ThemeException(errors);
         }
-        return new Theme(id, bars, bpm, numerator, denominator, states, stingers, quantize, rules, timeline,
-                presetId.isBlank() ? null : presetId, loudness, warnings, motifEvery, hold, kits, hooks(root, preset),
-                overlays, frameMs, phraseBars, base, initial);
+        Theme loaded = new Theme(id, bars, bpm, bpmPinned, numerator, denominator, states, stingers, quantize, rules,
+                timeline, presetId.isBlank() ? null : presetId, loudness, warnings, motifEvery, hold, kits,
+                hooks(root, preset), overlays, frameMs, phraseBars, base, initial);
+        if (!bpmPinned) {
+            loaded = loaded.withBpm(loaded.openingTempo());
+        }
+        return loaded;
     }
 
     /**

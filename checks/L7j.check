@@ -28,6 +28,44 @@ stdout-contains: error code=THEME_UNKNOWN_STATE
 stdout-contains: unknown state; declared: (none)
 
 ---
+name: hip-hop render stays on the genre
+args: render --genre hiphop --bars 8 --seed 1 --out build/l7j-hip --formats events
+exit: 0
+delete-before: build/l7j-hip
+stdout-contains: states= transitions=
+stdout-not-contains: peaceful
+stdout-not-contains: partying
+file-exists: build/l7j-hip/events.jsonl
+
+---
+name: hip-hop resolve keeps the declared palette
+args: theme resolve --genre hiphop
+exit: 0
+stdout-contains: instruments.lead=lead.saw
+stdout-contains: instruments.bass=bass.synth
+stdout-contains: instruments.drums=drums.808
+stdout-contains: instruments.chords=rhodes
+stdout-not-contains: from=state:
+
+---
+name: rock resolve keeps the guitars
+args: theme resolve --genre rock
+exit: 0
+stdout-contains: instruments.lead=guitar.overdrive
+stdout-contains: instruments.harp=guitar.clean
+stdout-contains: instruments.bass=bass.finger
+stdout-not-contains: from=state:
+
+---
+name: fantasy resolve keeps the flute and strings
+args: theme resolve --genre fantasy
+exit: 0
+stdout-contains: instruments.lead=flute
+stdout-contains: instruments.pad=strings
+stdout-contains: instruments.bass=cello
+stdout-not-contains: from=state:
+
+---
 name: a declared state keeps the library and the theme edit
 args: theme resolve samples/themes/custom-states.yaml --state stealth
 exit: 0

@@ -121,9 +121,15 @@ public record Theme(
         return bpm > 0 ? bpm : 120;
     }
 
-    /** Instrument names for one state, in layer order. Empty when that state is missing. */
+    /**
+     * Instrument names for one state, in layer order. A blank id is the genre base, so a
+     * preset audition lists the palette written on the genre. Empty when that state is missing.
+     */
     public String instrumentList(String stateId) {
-        StateDef state = states.get(stateId);
+        StateDef state = stateId == null ? null : states.get(stateId);
+        if (state == null && base != null && (stateId == null || stateId.isEmpty() || stateId.equals(base.id()))) {
+            state = base;
+        }
         if (state == null) {
             return "";
         }

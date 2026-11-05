@@ -72,8 +72,11 @@ public final class Presets {
                 preset.character(), preset.instruments(), performance.notes().size());
     }
 
-    /** Plays the genre for {@code bars}, with no state layered on. The same seed plays the same notes. */
-    public static Director.Performance play(String id, int bars, long seed) throws ThemeException {
+    /**
+     * The theme a genre audition plays. It names the preset, the meter, and a bar count.
+     * The director stays on the genre: there is no library state and no timeline.
+     */
+    public static Theme auditionTheme(String id, int bars) throws ThemeException {
         Preset preset = get(id);
         if (preset == null) {
             throw new IllegalArgumentException("unknown preset " + id);
@@ -82,7 +85,12 @@ public final class Presets {
             throw new IllegalArgumentException("bars must be 1 or more");
         }
         String yaml = "id: " + id + "\npreset: " + id + "\nbars: " + bars + "\nmeter: \"" + preset.meter() + "\"\n";
-        return Director.perform(Themes.parse(id + ".yaml", yaml), List.of(), seed);
+        return Themes.parse(id + ".yaml", yaml);
+    }
+
+    /** Plays the genre for {@code bars}, with no state layered on. The same seed plays the same notes. */
+    public static Director.Performance play(String id, int bars, long seed) throws ThemeException {
+        return Director.perform(auditionTheme(id, bars), List.of(), seed);
     }
 
     /** Genre defaults, then the library state {@code presets/states/<state>.yaml} when one is named. */

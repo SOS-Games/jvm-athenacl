@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 package io.github.sosgames.athenacl.adaptive;
 
+import io.github.sosgames.athenacl.events.ControlEvent;
 import io.github.sosgames.athenacl.events.NoteEvent;
 import io.github.sosgames.athenacl.motif.critic.MelodyCritic;
 import io.github.sosgames.athenacl.motif.hook.HookSettings;
@@ -83,6 +84,51 @@ class PresetAuditionTest {
         MelodyCritic.Scored scored = MelodyCritic.scorePitches(midi, durations, key, HookSettings.defaults(),
                 MelodyCritic.chords(key, progression), List.of(), MelodyCritic.Mode.PHRASE);
         assertTrue(scored.score() >= 0.75, scored.score() + " rejected=" + scored.rejected());
+    }
+
+    @Test
+    void aGenreAuditionStaysOnThatPalette() throws Exception {
+        Theme hiphop = Presets.auditionTheme("hiphop", 14);
+        Theme rock = Presets.auditionTheme("rock", 14);
+        Theme fantasy = Presets.auditionTheme("fantasy", 14);
+        assertEquals("(none)", hiphop.declared());
+        assertEquals("(none)", rock.declared());
+        assertTrue(hiphop.timeline().isEmpty());
+        assertTrue(rock.timeline().isEmpty());
+        assertTrue(fantasy.timeline().isEmpty());
+        assertEquals("bass.synth,pad.newage,drums.808,lead.saw,rhodes,lead.square", hiphop.instrumentList(""));
+        assertEquals("guitar.overdrive,bass.finger,drums.standard,organ,guitar.clean,piano", rock.instrumentList(""));
+        assertEquals("strings,piano,cello,flute", fantasy.instrumentList(""));
+        assertEquals("", hiphop.instrumentList("combat"));
+        Director.Performance played = Director.perform(hiphop, List.of(), 1);
+        Set<Integer> programs = new HashSet<>();
+        for (Director.BarInfo bar : played.bars()) {
+            assertEquals("", bar.state());
+        }
+        for (var control : played.score().controls()) {
+            if (control instanceof ControlEvent.ProgramChange change) {
+                programs.add(change.program());
+            }
+        }
+        assertTrue(programs.contains(81), programs.toString());
+        assertTrue(programs.contains(38), programs.toString());
+        assertFalse(programs.contains(73), programs.toString());
+        Set<Integer> rockPrograms = programs(Director.perform(rock, List.of(), 1));
+        assertTrue(rockPrograms.contains(29), rockPrograms.toString());
+        assertFalse(rockPrograms.contains(81), rockPrograms.toString());
+        Theme dungeon = Themes.load(java.nio.file.Path.of("themes/fantasy-dungeon.yaml"));
+        assertTrue(dungeon.states().containsKey("combat"));
+        assertTrue(dungeon.states().containsKey("partying"));
+    }
+
+    private static Set<Integer> programs(Director.Performance performance) {
+        Set<Integer> programs = new HashSet<>();
+        for (var control : performance.score().controls()) {
+            if (control instanceof ControlEvent.ProgramChange change) {
+                programs.add(change.program());
+            }
+        }
+        return programs;
     }
 
     private static Theme theme(String id, int bars) throws ThemeException {

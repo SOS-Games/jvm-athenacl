@@ -22,8 +22,9 @@ import java.util.Map;
 
 /**
  * Renders a theme through its instrument kits. Each named instrument is normalized first.
- * A genre that asks for auto selection plays the ensemble for this seed from declared
- * descriptors. The state's loudness contour is applied after that, on the mixed audio.
+ * A declared state that asks for auto selection plays that ensemble for this seed.
+ * The genre base, the stream a preset button auditions, keeps the instruments written
+ * on the genre. The state's loudness contour is applied after that, on the mixed audio.
  * The event log keeps the original program changes, so the musical hash does not move.
  */
 public final class ThemeMix {
@@ -56,17 +57,12 @@ public final class ThemeMix {
         }
         Map<String, Map<String, Playable>> byState = new LinkedHashMap<>();
         Map<String, Playable> used = new LinkedHashMap<>();
-        for (Theme.StateDef state : theme.states().values()) {
+        for (Theme.StateDef state : playbackStates(theme)) {
             Ensemble.Result ensemble = Ensemble.forPlayback(state.composition(), state.id(), seed);
             Map<String, Playable> patches = new LinkedHashMap<>();
             for (LayerSpec spec : state.specs()) {
                 String patch = spec.channel() + ":" + spec.program();
-                String name = ensemble == null
-                        ? state.instrument(spec.name())
-                        : ensemble.playing(spec.name(), state.instrument(spec.name()));
-                if (name.startsWith("sf:") || name.startsWith("kit:") || name.indexOf(':') > 0) {
-                    name = spec.kitName().isBlank() ? name : spec.kitName();
-                }
+                String name = heardName(state, spec, ensemble);
                 Playable playable = resolve(sessions, name);
                 if (playable == null) {
                     if (spec.instrument().startsWith("sf:")) {
@@ -95,6 +91,31 @@ public final class ThemeMix {
                     theme.loudness().reference(), theme.loudness().offsets());
         }
         return new Mix(body, List.copyOf(notices));
+    }
+
+    /**
+     * States the mix should load. A theme that declared none plays {@code base}, the genre.
+     * A theme that declared states keeps those and leaves the base out.
+     */
+    static List<Theme.StateDef> playbackStates(Theme theme) {
+        if (!theme.states().isEmpty()) {
+            return List.copyOf(theme.states().values());
+        }
+        if (theme.base() == null) {
+            return List.of();
+        }
+        return List.of(theme.base());
+    }
+
+    /** Kit name this layer should load. A null ensemble keeps the name written on the state. */
+    static String heardName(Theme.StateDef state, LayerSpec spec, Ensemble.Result ensemble) {
+        String name = ensemble == null
+                ? state.instrument(spec.name())
+                : ensemble.playing(spec.name(), state.instrument(spec.name()));
+        if (name.startsWith("sf:") || name.startsWith("kit:") || name.indexOf(':') > 0) {
+            name = spec.kitName().isBlank() ? name : spec.kitName();
+        }
+        return name;
     }
 
     private static Playable resolve(List<KitSession> sessions, String name) throws IOException, KitException {

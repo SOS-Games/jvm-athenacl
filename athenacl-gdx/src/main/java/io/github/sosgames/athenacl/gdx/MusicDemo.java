@@ -47,7 +47,9 @@ import java.util.concurrent.ThreadLocalRandom;
  * background thread and becomes audible on the next bar after bar 8, until a track button
  * is pressed. Each button starts that piece from the beginning and repeats it until
  * another button is pressed. Genre buttons are the presets that do not already have a
- * track. The line under the scheduler is where you are in the current pass.
+ * track. Each one plays that genre on its own: the overlay stays on the genre, and the
+ * recording uses the instruments that genre names. Named tracks load their theme files
+ * and keep the states written there. The line under the scheduler is where you are in the current pass.
  * The window opens on a silent menu. Sounds lists the soundpack and hides the genres.
  * A sound click repeats until another sound or Back. Genres lists the tracks and
  * starts the ambush piece. Randomize picks a new seed and plays the current track again.
@@ -441,29 +443,11 @@ public class MusicDemo extends ApplicationAdapter {
         request(track(name));
     }
 
-    /** Theme file, or a short tour of a preset. Playback uses the configured default kit. */
+    /** Theme file, or the genre base for a preset button. Playback uses the configured default kit. */
     private static Theme load(Track track) throws Exception {
-        Theme theme;
-        if (track.preset != null) {
-            Presets.Preset preset = Presets.get(track.preset);
-            String yaml = """
-                    id: %s
-                    preset: %s
-                    bars: 14
-                    meter: "%s"
-                    states:
-                      peaceful: {use: library:peaceful}
-                      combat: {use: library:combat}
-                      partying: {use: library:partying}
-                    timeline:
-                      - {bar: 1, state: peaceful, intensity: 0.65}
-                      - {bar: 5, state: combat, intensity: 1}
-                      - {bar: 9, state: partying, intensity: 0.85}
-                    """.formatted(track.preset, track.preset, preset.meter());
-            theme = Themes.parse(track.preset + ".yaml", yaml);
-        } else {
-            theme = Themes.load(Path.of(track.theme));
-        }
+        Theme theme = track.preset != null
+                ? Presets.auditionTheme(track.preset, 14)
+                : Themes.load(Path.of(track.theme));
         return theme.withKits(List.of(KitDefaults.id(null)));
     }
 

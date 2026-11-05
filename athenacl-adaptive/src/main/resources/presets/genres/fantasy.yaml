@@ -35,7 +35,7 @@ tempo: {bpm: {range: [84, 108], step: 2, fallback: 96}}
 instruments: {lead: flute, pad: strings, bass: cello, chords: piano, brass: horn, arp: harp, perc: taiko}
 ensemble:
   select: auto
-  kits: [gm-lite]
+  kits: [gm-full]
   topK: 3
   roles:
     lead: {fit: ">=0.5", tags: {none: [noisy]}}

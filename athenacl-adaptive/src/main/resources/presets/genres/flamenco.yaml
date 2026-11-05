@@ -32,7 +32,7 @@ programs: {harp: 24, lead: 27, chords: 29, bass: 32, pad: 48, drums: 0}
 instruments: {harp: nylon, lead: guitar.clean, chords: guitar.overdrive, bass: bass.acoustic, pad: strings, drums: drums.standard}
 ensemble:
   select: auto
-  kits: [gm-lite]
+  kits: [gm-full]
   topK: 3
   roles:
     lead: {fit: ">=0.5", tags: {none: [noisy]}}

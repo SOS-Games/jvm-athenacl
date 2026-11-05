@@ -2,7 +2,7 @@
 id: fantasy-party
 preset: fantasy
 instruments:
-  kits: [gm-lite]
+  kits: [gm-full]
 bars: 14
 bpm: 120
 meter: "4/4"

@@ -32,7 +32,7 @@ programs: {arp: 80, bass: 38, lead: 81, drums: 25, pad: 88, bell: 8}
 instruments: {arp: lead.square, bass: bass.synth, lead: lead.saw, drums: drums.808, pad: pad.newage, bell: celesta}
 ensemble:
   select: auto
-  kits: [gm-lite]
+  kits: [gm-full]
   topK: 3
   roles:
     lead: {fit: ">=0.5", tags: {none: [noisy]}}

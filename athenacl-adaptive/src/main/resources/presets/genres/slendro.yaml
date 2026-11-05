@@ -32,7 +32,7 @@ programs: {bell: 108, chords: 107, pad: 48, lead: 73, bass: 43, drums: 0}
 instruments: {bell: kalimba, chords: koto, pad: strings, lead: flute, bass: cello, drums: drums.standard}
 ensemble:
   select: auto
-  kits: [gm-lite]
+  kits: [gm-full]
   topK: 3
   roles:
     lead: {fit: ">=0.5", tags: {none: [noisy]}}

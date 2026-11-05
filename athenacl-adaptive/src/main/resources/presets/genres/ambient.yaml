@@ -31,7 +31,7 @@ programs: {pad: 89, bell: 8, drone: 52, chords: 46, lead: 73, bass: 43}
 instruments: {pad: pad.warm, bell: celesta, drone: choir, chords: harp, lead: flute, bass: cello}
 ensemble:
   select: auto
-  kits: [gm-lite]
+  kits: [gm-full]
   topK: 3
   roles:
     lead: {fit: ">=0.5", tags: {none: [noisy]}}

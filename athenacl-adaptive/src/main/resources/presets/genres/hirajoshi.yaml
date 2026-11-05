@@ -32,7 +32,7 @@ programs: {harp: 107, pad: 48, lead: 73, bass: 43, chords: 8}
 instruments: {harp: koto, pad: strings, lead: flute, bass: cello, chords: celesta}
 ensemble:
   select: auto
-  kits: [gm-lite]
+  kits: [gm-full]
   topK: 3
   roles:
     lead: {fit: ">=0.5", tags: {none: [noisy]}}

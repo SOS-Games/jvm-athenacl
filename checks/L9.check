@@ -19,7 +19,7 @@ args: render themes/scifi-space.yaml --timeline samples/timelines/dungeon-tour.j
 exit: 0
 delete-before: build/l9
 stdout-contains: bars=14
-stdout-contains: kit=gm-lite
+stdout-contains: kit=gm-full
 stdout-contains: states=sneaking,peaceful,danger,combat,trading,partying
 file-exists: build/l9/score.wav
 file-exists: build/l9/events.jsonl

@@ -32,7 +32,7 @@ programs: {harp: 106, lead: 73, chords: 107, bass: 32, drums: 0}
 instruments: {harp: shamisen, lead: flute, chords: koto, bass: bass.acoustic, drums: drums.standard}
 ensemble:
   select: auto
-  kits: [gm-lite]
+  kits: [gm-full]
   topK: 3
   roles:
     lead: {fit: ">=0.5", tags: {none: [noisy]}}

@@ -10,17 +10,17 @@ loudness:
 scale:
   tonic: {choose: [C, D, E], weights: [4, 1, 1], fallback: C}
   mode: {choose: [lydian, ionian, mixolydian], weights: [4, 1, 1], fallback: lydian}
-  leadingTone: {p: 0.2, fallback: false}
+  leadingTone: false
 harmony:
   style: modal
   progression:
-    generate: markov
-    model: major-functional
-    length: 4
+    generate: grammar
+    templates: "I II vi V|I II V V|I V II V"
     fallback: [I, II, vi, V]
     constraints: {startOn: I, endOn: [V]}
-  harmonicRhythm: {choose: [1, 2], weights: [3, 1], fallback: 1}
+  harmonicRhythm: {choose: [2, 1], weights: [2, 1], fallback: 2}
   sevenths: none
+  cadences: {8: V}
 cadence: {strength: weak, every: 8}
 drone: {enabled: false}
 voicing: {style: {choose: [close, open], weights: [2, 1], fallback: close}, voiceLead: true, maxLeap: 4}

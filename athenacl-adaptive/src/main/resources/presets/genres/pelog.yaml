@@ -10,17 +10,17 @@ loudness:
 scale:
   tonic: {choose: [C, D, E], weights: [4, 1, 1], fallback: C}
   mode: {choose: [phrygian, aeolian, phrygian-dominant], weights: [4, 1, 1], fallback: phrygian}
-  leadingTone: {p: 0.2, fallback: false}
+  leadingTone: false
 harmony:
   style: modal
   progression:
-    generate: markov
-    model: modal-phrygian
-    length: 4
-    fallback: [i, bII, bIII, bII]
-    constraints: {startOn: i, endOn: [bII]}
-  harmonicRhythm: {choose: [1, 2], weights: [3, 1], fallback: 1}
+    generate: grammar
+    templates: "i bIII bVII i|i bIII iv i|i iv bIII i"
+    fallback: [i, bIII, bVII, i]
+    constraints: {startOn: i, endOn: [i]}
+  harmonicRhythm: {choose: [2, 1], weights: [2, 1], fallback: 2}
   sevenths: none
+  cadences: {8: i}
 cadence: {strength: weak, every: 8}
 drone: {enabled: false}
 voicing: {style: {choose: [close, open], weights: [2, 1], fallback: close}, voiceLead: true, maxLeap: 4}

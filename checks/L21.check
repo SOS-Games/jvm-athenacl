@@ -28,3 +28,67 @@ stdout-contains: preset=hijaz
 stdout-contains: key=E-phrygian-dominant
 stdout-contains: character=maqam
 stdout-regex: notes=[1-9]
+
+---
+name: rock seed is a flat-seven loop
+args: theme resolve --genre rock --seed 1
+exit: 0
+stdout-contains: harmony.style=modal
+stdout-contains: source=generated:grammar
+stdout-regex: harmony\.progression=I,(bVII,IV,I|bVII,V,I|V,bVII,I)
+
+---
+name: jazz seed is a seventh-chord cadence
+args: theme resolve --genre jazz --seed 1
+exit: 0
+stdout-contains: harmony.style=functional
+stdout-contains: harmony.sevenths=dominant
+stdout-contains: source=generated:grammar
+stdout-regex: harmony\.progression=ii7,(V7,vi7,Imaj7|V7,iii7,Imaj7|vi7,V7,Imaj7)
+
+---
+name: sci-fi seed keeps the lydian II
+args: theme resolve --genre scifi-space --seed 1
+exit: 0
+stdout-contains: harmony.style=modal
+stdout-contains: harmony.cadences.8=V
+stdout-contains: source=generated:grammar
+stdout-regex: harmony\.progression=I,(II,vi,V|II,V,V|V,II,V)
+
+---
+name: blues seed is a dominant-seventh form
+args: theme resolve --genre blues --seed 1
+exit: 0
+stdout-contains: harmony.sevenths=dominant
+stdout-contains: harmony.cadences.12=I7
+stdout-contains: source=generated:grammar
+stdout-regex: harmony\.progression=I7,.*V7,.*I7
+
+---
+name: hiphop and house do not share one minor loop
+args: theme resolve --genre hiphop --seed 1
+exit: 0
+stdout-contains: harmony.style=loop
+stdout-regex: harmony\.progression=i,(bVI,bIII,bVII|v,bVI,bVII|bIII,bVI,bVII)
+
+---
+name: house seed is a minor-fifth loop
+args: theme resolve --genre house --seed 1
+exit: 0
+stdout-contains: harmony.style=loop
+stdout-contains: harmony.harmonicRhythm=2
+stdout-regex: harmony\.progression=i,(v,iv,VII|iv,v,VII|v,i,VII)
+
+---
+name: flamenco seed cadences on a dominant seventh
+args: theme resolve --genre flamenco --seed 1
+exit: 0
+stdout-contains: harmony.cadences.8=V7
+stdout-regex: harmony\.progression=I,(bVII,bVI,V7|bII,bVII,V7|iv,bVI,V7)
+
+---
+name: metal seed is phrygian fifths
+args: theme resolve --genre metal --seed 1
+exit: 0
+stdout-contains: voicing.style=open5
+stdout-regex: harmony\.progression=i,(bII,bIII,i|bII,V,i|bVI,bII,i)

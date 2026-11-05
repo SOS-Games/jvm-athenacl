@@ -10,23 +10,23 @@ loudness:
 scale:
   tonic: {choose: [C, D, E], weights: [4, 1, 1], fallback: C}
   mode: {choose: [dorian, aeolian, mixolydian], weights: [4, 1, 1], fallback: dorian}
-  leadingTone: {p: 0.2, fallback: false}
+  leadingTone: false
 harmony:
-  style: modal
+  style: loop
   progression:
-    generate: markov
-    model: minor-functional
-    length: 4
-    fallback: [i, IV, VII, i]
+    generate: grammar
+    templates: "i IV V i|i V bVII i|i V IV i"
+    fallback: [i, IV, V, i]
     constraints: {startOn: i, endOn: [i]}
-  harmonicRhythm: {choose: [1, 2], weights: [3, 1], fallback: 1}
+  harmonicRhythm: 1
   sevenths: none
+  cadences: {8: i}
 cadence: {strength: weak, every: 8}
 drone: {enabled: false}
 voicing: {style: {choose: [close, open], weights: [2, 1], fallback: close}, voiceLead: true, maxLeap: 4}
 lead: {enabled: true, phrase: period, rhythmCells: {generate: po, po: basketGen, symbols: [lsS, sslL], count: 2, fallback: [lsS, sslL]}, register: [A4, E6]}
 hooks: {enabled: true, candidates: 64}
-tempo: {bpm: {range: [108, 132], step: 2, fallback: 120}}
+tempo: {bpm: {range: [104, 128], step: 2, fallback: 116}}
 layers: [harp, chords, drums, lead, bass, pad]
 programs: {harp: 24, chords: 0, drums: 0, lead: 56, bass: 32, pad: 48}
 instruments: {harp: nylon, chords: piano, drums: drums.standard, lead: trumpet, bass: bass.acoustic, pad: strings}

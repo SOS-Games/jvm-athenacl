@@ -9,24 +9,24 @@ loudness:
   offsets: {sneaking: -1.5, peaceful: -1.0, trading: -1.0, partying: 1.5, danger: 2.0, combat: 4.0}
 scale:
   tonic: {choose: [F, G, A], weights: [4, 1, 1], fallback: F}
-  mode: {choose: [dorian, aeolian, mixolydian], weights: [4, 1, 1], fallback: dorian}
-  leadingTone: {p: 0.2, fallback: false}
+  mode: {choose: [ionian, dorian, mixolydian], weights: [4, 2, 1], fallback: ionian}
+  leadingTone: false
 harmony:
-  style: modal
+  style: functional
   progression:
-    generate: markov
-    model: minor-functional
-    length: 4
-    fallback: [i, IV, VII, i]
-    constraints: {startOn: i, endOn: [i]}
-  harmonicRhythm: {choose: [1, 2], weights: [3, 1], fallback: 1}
-  sevenths: none
+    generate: grammar
+    templates: "ii7 V7 vi7 Imaj7|ii7 V7 iii7 Imaj7|ii7 vi7 V7 Imaj7"
+    fallback: [ii7, V7, vi7, Imaj7]
+    constraints: {startOn: ii7, endOn: [Imaj7]}
+  harmonicRhythm: 1
+  sevenths: dominant
+  cadences: {8: Imaj7}
 cadence: {strength: weak, every: 8}
 drone: {enabled: false}
 voicing: {style: {choose: [close, open], weights: [2, 1], fallback: close}, voiceLead: true, maxLeap: 4}
 lead: {enabled: true, phrase: period, rhythmCells: {generate: po, po: basketGen, symbols: [lsS, sslL], count: 2, fallback: [lsS, sslL]}, register: [A4, E6]}
 hooks: {enabled: true, candidates: 64}
-tempo: {bpm: {range: [108, 132], step: 2, fallback: 120}}
+tempo: {bpm: {range: [120, 144], step: 2, fallback: 132}}
 layers: [chords, bass, drums, lead, bell, brass]
 programs: {chords: 0, bass: 32, drums: 0, lead: 56, bell: 11, brass: 57}
 instruments: {chords: piano, bass: bass.acoustic, drums: drums.standard, lead: trumpet, bell: vibes, brass: trombone}

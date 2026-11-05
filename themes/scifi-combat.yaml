@@ -2,7 +2,7 @@
 id: scifi-combat
 preset: scifi-space
 instruments:
-  kits: [gm-lite]
+  kits: [gm-full]
 bars: 14
 bpm: 100
 meter: "4/4"

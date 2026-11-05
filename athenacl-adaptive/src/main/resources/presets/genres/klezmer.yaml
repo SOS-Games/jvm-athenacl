@@ -32,7 +32,7 @@ programs: {lead: 71, chords: 21, pad: 40, bass: 32, drums: 0}
 instruments: {lead: clarinet, chords: accordion, pad: violin, bass: bass.acoustic, drums: drums.standard}
 ensemble:
   select: auto
-  kits: [gm-lite]
+  kits: [gm-full]
   topK: 3
   roles:
     lead: {fit: ">=0.5", tags: {none: [noisy]}}

@@ -38,7 +38,7 @@ A note list such as `samples/notes/c-major-scale.yaml` renders to `score.mid`, `
 
 `gradlew layerCheck -Player=L5` passes (6 checks).
 
-`themes/fantasy-dungeon.yaml` uses the fantasy preset and the `gm-lite` kit. Layers name kit instruments (harp, strings, choir, cello, flute, horn, taiko, and the orchestral drums). Each of those is normalized before the mix, then `analyze --by state` measures each state within 1 LU of the contour, from sneaking at −1.5 LU to combat at +4.0, with the spread at or under 6. The event-log hash is unchanged by that trim.
+`themes/fantasy-dungeon.yaml` uses the fantasy preset and the `gm-full` kit. Layers name kit instruments (harp, strings, choir, cello, flute, horn, taiko, and the orchestral drums). Each of those is normalized before the mix, then `analyze --by state` measures each state within 1 LU of the contour, from sneaking at −1.5 LU to combat at +4.0, with the spread at or under 6. The event-log hash is unchanged by that trim.
 
 ## L1b — Instrument kits
 

@@ -32,7 +32,7 @@ programs: {pad: 48, brass: 60, taiko: 47, lead: 73, harp: 46, bass: 43}
 instruments: {pad: strings, brass: horn, taiko: timpani, lead: flute, harp: harp, bass: cello}
 ensemble:
   select: auto
-  kits: [gm-lite]
+  kits: [gm-full]
   topK: 3
   roles:
     lead: {fit: ">=0.5", tags: {none: [noisy]}}

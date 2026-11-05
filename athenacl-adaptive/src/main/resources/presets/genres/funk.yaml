@@ -32,7 +32,7 @@ programs: {chords: 7, bass: 33, lead: 27, pad: 4, arp: 80, drums: 0}
 instruments: {chords: clav, bass: bass.finger, lead: guitar.clean, pad: rhodes, arp: lead.square, drums: drums.standard}
 ensemble:
   select: auto
-  kits: [gm-lite]
+  kits: [gm-full]
   topK: 3
   roles:
     lead: {fit: ">=0.5", tags: {none: [noisy]}}

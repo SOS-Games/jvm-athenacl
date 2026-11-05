@@ -53,9 +53,9 @@ exit: 0
 stdout-contains: kit=gm-full source=builtin
 
 ---
-name: a pinned theme keeps gm-lite
+name: a pinned theme keeps gm-full
 args: theme resolve themes/fantasy-dungeon.yaml --state sneaking
-env: ATHENACL_KIT=gm-full
+env: ATHENACL_KIT=gm-lite
 env: ATHENACL_RC=samples/kits/empty.rc
 exit: 0
-stdout-contains: kit=gm-lite source=pin
+stdout-contains: kit=gm-full source=pin

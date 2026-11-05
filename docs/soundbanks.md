@@ -28,7 +28,7 @@ Precedence:
 
 `ATHENACL_RC` (or `-Dathenacl.rc`) points at a different rc file. The rc file is `key=value`, same as `local.properties`.
 
-A theme that lists `instruments.kits` keeps that list. `themes/fantasy-dungeon.yaml` pins `gm-lite`. To play it through MuseScore, change the list to `[gm-full]` or pass `--kit gm-full`. `theme resolve` prints `kit=` and `source=` (`flag`, `env`, `rc`, `pin`, or `builtin`).
+A theme that lists `instruments.kits` keeps that list. `themes/fantasy-dungeon.yaml` pins `gm-full`. `theme resolve` prints `kit=` and `source=` (`flag`, `env`, `rc`, `pin`, or `builtin`). A pin beats `ATHENACL_KIT` and `kit.default`. `--kit` beats the pin.
 
 Fantasy and sci-fi presets that do not pin a kit use this default. Other note-list renders stay on the soundbank path unless you pass `--kit`.
 

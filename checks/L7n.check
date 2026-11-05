@@ -1,0 +1,152 @@
+# L7n genre-only beds. Directive list: AGENTS.md, section "Layer checks".
+# A preset button plays the genre base. The groove is that genre's own grid.
+# A theme that declares states still lists those states.
+
+name: hip-hop resolve keeps its loop and its palette
+args: theme resolve --genre hiphop --seed 1
+exit: 0
+stdout-contains: harmony.style=loop
+stdout-contains: instruments.lead=lead.saw
+stdout-contains: instruments.bass=bass.synth
+stdout-contains: instruments.drums=drums.808
+stdout-not-contains: from=state:
+
+---
+name: rock resolve keeps its flat-seven loop
+args: theme resolve --genre rock --seed 1
+exit: 0
+stdout-contains: harmony.style=modal
+stdout-contains: instruments.lead=guitar.overdrive
+stdout-contains: instruments.bass=bass.finger
+stdout-regex: harmony\.progression=I,(bVII,IV,I|bVII,V,I|V,bVII,I)
+
+---
+name: fantasy resolve keeps the minor-functional draw
+args: theme resolve --genre fantasy --seed 1
+exit: 0
+stdout-contains: source=generated:markov(minor-functional)
+stdout-contains: instruments.lead=flute
+stdout-contains: instruments.pad=strings
+stdout-contains: instruments.bass=cello
+
+---
+name: hip-hop genre render
+args: render --genre hiphop --bars 2 --seed 1 --out build/l7n-hip --formats events
+exit: 0
+delete-before: build/l7n-hip
+stdout-contains: states= transitions=
+stdout-not-contains: peaceful
+file-exists: build/l7n-hip/events.jsonl
+
+---
+name: rock genre render
+args: render --genre rock --bars 2 --seed 1 --out build/l7n-rock --formats events
+exit: 0
+delete-before: build/l7n-rock
+stdout-contains: states= transitions=
+file-exists: build/l7n-rock/events.jsonl
+
+---
+name: fantasy genre render
+args: render --genre fantasy --bars 2 --seed 1 --out build/l7n-fan --formats events
+exit: 0
+delete-before: build/l7n-fan
+stdout-contains: states= transitions=
+file-exists: build/l7n-fan/events.jsonl
+
+---
+name: hip-hop clap sits on beat 3
+args: describe-music build/l7n-hip/events.jsonl --roll --bars 1
+exit: 0
+stdout-contains: snare |········●·······
+
+---
+name: rock snare is the backbeat
+args: describe-music build/l7n-rock/events.jsonl --roll --bars 1
+exit: 0
+stdout-contains: snare |····●·······●···
+
+---
+name: fantasy genre has no kit
+args: describe-music build/l7n-fan/events.jsonl --roll --bars 1
+exit: 0
+stdout-not-contains: snare |
+
+---
+name: hip-hop does not hold a pad
+args: debug inspect build/l7n-hip/events.jsonl --where layer=pad
+exit: 0
+stdout-empty
+
+---
+name: hip-hop chords are a stab
+args: debug inspect build/l7n-hip/events.jsonl --where layer=chords
+exit: 0
+stdout-contains: dur=1/8
+stdout-not-contains: dur=1/1
+
+---
+name: fantasy strings hold and the piano does not
+args: debug inspect build/l7n-fan/events.jsonl --where layer=pad
+exit: 0
+stdout-contains: dur=1/1
+
+---
+name: fantasy piano is not a second held pad
+args: debug inspect build/l7n-fan/events.jsonl --where layer=chords
+exit: 0
+stdout-contains: dur=1/4
+stdout-not-contains: dur=1/1
+
+---
+name: the three leads do not share one cell
+args: debug inspect build/l7n-hip/events.jsonl --where layer=lead
+exit: 0
+stdout-contains: dur=480/3840
+stdout-contains: dur=1920/3840
+
+---
+name: rock lead is quarters
+args: debug inspect build/l7n-rock/events.jsonl --where layer=lead
+exit: 0
+stdout-contains: dur=960/3840
+stdout-not-contains: dur=480/3840
+stdout-not-contains: dur=1440/3840
+
+---
+name: fantasy lead uses the dotted cell
+args: debug inspect build/l7n-fan/events.jsonl --where layer=lead
+exit: 0
+stdout-contains: dur=1440/3840
+
+---
+name: a genre-only lead was not picked by the critic
+args: debug explain build/l7n-hip/events.jsonl --where layer=lead --first
+exit: 0
+stdout-not-contains: hook.cand
+
+---
+name: rock lead was not picked by the critic
+args: debug explain build/l7n-rock/events.jsonl --where layer=lead --first
+exit: 0
+stdout-not-contains: hook.cand
+
+---
+name: the dungeon theme still declares its states
+args: theme explain themes/fantasy-dungeon.yaml
+exit: 0
+stdout-contains: states=peaceful,sneaking,combat,danger,trading,partying
+stdout-contains: state=combat
+
+---
+name: a declared state still uses the critic
+args: render themes/fantasy-dungeon.yaml --seed 1 --bars 1-2 --out build/l7n-dungeon --formats events
+exit: 0
+delete-before: build/l7n-dungeon
+file-exists: build/l7n-dungeon/events.jsonl
+
+---
+name: the dungeon lead names the hook
+args: debug explain build/l7n-dungeon/events.jsonl --where layer=lead --first
+exit: 0
+stdout-contains: hook.cand

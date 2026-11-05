@@ -121,6 +121,68 @@ class PresetAuditionTest {
         assertTrue(dungeon.states().containsKey("partying"));
     }
 
+    @Test
+    void aGenreOnlyLeadDoesNotAskTheCritic() throws Exception {
+        for (String id : List.of("hiphop", "rock", "fantasy")) {
+            Director.Performance played = Director.perform(Presets.auditionTheme(id, 4), List.of(), 1);
+            boolean lead = false;
+            for (Director.Played note : played.notes()) {
+                if (!"lead".equals(note.note().layer())) {
+                    continue;
+                }
+                lead = true;
+                String motif = note.note().motif();
+                assertTrue(motif == null || !motif.contains("hook.cand"), id + " " + motif);
+            }
+            assertTrue(lead, id);
+        }
+    }
+
+    @Test
+    void aNamedStateStillUsesTheCritic() throws Exception {
+        Director.Performance played = Director.perform(themeWithState("fantasy", "peaceful", 4), List.of(), 1);
+        boolean hook = false;
+        boolean heldPad = false;
+        boolean heldChords = false;
+        for (Director.Played note : played.notes()) {
+            String motif = note.note().motif();
+            if (motif != null && motif.contains("hook.cand")) {
+                hook = true;
+            }
+            if ("pad".equals(note.note().layer()) && "1/1".equals(note.note().duration())) {
+                heldPad = true;
+            }
+            if ("chords".equals(note.note().layer()) && "1/1".equals(note.note().duration())) {
+                heldChords = true;
+            }
+        }
+        assertTrue(hook, "peaceful lead");
+        assertTrue(heldPad, "peaceful pad");
+        assertTrue(heldChords, "peaceful chords");
+    }
+
+    @Test
+    void genreBedsDoNotShareOneAccompaniment() throws Exception {
+        Director.Performance hiphop = Director.perform(Presets.auditionTheme("hiphop", 2), List.of(), 1);
+        Director.Performance rock = Director.perform(Presets.auditionTheme("rock", 2), List.of(), 1);
+        Director.Performance fantasy = Director.perform(Presets.auditionTheme("fantasy", 2), List.of(), 1);
+        assertFalse(layers(hiphop).contains("pad"), layers(hiphop).toString());
+        assertFalse(layers(rock).contains("pad"), layers(rock).toString());
+        assertTrue(layers(fantasy).contains("pad"), layers(fantasy).toString());
+        assertEquals("........x.......", grid(hiphop, 38));
+        assertEquals("....x.......x...", grid(rock, 38));
+        assertEquals("", grid(fantasy, 38));
+        assertTrue(duration(hiphop, "chords").contains("1/8"), duration(hiphop, "chords").toString());
+        assertFalse(duration(hiphop, "chords").contains("1/1"), duration(hiphop, "chords").toString());
+        assertTrue(duration(fantasy, "pad").contains("1/1"));
+        assertTrue(duration(fantasy, "chords").contains("1/4"));
+        assertFalse(duration(fantasy, "chords").contains("1/1"));
+        assertTrue(duration(hiphop, "lead").contains("480/3840"), duration(hiphop, "lead").toString());
+        assertTrue(duration(rock, "lead").contains("960/3840"));
+        assertFalse(duration(rock, "lead").contains("480/3840"), duration(rock, "lead").toString());
+        assertTrue(duration(fantasy, "lead").contains("1440/3840"), duration(fantasy, "lead").toString());
+    }
+
     private static Set<Integer> programs(Director.Performance performance) {
         Set<Integer> programs = new HashSet<>();
         for (var control : performance.score().controls()) {
@@ -133,6 +195,57 @@ class PresetAuditionTest {
 
     private static Theme theme(String id, int bars) throws ThemeException {
         return Themes.parse(id + ".yaml", "id: " + id + "\npreset: " + id + "\nbars: " + bars + "\n");
+    }
+
+    private static Theme themeWithState(String id, String state, int bars) throws ThemeException {
+        String yaml = "id: " + id + "\npreset: " + id + "\nbars: " + bars + "\n"
+                + "states:\n  " + state + ": {use: library:" + state + "}\n";
+        return Themes.parse(id + ".yaml", yaml);
+    }
+
+    private static Set<String> layers(Director.Performance performance) {
+        Set<String> names = new HashSet<>();
+        for (Director.Played played : performance.notes()) {
+            names.add(played.note().layer());
+        }
+        return names;
+    }
+
+    private static Set<String> duration(Director.Performance performance, String layer) {
+        Set<String> values = new HashSet<>();
+        for (Director.Played played : performance.notes()) {
+            if (layer.equals(played.note().layer())) {
+                values.add(played.note().duration());
+            }
+        }
+        return values;
+    }
+
+    /** Sixteen steps of bar 1 for one drum pitch. Empty when that pitch never sounds. */
+    private static String grid(Director.Performance performance, int pitch) {
+        long bar = performance.score().barTicks();
+        long step = Math.max(1, bar / 16);
+        boolean[] hits = new boolean[16];
+        boolean any = false;
+        for (Director.Played played : performance.notes()) {
+            NoteEvent note = played.note();
+            if (note.pitch() != pitch || note.channel() != 9 || note.bar() != 1) {
+                continue;
+            }
+            any = true;
+            int column = (int) ((note.startTick() % bar) / step);
+            if (column >= 0 && column < hits.length) {
+                hits[column] = true;
+            }
+        }
+        if (!any) {
+            return "";
+        }
+        StringBuilder text = new StringBuilder();
+        for (boolean hit : hits) {
+            text.append(hit ? 'x' : '.');
+        }
+        return text.toString();
     }
 
     private static Director.Performance play(String genre, String state, int bars) throws ThemeException {
